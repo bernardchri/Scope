@@ -25,3 +25,9 @@
 
 ### inspiration
 - Storybook :  parce que l'on peut imaginer installer une scope par projet, et l'accoler aux fichiers de chaque projet web.
+
+
+
+https://www.youtube.com/watch?v=g6RPzygnhho&t=3671s&ab_channel=Melvynx%E2%80%A2Apprendre%C3%A0coder
+
+https://www.youtube.com/watch?v=g6RPzygnhho&t=3671s&ab_channel=Melvynx%E2%80%A2Apprendre%C3%A0coder
