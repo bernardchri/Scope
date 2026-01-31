@@ -134,108 +134,108 @@ export default function Home() {
 
         <h1 className="text-2xl font-bold mb-6">{activeComponent.name}</h1>
 
-{/* Section Tâches */}
-<div className="mb-8">
-  <div className="flex justify-between items-center mb-4">
-    <h2 className="text-xl font-semibold">Tâches</h2>
-    <button
-      onClick={() => setIsCreatingTask(true)}
-      className="bg-blue-500 text-white px-4 py-2 rounded"
-    >
-      Nouvelle tâche
-    </button>
-  </div>
-
-  {isCreatingTask && (
-    <div className="mb-4 border p-4 rounded bg-gray-50">
-      <input
-        type="text"
-        value={newTaskName}
-        onChange={(e) => setNewTaskName(e.target.value)}
-        placeholder="Nom de la tâche"
-        className="border p-2 w-full mb-2"
-        autoFocus
-      />
-      <div className="flex gap-2">
-        <button
-          onClick={handleCreateTask}
-          className="bg-green-500 text-white px-4 py-2 rounded"
-        >
-          Créer
-        </button>
-        <button
-          onClick={() => {
-            setIsCreatingTask(false);
-            setNewTaskName('');
-          }}
-          className="bg-gray-300 px-4 py-2 rounded"
-        >
-          Annuler
-        </button>
-      </div>
-    </div>
-  )}
-
-  {activeComponent.tasks.length === 0 ? (
-    <p className="text-gray-500">Aucune tâche</p>
-  ) : (
-    <ul className="space-y-4">
-      {activeComponent.tasks.map(task => (
-        <li key={task.id} className="border p-4 rounded">
-          <div className="flex justify-between items-start mb-3">
-            <div className="flex items-center gap-3">
-              <input
-                type="checkbox"
-                checked={task.completed}
-                onChange={() => toggleTask(activeProject.id, activeComponent.id, task.id)}
-                className="w-5 h-5"
-              />
-              <span className={task.completed ? 'line-through text-gray-500' : 'font-semibold'}>
-                {task.name}
-              </span>
-            </div>
+        {/* Section Tâches */}
+        <div className="mb-8">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-semibold">Tâches</h2>
             <button
-              onClick={() => deleteTask(activeProject.id, activeComponent.id, task.id)}
-              className="bg-red-500 text-white px-3 py-1 rounded text-sm"
+              onClick={() => setIsCreatingTask(true)}
+              className="bg-blue-500 text-white px-4 py-2 rounded"
             >
-              Supprimer
+              Nouvelle tâche
             </button>
           </div>
 
-          {/* Gestion des liens avec les champs */}
-          <div className="ml-8">
-            <p className="text-sm text-gray-600 mb-2">Champs liés :</p>
-            {activeComponent.fields.length === 0 ? (
-              <p className="text-sm text-gray-400 italic">Aucun champ disponible</p>
-            ) : (
-              <div className="space-y-1">
-                {activeComponent.fields.map(field => {
-                  const isLinked = task.linkedFieldIds.includes(field.id);
-                  return (
-                    <label key={field.id} className="flex items-center gap-2 text-sm">
+          {isCreatingTask && (
+            <div className="mb-4 border p-4 rounded bg-gray-50">
+              <input
+                type="text"
+                value={newTaskName}
+                onChange={(e) => setNewTaskName(e.target.value)}
+                placeholder="Nom de la tâche"
+                className="border p-2 w-full mb-2"
+                autoFocus
+              />
+              <div className="flex gap-2">
+                <button
+                  onClick={handleCreateTask}
+                  className="bg-green-500 text-white px-4 py-2 rounded"
+                >
+                  Créer
+                </button>
+                <button
+                  onClick={() => {
+                    setIsCreatingTask(false);
+                    setNewTaskName('');
+                  }}
+                  className="bg-gray-300 px-4 py-2 rounded"
+                >
+                  Annuler
+                </button>
+              </div>
+            </div>
+          )}
+
+          {activeComponent.tasks.length === 0 ? (
+            <p className="text-gray-500">Aucune tâche</p>
+          ) : (
+            <ul className="space-y-4">
+              {activeComponent.tasks.map(task => (
+                <li key={task.id} className="border p-4 rounded">
+                  <div className="flex justify-between items-start mb-3">
+                    <div className="flex items-center gap-3">
                       <input
                         type="checkbox"
-                        checked={isLinked}
-                        onChange={() => {
-                          if (isLinked) {
-                            unlinkTaskFromField(activeProject.id, activeComponent.id, task.id, field.id);
-                          } else {
-                            linkTaskToField(activeProject.id, activeComponent.id, task.id, field.id);
-                          }
-                        }}
+                        checked={task.completed}
+                        onChange={() => toggleTask(activeProject.id, activeComponent.id, task.id)}
+                        className="w-5 h-5"
                       />
-                      <span>{field.name} ({field.type})</span>
-                    </label>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        </li>
-      ))}
-    </ul>
-  )}
-</div>
+                      <span className={task.completed ? 'line-through text-gray-500' : 'font-semibold'}>
+                        {task.name}
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => deleteTask(activeProject.id, activeComponent.id, task.id)}
+                      className="bg-red-500 text-white px-3 py-1 rounded text-sm"
+                    >
+                      Supprimer
+                    </button>
+                  </div>
+
+                  {/* Gestion des liens avec les champs */}
+                  <div className="ml-8">
+                    <p className="text-sm text-gray-600 mb-2">Champs liés :</p>
+                    {activeComponent.fields.length === 0 ? (
+                      <p className="text-sm text-gray-400 italic">Aucun champ disponible</p>
+                    ) : (
+                      <div className="space-y-1">
+                        {activeComponent.fields.map(field => {
+                          const isLinked = task.linkedFieldIds.includes(field.id);
+                          return (
+                            <label key={field.id} className="flex items-center gap-2 text-sm">
+                              <input
+                                type="checkbox"
+                                checked={isLinked}
+                                onChange={() => {
+                                  if (isLinked) {
+                                    unlinkTaskFromField(activeProject.id, activeComponent.id, task.id, field.id);
+                                  } else {
+                                    linkTaskToField(activeProject.id, activeComponent.id, task.id, field.id);
+                                  }
+                                }}
+                              />
+                              <span>{field.name} ({field.type})</span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
 
         {/* Section Champs CMS */}
         <div>
@@ -399,53 +399,72 @@ export default function Home() {
   }
 
   // Vue liste des projets
-  return (
-    <div className="p-8">
-      <div className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl font-bold">Mes Projets</h1>
-        <button
-          onClick={() => setIsCreating(true)}
-          className="bg-blue-500 text-white px-4 py-2 rounded"
-        >
-          Nouveau projet
-        </button>
-      </div>
+// Vue liste des projets
+return (
+  <div className="p-8">
+    <div className="flex justify-between items-center mb-4">
+      <h1 className="text-2xl font-bold">Mes Projets</h1>
+      <button
+        onClick={() => setIsCreating(true)}
+        className="bg-blue-500 text-white px-4 py-2 rounded"
+      >
+        Nouveau projet
+      </button>
+    </div>
 
-      {isCreating && (
-        <div className="mb-4 border p-4 rounded bg-gray-50">
-          <input
-            type="text"
-            value={newProjectName}
-            onChange={(e) => setNewProjectName(e.target.value)}
-            placeholder="Nom du projet"
-            className="border p-2 w-full mb-2"
-            autoFocus
-          />
-          <div className="flex gap-2">
-            <button
-              onClick={handleCreateProject}
-              className="bg-green-500 text-white px-4 py-2 rounded"
-            >
-              Créer
-            </button>
-            <button
-              onClick={() => {
-                setIsCreating(false);
-                setNewProjectName('');
-              }}
-              className="bg-gray-300 px-4 py-2 rounded"
-            >
-              Annuler
-            </button>
-          </div>
+    {isCreating && (
+      <div className="mb-4 border p-4 rounded bg-gray-50">
+        <input
+          type="text"
+          value={newProjectName}
+          onChange={(e) => setNewProjectName(e.target.value)}
+          placeholder="Nom du projet"
+          className="border p-2 w-full mb-2"
+          autoFocus
+        />
+        <div className="flex gap-2">
+          <button
+            onClick={handleCreateProject}
+            className="bg-green-500 text-white px-4 py-2 rounded"
+          >
+            Créer
+          </button>
+          <button
+            onClick={() => {
+              setIsCreating(false);
+              setNewProjectName('');
+            }}
+            className="bg-gray-300 px-4 py-2 rounded"
+          >
+            Annuler
+          </button>
         </div>
-      )}
-
-      {projects.length === 0 ? (
-        <p className="text-gray-500">Aucun projet pour le moment</p>
-      ) : (
-        <ul className="space-y-2">
-          {projects.map(project => (
+      </div>
+    )}
+    
+    {projects.length === 0 ? (
+      <p className="text-gray-500">Aucun projet pour le moment</p>
+    ) : (
+      <ul className="space-y-2">
+        {projects.map(project => {
+          // Calcul des stats du projet
+          const totalComponents = project.components.length;
+          const totalTasks = project.components.reduce((acc, c) => acc + c.tasks.length, 0);
+          const completedTasks = project.components.reduce(
+            (acc, c) => acc + c.tasks.filter(t => t.completed).length,
+            0
+          );
+          const totalFields = project.components.reduce((acc, c) => acc + c.fields.length, 0);
+          const linkedFields = project.components.reduce((acc, c) => {
+            const linked = new Set();
+            c.tasks.forEach(t => t.linkedFieldIds.forEach(id => linked.add(id)));
+            return acc + linked.size;
+          }, 0);
+          
+          const taskProgress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+          const fieldProgress = totalFields > 0 ? Math.round((linkedFields / totalFields) * 100) : 0;
+          
+          return (
             <li key={project.id} className="border p-4 rounded">
               {editingId === project.id ? (
                 <div>
@@ -475,13 +494,54 @@ export default function Home() {
                 <>
                   <div
                     onClick={() => setActiveProject(project.id)}
-                    className="cursor-pointer mb-2"
+                    className="cursor-pointer mb-3"
                   >
-                    <h2 className="font-semibold">{project.name}</h2>
-                    <p className="text-sm text-gray-500">
-                      {project.components.length} composant(s)
-                    </p>
+                    <h2 className="font-semibold text-lg mb-2">{project.name}</h2>
+                    
+                    {/* Badges de statut */}
+                    <div className="flex gap-2 mb-2 flex-wrap">
+                      <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
+                        {totalComponents} composant{totalComponents > 1 ? 's' : ''}
+                      </span>
+                      
+                      {totalTasks > 0 && (
+                        <span className={`text-xs px-2 py-1 rounded ${
+                          taskProgress === 100 
+                            ? 'bg-green-100 text-green-700' 
+                            : taskProgress > 0 
+                            ? 'bg-yellow-100 text-yellow-700'
+                            : 'bg-gray-100 text-gray-700'
+                        }`}>
+                          Tâches: {completedTasks}/{totalTasks} ({taskProgress}%)
+                        </span>
+                      )}
+                      
+                      {totalFields > 0 && (
+                        <span className={`text-xs px-2 py-1 rounded ${
+                          fieldProgress === 100 
+                            ? 'bg-green-100 text-green-700' 
+                            : fieldProgress > 0 
+                            ? 'bg-yellow-100 text-yellow-700'
+                            : 'bg-gray-100 text-gray-700'
+                        }`}>
+                          Champs liés: {linkedFields}/{totalFields} ({fieldProgress}%)
+                        </span>
+                      )}
+                    </div>
+                    
+                    {/* Barres de progression */}
+                    {totalTasks > 0 && (
+                      <div className="mb-1">
+                        <div className="w-full bg-gray-200 rounded-full h-2">
+                          <div 
+                            className="bg-green-500 h-2 rounded-full transition-all"
+                            style={{ width: `${taskProgress}%` }}
+                          />
+                        </div>
+                      </div>
+                    )}
                   </div>
+                  
                   <div className="flex gap-2">
                     <button
                       onClick={() => startEditing(project)}
@@ -499,9 +559,10 @@ export default function Home() {
                 </>
               )}
             </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  );
+          );
+        })}
+      </ul>
+    )}
+  </div>
+);
 }
