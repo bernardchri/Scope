@@ -24,6 +24,9 @@ interface ProjectStore {
   
   addField: (projectId: string, componentId: string, field: Field) => void;
   deleteField: (projectId: string, componentId: string, fieldId: string) => void;
+  
+  linkTaskToField: (projectId: string, componentId: string, taskId: string, fieldId: string) => void;
+  unlinkTaskFromField: (projectId: string, componentId: string, taskId: string, fieldId: string) => void;
 }
 
 export const useProjectStore = create<ProjectStore>((set, get) => ({
@@ -168,6 +171,56 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
               components: p.components.map(c =>
                 c.id === componentId
                   ? { ...c, fields: c.fields.filter(f => f.id !== fieldId) }
+                  : c
+              )
+            }
+          : p
+      )
+    }));
+    saveProjects(get().projects);
+  },
+  
+  linkTaskToField: (projectId, componentId, taskId, fieldId) => {
+    set((state) => ({
+      projects: state.projects.map(p =>
+        p.id === projectId
+          ? {
+              ...p,
+              components: p.components.map(c =>
+                c.id === componentId
+                  ? {
+                      ...c,
+                      tasks: c.tasks.map(t =>
+                        t.id === taskId
+                          ? { ...t, linkedFieldIds: [...new Set([...t.linkedFieldIds, fieldId])] }
+                          : t
+                      )
+                    }
+                  : c
+              )
+            }
+          : p
+      )
+    }));
+    saveProjects(get().projects);
+  },
+  
+  unlinkTaskFromField: (projectId, componentId, taskId, fieldId) => {
+    set((state) => ({
+      projects: state.projects.map(p =>
+        p.id === projectId
+          ? {
+              ...p,
+              components: p.components.map(c =>
+                c.id === componentId
+                  ? {
+                      ...c,
+                      tasks: c.tasks.map(t =>
+                        t.id === taskId
+                          ? { ...t, linkedFieldIds: t.linkedFieldIds.filter(id => id !== fieldId) }
+                          : t
+                      )
+                    }
                   : c
               )
             }
