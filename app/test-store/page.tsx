@@ -26,7 +26,7 @@ export default function TestStore() {
 
   return (
     <div className="p-8">
-      <h1>Test Store</h1>
+      <h1>Page de Test Store</h1>
       <p>Valeur stockée : <strong>{storedValue}</strong></p>
       <input value={value} onChange={(e) => setValue(e.target.value)} />
       <button onClick={saveValue}>Sauvegarder</button>
