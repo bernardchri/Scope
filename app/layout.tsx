@@ -1,22 +1,27 @@
+'use client';
 
 import '../styles/global.css';
+import { useEffect } from 'react';
+import { useProjectStore } from '@/lib/projectStore';
+import { loadProjects } from '@/lib/persistence';
 
 export default function RootLayout({
   children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+}: {
+  children: React.ReactNode
+}) {
+  const setProjects = useProjectStore(state => state.setProjects);
+
+  useEffect(() => {
+    // Charger les projets au démarrage
+    loadProjects().then(projects => {
+      setProjects(projects);
+    });
+  }, [setProjects]);
+
   return (
-    <html lang="en">
-      <body
-        className={` antialiased`}
-      >
-        <nav className="flex gap-2 justify-between align-baseline items-center">
-          <a href="/">Accueil</a>
-          <a href="/test-store">Test Store</a>
-        </nav>
-        {children}
-      </body>
+    <html lang="fr">
+      <body>{children}</body>
     </html>
   );
 }
