@@ -226,7 +226,7 @@ Permettre d'organiser mon travail dans la création d'une application, d'un site
 ## améliorations
 
 ### global
-- [ ]  dev : Refactorisation des éléments 
+- [ ] Dev : Refactorisation des éléments 
 - [ ] ui : Installation et utilisation de shadcn/ui 
 - [ ] v2 ux : ajouter des options globales à scope
 - [ ] v2 ux: j'aimerai améliorer visuellement l'ensemble. Au clic sur le projet, avoir la liste des composants dans un panneau à gauche, et les détails dans un panneau à droite. Dans ce panneau de droite avoir l'image de référence et 
@@ -245,9 +245,9 @@ Permettre d'organiser mon travail dans la création d'une application, d'un site
 
 ### Les todolists
 - [X] dev : Ajouter une catégorie : "front-end", "back-end","seo","motion". (par défaut front-end)
+- [x] ux : Avoir la possibilité de modifier une tache
 - [ ] ux : A la création d'une nouvelle tache avoir un select à gauche du champ de nom
 - [ ] ux : Afficher la catégorie avant le nom de la tache. 
-- [ ] ux : Avoir la possibilité de modifier une tache
 - [ ] ux : Bouton ajouter une nouvelle tache 
 - [ ] ui : Visuellement gagner de la Par défaut ne pas relier directement à champ pour
 - [ ] ux : améliorer la manière dont on crée les nouvelle tâche, l'idéal serait de ne pas avoir à toucher la souris à la création de plusieurs todo. un champ texte en dessous de la liste, Entrée pour valider, on rentre dans de nouveau dans ce champs
@@ -261,4 +261,34 @@ Permettre d'organiser mon travail dans la création d'une application, d'un site
 
 ## Liste des composants
 - [ ] ux: ajouter la possibilité de dupliquer un composants afficher le select à gauche du champ nom 
-- 
+
+
+
+
+## Prochaine étape CLaude :
+
+Ma recommandation 🎯
+Ordre d'exécution :
+
+Installer shadcn/ui (5 min)
+Remplacer progressivement les éléments HTML de base par shadcn
+
+Commencer par Button, Input, Card
+Ça améliore immédiatement le look
+
+
+Découper en petits composants au fur et à mesure
+
+Pas besoin de tout refactoriser d'un coup
+Fais-le feature par feature
+
+
+
+Exemple de roadmap :
+
+Jour 1 : Install shadcn + remplacer tous les <button> par <Button>
+Jour 2 : Créer ComponentCard et ProjectCard
+Jour 3 : Créer les formulaires avec Dialog
+Jour 4 : Ajouter Tabs dans ComponentDetail
+Jour 5 : Polish général
+

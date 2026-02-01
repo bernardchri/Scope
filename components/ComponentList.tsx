@@ -5,6 +5,7 @@ import { useProjectStore } from '@/lib/projectStore';
 import { Component, ComponentCategory, TaskCategory } from '@/lib/types';
 import { CATEGORY_LABELS, getCategoryLabel, getCategoryColor } from '@/lib/categoryHelpers';
 import { getTaskStatsByCategory, getTaskCategoryLabel } from '@/lib/taskCategoryHelpers';
+import ComponentCard from './ComponentCard';
 
 interface ComponentListProps {
   projectId: string;
@@ -17,7 +18,7 @@ export default function ComponentList({ projectId }: ComponentListProps) {
   const addComponent = useProjectStore(state => state.addComponent);
   const deleteComponent = useProjectStore(state => state.deleteComponent);
   const canDeleteComponent = useProjectStore(state => state.canDeleteComponent);
-  
+
   const [newComponentName, setNewComponentName] = useState('');
   const [newComponentDescription, setNewComponentDescription] = useState('');
   const [newComponentCategory, setNewComponentCategory] = useState<ComponentCategory>('element');
@@ -29,7 +30,7 @@ export default function ComponentList({ projectId }: ComponentListProps) {
 
   function handleCreateComponent() {
     if (!newComponentName.trim()) return;
-    
+
     const newComponent: Component = {
       id: `component-${Date.now()}`,
       name: newComponentName,
@@ -38,7 +39,7 @@ export default function ComponentList({ projectId }: ComponentListProps) {
       instances: [],
       tasks: []
     };
-    
+
     addComponent(activeProject.id, newComponent);
     setNewComponentName('');
     setNewComponentDescription('');
@@ -51,7 +52,7 @@ export default function ComponentList({ projectId }: ComponentListProps) {
       const usages = activeProject.components.filter(c =>
         c.instances.some(i => i.componentId === componentId)
       );
-      
+
       alert(`Impossible de supprimer ce composant, il est utilisé dans ${usages.length} composant(s) : ${usages.map(c => c.name).join(', ')}`);
       return;
     }
@@ -67,7 +68,7 @@ export default function ComponentList({ projectId }: ComponentListProps) {
       >
         ← Retour aux projets
       </button>
-      
+
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-2xl font-bold">{activeProject.name}</h1>
         <button
@@ -88,14 +89,14 @@ export default function ComponentList({ projectId }: ComponentListProps) {
             className="border p-2 w-full mb-2"
             autoFocus
           />
-          
+
           <textarea
             value={newComponentDescription}
             onChange={(e) => setNewComponentDescription(e.target.value)}
             placeholder="Description (optionnelle)"
             className="border p-2 w-full mb-2 h-20"
           />
-          
+
           <select
             value={newComponentCategory}
             onChange={(e) => setNewComponentCategory(e.target.value as ComponentCategory)}
@@ -107,7 +108,7 @@ export default function ComponentList({ projectId }: ComponentListProps) {
               </option>
             ))}
           </select>
-          
+
           <div className="flex gap-2">
             <button
               onClick={handleCreateComponent}
@@ -129,7 +130,7 @@ export default function ComponentList({ projectId }: ComponentListProps) {
           </div>
         </div>
       )}
-      
+
       {activeProject.components.length === 0 ? (
         <p className="text-gray-500">Aucun composant</p>
       ) : (
@@ -137,18 +138,16 @@ export default function ComponentList({ projectId }: ComponentListProps) {
           {activeProject.components.map(component => {
             const totalTasks = component.tasks.length;
             const completedTasks = component.tasks.filter(t => t.completed).length;
-            
+
             // Calcul des stats par catégorie
             const taskStats = getTaskStatsByCategory(component.tasks);
-            
             const taskProgress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
-
             const usageCount = activeProject.components.reduce((count, c) => {
               return count + c.instances.filter(i => i.componentId === component.id).length;
             }, 0);
 
             const canDelete = canDeleteComponent(activeProject.id, component.id);
-            
+
             return (
               <li key={component.id} className="border p-4 rounded">
                 <div
@@ -156,43 +155,35 @@ export default function ComponentList({ projectId }: ComponentListProps) {
                   className="cursor-pointer mb-2"
                 >
                   <div className="flex items-start gap-3 mb-2">
-                    {component.imageBase64 && (
-                      <img 
-                        src={component.imageBase64} 
-                        alt={component.name}
-                        className="w-16 h-16 object-cover rounded border flex-shrink-0"
-                      />
-                    )}
-                    
+
                     <div className="flex-1">
                       <div className="flex items-start gap-2 mb-2">
-                        <h3 className="font-semibold text-lg">{component.name}</h3>
+
                         <span className={`text-xs px-2 py-1 rounded ${getCategoryColor(component.category)}`}>
                           {getCategoryLabel(component.category)}
                         </span>
+                        <h3 className="font-semibold text-lg">{component.name}</h3>
                       </div>
-
                       {component.description && (
                         <p className="text-sm text-gray-600 mb-2 italic">
                           {component.description}
                         </p>
                       )}
-                      
+
                       {/* Badges par catégorie de tâche */}
                       <div className="flex gap-2 mb-2 flex-wrap">
                         {Object.entries(taskStats).map(([category, stats]) => {
                           if (stats.total === 0) return null;
-                          
+
                           const isComplete = stats.completed === stats.total;
-                          
+
                           return (
                             <span
                               key={category}
-                              className={`text-xs px-2 py-1 rounded ${
-                                isComplete
-                                  ? 'bg-green-100 text-green-700'
-                                  : 'bg-gray-100 text-gray-700'
-                              }`}
+                              className={`text-xs px-2 py-1 rounded ${isComplete
+                                ? 'bg-green-100 text-green-700'
+                                : 'bg-gray-100 text-gray-700'
+                                }`}
                             >
                               {getTaskCategoryLabel(category as TaskCategory).split(' ')[0]} {stats.completed}/{stats.total}
                             </span>
@@ -210,33 +201,40 @@ export default function ComponentList({ projectId }: ComponentListProps) {
                             🔗 Utilisé {usageCount}× dans le projet
                           </span>
                         )}
-                        
+
                         {completedTasks === totalTasks && totalTasks > 0 && (
                           <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">
                             ✓ Terminé
                           </span>
                         )}
                       </div>
-                      
+
                       {totalTasks > 0 && (
                         <div className="w-full bg-gray-200 rounded-full h-2">
-                          <div 
+                          <div
                             className="bg-purple-500 h-2 rounded-full transition-all"
                             style={{ width: `${taskProgress}%` }}
                           />
                         </div>
                       )}
                     </div>
+
+                    {component.imageBase64 && (
+                      <img
+                        src={component.imageBase64}
+                        alt={component.name}
+                        className="w-60 h-16 rounded border flex-shrink-0 object-contain"
+                      />
+                    )}
                   </div>
                 </div>
-                
+
                 <button
                   onClick={() => handleDeleteComponent(component.id)}
-                  className={`px-3 py-1 rounded text-sm mt-2 ${
-                    canDelete 
-                      ? 'bg-red-500 text-white hover:bg-red-600' 
-                      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                  }`}
+                  className={`px-3 py-1 rounded text-sm mt-2 ${canDelete
+                    ? 'bg-red-500 text-white hover:bg-red-600'
+                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    }`}
                   disabled={!canDelete}
                   title={!canDelete ? 'Ce composant est utilisé ailleurs' : ''}
                 >

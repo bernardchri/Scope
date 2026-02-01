@@ -62,9 +62,9 @@ export default function ComponentDetail({ projectId, componentId }: ComponentDet
     if (!file) return;
 
     setImageError(null);
-    
+
     const result = await convertImageToBase64(file);
-    
+
     if (result.valid && result.base64) {
       setEditImageBase64(result.base64);
     } else {
@@ -85,7 +85,7 @@ export default function ComponentDetail({ projectId, componentId }: ComponentDet
       >
         ← Retour au projet {activeProject.name}
       </button>
-      
+
       <div className="mb-6">
         {isEditing ? (
           <div className="border p-4 rounded bg-gray-50">
@@ -97,14 +97,14 @@ export default function ComponentDetail({ projectId, componentId }: ComponentDet
               className="border p-2 w-full mb-2 text-2xl font-bold"
               autoFocus
             />
-            
+
             <textarea
               value={editDescription}
               onChange={(e) => setEditDescription(e.target.value)}
               placeholder="Description (optionnelle)"
               className="border p-2 w-full mb-2 h-20"
             />
-            
+
             <select
               value={editCategory}
               onChange={(e) => setEditCategory(e.target.value as ComponentCategory)}
@@ -119,12 +119,12 @@ export default function ComponentDetail({ projectId, componentId }: ComponentDet
 
             <div className="mb-4">
               <label className="block font-semibold mb-2">Image du composant</label>
-              
+
               {editImageBase64 ? (
                 <div className="relative inline-block">
-                  <img 
-                    src={editImageBase64} 
-                    alt="Aperçu" 
+                  <img
+                    src={editImageBase64}
+                    alt="Aperçu"
                     className="max-w-xs max-h-48 rounded border"
                   />
                   <button
@@ -153,12 +153,12 @@ export default function ComponentDetail({ projectId, componentId }: ComponentDet
                   <p className="text-xs text-gray-500 mt-1">Maximum 1 MB</p>
                 </div>
               )}
-              
+
               {imageError && (
                 <p className="text-red-500 text-sm mt-2">{imageError}</p>
               )}
             </div>
-            
+
             <div className="flex gap-2">
               <button
                 onClick={handleSaveEdit}
@@ -176,15 +176,9 @@ export default function ComponentDetail({ projectId, componentId }: ComponentDet
           </div>
         ) : (
           <div>
+
             <div className="flex items-start gap-4 mb-4">
-              {activeComponent.imageBase64 && (
-                <img 
-                  src={activeComponent.imageBase64} 
-                  alt={activeComponent.name}
-                  className="w-24 h-24 object-cover rounded border"
-                />
-              )}
-              
+
               <div className="flex-1">
                 <div className="flex items-center gap-3 mb-2">
                   <h1 className="text-2xl font-bold">{activeComponent.name}</h1>
@@ -198,7 +192,7 @@ export default function ComponentDetail({ projectId, componentId }: ComponentDet
                     Modifier
                   </button>
                 </div>
-                
+
                 {activeComponent.description && (
                   <p className="text-gray-600 italic">
                     {activeComponent.description}
@@ -206,11 +200,21 @@ export default function ComponentDetail({ projectId, componentId }: ComponentDet
                 )}
               </div>
             </div>
+
+            <div className='py-4'>
+              {activeComponent.imageBase64 && (
+                <img
+                  src={activeComponent.imageBase64}
+                  alt={activeComponent.name}
+                  className="w-full h-auto object-cover rounded border"
+                />
+              )}
+            </div>
           </div>
         )}
       </div>
 
-      <TaskList 
+      <TaskList
         projectId={projectId}
         componentId={componentId}
         tasks={activeComponent.tasks}

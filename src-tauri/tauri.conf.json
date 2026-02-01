@@ -13,7 +13,7 @@
     "windows": [
       {
         "title": "scope",
-        "width": 800,
+        "width": 1000,
         "height": 600,
         "resizable": true,
         "fullscreen": false
@@ -26,6 +26,25 @@
   "bundle": {
     "active": true,
     "targets": "all",
+    "macOS": {
+      "dmg": {
+        "appPosition": {
+          "x": 180,
+          "y": 170
+        },
+        "applicationFolderPosition": {
+          "x": 480,
+          "y": 170
+        },
+        "windowSize": {
+          "height": 400,
+          "width": 660
+        }
+      },
+      "files": {},
+      "hardenedRuntime": true,
+      "minimumSystemVersion": "10.13"
+    },
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",

@@ -16,25 +16,25 @@ export default function TaskList({ projectId, componentId, tasks }: TaskListProp
   const deleteTask = useProjectStore(state => state.deleteTask);
   const toggleTask = useProjectStore(state => state.toggleTask);
   const updateTask = useProjectStore(state => state.updateTask); // 🆕
-  
+
   const [newTaskName, setNewTaskName] = useState('');
   const [newTaskCategory, setNewTaskCategory] = useState<TaskCategory>('frontend'); // 🆕
   const [isCreatingTask, setIsCreatingTask] = useState(false);
-  
+
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null); // 🆕
   const [editTaskName, setEditTaskName] = useState(''); // 🆕
   const [editTaskCategory, setEditTaskCategory] = useState<TaskCategory>('frontend'); // 🆕
 
   function handleCreateTask() {
     if (!newTaskName.trim()) return;
-    
+
     const newTask: Task = {
       id: `task-${Date.now()}`,
       name: newTaskName,
       completed: false,
       category: newTaskCategory // 🆕
     };
-    
+
     addTask(projectId, componentId, newTask);
     setNewTaskName('');
     setNewTaskCategory('frontend'); // 🆕 Reset
@@ -64,58 +64,10 @@ export default function TaskList({ projectId, componentId, tasks }: TaskListProp
     <div className="mb-8">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-semibold">Tâches</h2>
-        <button
-          onClick={() => setIsCreatingTask(true)}
-          className="bg-blue-500 text-white px-4 py-2 rounded"
-        >
-          Nouvelle tâche
-        </button>
+
       </div>
 
-      {isCreatingTask && (
-        <div className="mb-4 border p-4 rounded bg-gray-50">
-          <input
-            type="text"
-            value={newTaskName}
-            onChange={(e) => setNewTaskName(e.target.value)}
-            placeholder="Nom de la tâche"
-            className="border p-2 w-full mb-2"
-            autoFocus
-          />
-          
-          {/* 🆕 Sélection de catégorie */}
-          <select
-            value={newTaskCategory}
-            onChange={(e) => setNewTaskCategory(e.target.value as TaskCategory)}
-            className="border p-2 w-full mb-2"
-          >
-            {Object.entries(TASK_CATEGORY_LABELS).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
 
-          <div className="flex gap-2">
-            <button
-              onClick={handleCreateTask}
-              className="bg-green-500 text-white px-4 py-2 rounded"
-            >
-              Créer
-            </button>
-            <button
-              onClick={() => {
-                setIsCreatingTask(false);
-                setNewTaskName('');
-                setNewTaskCategory('frontend');
-              }}
-              className="bg-gray-300 px-4 py-2 rounded"
-            >
-              Annuler
-            </button>
-          </div>
-        </div>
-      )}
 
       {tasks.length === 0 ? (
         <p className="text-gray-500">Aucune tâche</p>
@@ -133,7 +85,7 @@ export default function TaskList({ projectId, componentId, tasks }: TaskListProp
                     className="border p-2 w-full mb-2"
                     autoFocus
                   />
-                  
+
                   <select
                     value={editTaskCategory}
                     onChange={(e) => setEditTaskCategory(e.target.value as TaskCategory)}
@@ -183,7 +135,7 @@ export default function TaskList({ projectId, componentId, tasks }: TaskListProp
                       </div>
                     </div>
                   </div>
-                  
+
                   <div className="flex gap-2">
                     <button
                       onClick={() => startEditingTask(task)}
@@ -204,6 +156,61 @@ export default function TaskList({ projectId, componentId, tasks }: TaskListProp
           ))}
         </ul>
       )}
+
+      {!isCreatingTask && <button
+        onClick={() => setIsCreatingTask(true)}
+        className="bg-blue-500 text-white px-4 py-2 rounded my-4 w-full"
+      >
+        Nouvelle tâche
+      </button>
+      }
+
+      {isCreatingTask && (
+        <div className="mb-4 border p-4 rounded bg-gray-50 mt-4">
+          <input
+            type="text"
+            value={newTaskName}
+            onChange={(e) => setNewTaskName(e.target.value)}
+            placeholder="Nom de la tâche"
+            className="border p-2 w-full mb-2"
+            autoFocus
+          />
+
+          {/* 🆕 Sélection de catégorie */}
+          <select
+            value={newTaskCategory}
+            onChange={(e) => setNewTaskCategory(e.target.value as TaskCategory)}
+            className="border p-2 w-full mb-2"
+          >
+            {Object.entries(TASK_CATEGORY_LABELS).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+
+          <div className="flex gap-2">
+            <button
+              onClick={handleCreateTask}
+              className="bg-green-500 text-white px-4 py-2 rounded w-full"
+            >
+              Créer
+            </button>
+            <button
+              onClick={() => {
+                setIsCreatingTask(false);
+                setNewTaskName('');
+                setNewTaskCategory('frontend');
+              }}
+              className="bg-gray-300 px-4 py-2 rounded"
+            >
+              Annuler
+            </button>
+          </div>
+        </div>
+      )}
     </div>
+
+
   );
 }

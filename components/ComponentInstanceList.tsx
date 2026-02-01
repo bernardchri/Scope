@@ -123,7 +123,7 @@ export default function ComponentInstanceList({
         </span>
       </div>
       <p className="text-sm text-gray-500">
-        {component.tasks.length} tâche(s) · {component.fields.length} champ(s)
+        {component.tasks.length} tâche(s) 
       </p>
       {component.description && (
         <p className="text-xs text-gray-400 italic mt-1">
