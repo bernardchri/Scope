@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useProjectStore } from '@/lib/projectStore';
 import { Component, ComponentInstance } from '@/lib/types';
+import { getCategoryLabel, getCategoryColor } from '@/lib/categoryHelpers'; // 🆕
 
 interface ComponentInstanceListProps {
   projectId: string;
@@ -24,7 +25,6 @@ export default function ComponentInstanceList({
   const [isAdding, setIsAdding] = useState(false);
   const [selectedComponentId, setSelectedComponentId] = useState('');
 
-  // Grouper les instances par composant pour affichage
   const instancesGrouped = instances.reduce((acc, instance) => {
     const component = allComponents.find(c => c.id === instance.componentId);
     if (!component) return acc;
@@ -47,7 +47,6 @@ export default function ComponentInstanceList({
     setIsAdding(false);
   }
 
-  // Filtrer les composants disponibles (ne pas montrer le composant lui-même)
   const availableComponents = allComponents.filter(c => c.id !== componentId);
 
   return (
@@ -74,7 +73,7 @@ export default function ComponentInstanceList({
             <option value="">-- Choisir --</option>
             {availableComponents.map(comp => (
               <option key={comp.id} value={comp.id}>
-                {comp.name}
+                {getCategoryLabel(comp.category)} - {comp.name}  {/* 🆕 Afficher catégorie */}
               </option>
             ))}
           </select>
@@ -106,12 +105,27 @@ export default function ComponentInstanceList({
           {Object.values(instancesGrouped).map(({ component, instances: compInstances }) => (
             compInstances.map((instance, index) => (
               <li key={instance.id} className="border p-4 rounded">
-                <div className="flex justify-between items-center">
+                <div className="flex justify-between items-start">
                   <div className="flex-1">
-                    <span className="font-semibold">{component.name} #{index + 1}</span>
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="font-semibold">{component.name} #{index + 1}</span>
+                      {/* 🆕 Badge catégorie mini */}
+                      <span className={`text-xs px-2 py-0.5 rounded ${getCategoryColor(component.category)}`}>
+                        {getCategoryLabel(component.category).split(' ')[0]} {/* Juste l'emoji */}
+                      </span>
+                    </div>
                     <p className="text-sm text-gray-500">
                       {component.tasks.length} tâche(s) · {component.fields.length} champ(s)
                     </p>
+                    {/* 🆕 Description courte */}
+                    {component.description && (
+                      <p className="text-xs text-gray-400 italic mt-1">
+                        {component.description.length > 50 
+                          ? component.description.substring(0, 50) + '...' 
+                          : component.description
+                        }
+                      </p>
+                    )}
                   </div>
                   <div className="flex gap-2">
                     <button

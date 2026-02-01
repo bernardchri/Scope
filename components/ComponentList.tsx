@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { useProjectStore } from '@/lib/projectStore';
-import { Component } from '@/lib/types';
+import { Component, ComponentCategory } from '@/lib/types';
+import { CATEGORY_LABELS, getCategoryLabel, getCategoryColor } from '@/lib/categoryHelpers'; // 🆕
 
 interface ComponentListProps {
   projectId: string;
@@ -14,9 +15,11 @@ export default function ComponentList({ projectId }: ComponentListProps) {
   const setActiveComponent = useProjectStore(state => state.setActiveComponent);
   const addComponent = useProjectStore(state => state.addComponent);
   const deleteComponent = useProjectStore(state => state.deleteComponent);
-  const canDeleteComponent = useProjectStore(state => state.canDeleteComponent); // 🆕
+  const canDeleteComponent = useProjectStore(state => state.canDeleteComponent);
   
   const [newComponentName, setNewComponentName] = useState('');
+  const [newComponentDescription, setNewComponentDescription] = useState(''); // 🆕
+  const [newComponentCategory, setNewComponentCategory] = useState<ComponentCategory>('element'); // 🆕
   const [isCreatingComponent, setIsCreatingComponent] = useState(false);
 
   const activeProject = projects.find(p => p.id === projectId);
@@ -29,20 +32,22 @@ export default function ComponentList({ projectId }: ComponentListProps) {
     const newComponent: Component = {
       id: `component-${Date.now()}`,
       name: newComponentName,
-      instances: [], // 🆕
+      description: newComponentDescription || undefined, // 🆕
+      category: newComponentCategory, // 🆕
+      instances: [],
       tasks: [],
       fields: []
     };
     
     addComponent(activeProject.id, newComponent);
     setNewComponentName('');
+    setNewComponentDescription(''); // 🆕
+    setNewComponentCategory('element'); // 🆕
     setIsCreatingComponent(false);
   }
 
   function handleDeleteComponent(componentId: string) {
-    // 🆕 Vérifier si on peut supprimer
     if (!canDeleteComponent(activeProject.id, componentId)) {
-      // Compter où il est utilisé
       const usages = activeProject.components.filter(c =>
         c.instances.some(i => i.componentId === componentId)
       );
@@ -83,6 +88,28 @@ export default function ComponentList({ projectId }: ComponentListProps) {
             className="border p-2 w-full mb-2"
             autoFocus
           />
+          
+          {/* 🆕 Description */}
+          <textarea
+            value={newComponentDescription}
+            onChange={(e) => setNewComponentDescription(e.target.value)}
+            placeholder="Description (optionnelle)"
+            className="border p-2 w-full mb-2 h-20"
+          />
+          
+          {/* 🆕 Catégorie */}
+          <select
+            value={newComponentCategory}
+            onChange={(e) => setNewComponentCategory(e.target.value as ComponentCategory)}
+            className="border p-2 w-full mb-2"
+          >
+            {Object.entries(CATEGORY_LABELS).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+          
           <div className="flex gap-2">
             <button
               onClick={handleCreateComponent}
@@ -94,6 +121,8 @@ export default function ComponentList({ projectId }: ComponentListProps) {
               onClick={() => {
                 setIsCreatingComponent(false);
                 setNewComponentName('');
+                setNewComponentDescription(''); // 🆕
+                setNewComponentCategory('element'); // 🆕
               }}
               className="bg-gray-300 px-4 py-2 rounded"
             >
@@ -108,7 +137,6 @@ export default function ComponentList({ projectId }: ComponentListProps) {
       ) : (
         <ul className="space-y-2">
           {activeProject.components.map(component => {
-            // Stats du composant
             const totalTasks = component.tasks.length;
             const completedTasks = component.tasks.filter(t => t.completed).length;
             const totalFields = component.fields.length;
@@ -118,7 +146,6 @@ export default function ComponentList({ projectId }: ComponentListProps) {
             
             const taskProgress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
-            // 🆕 Compter où ce composant est utilisé
             const usageCount = activeProject.components.reduce((count, c) => {
               return count + c.instances.filter(i => i.componentId === component.id).length;
             }, 0);
@@ -131,7 +158,20 @@ export default function ComponentList({ projectId }: ComponentListProps) {
                   onClick={() => setActiveComponent(component.id)}
                   className="cursor-pointer mb-2"
                 >
-                  <h3 className="font-semibold mb-2">{component.name}</h3>
+                  <div className="flex items-start gap-2 mb-2">
+                    <h3 className="font-semibold text-lg">{component.name}</h3>
+                    {/* 🆕 Badge catégorie */}
+                    <span className={`text-xs px-2 py-1 rounded ${getCategoryColor(component.category)}`}>
+                      {getCategoryLabel(component.category)}
+                    </span>
+                  </div>
+
+                  {/* 🆕 Description */}
+                  {component.description && (
+                    <p className="text-sm text-gray-600 mb-2 italic">
+                      {component.description}
+                    </p>
+                  )}
                   
                   {/* Badges */}
                   <div className="flex gap-2 mb-2 flex-wrap">
@@ -142,7 +182,6 @@ export default function ComponentList({ projectId }: ComponentListProps) {
                       {totalFields} champ{totalFields > 1 ? 's' : ''}
                     </span>
                     
-                    {/* 🆕 Badge d'utilisation */}
                     {component.instances.length > 0 && (
                       <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">
                         {component.instances.length} instance{component.instances.length > 1 ? 's' : ''}
@@ -168,7 +207,6 @@ export default function ComponentList({ projectId }: ComponentListProps) {
                     )}
                   </div>
                   
-                  {/* Barre de progression tâches */}
                   {totalTasks > 0 && (
                     <div className="w-full bg-gray-200 rounded-full h-2">
                       <div 

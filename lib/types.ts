@@ -1,3 +1,13 @@
+export type ComponentCategory = 
+  | 'template'
+  | 'section'
+  | 'composition'
+  | 'element'
+  | 'navigation'
+  | 'media'
+  | 'form'
+  | 'content';
+
 export interface ComponentInstance {
   id: string;
   componentId: string;
@@ -20,7 +30,9 @@ export interface Task {
 export interface Component {
   id: string;
   name: string;
-  instances: ComponentInstance[]; // 🆕
+  description?: string;           // 🆕
+  category: ComponentCategory;    // 🆕
+  instances: ComponentInstance[];
   tasks: Task[];
   fields: Field[];
 }

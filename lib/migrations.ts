@@ -5,7 +5,9 @@ export function migrateProjectsToV2(projects: Project[]): Project[] {
     ...project,
     components: project.components.map(component => ({
       ...component,
-      instances: (component as any).instances || [] // Ajouter instances si manquant
+      instances: (component as any).instances || [],
+      description: (component as any).description || undefined,  // 🆕
+      category: (component as any).category || 'element'         // 🆕 Défaut: element
     }))
   }));
 }
