@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useProjectStore } from '@/lib/projectStore';
 import { ComponentCategory } from '@/lib/types';
 import { getCategoryLabel, getCategoryColor, CATEGORY_LABELS } from '@/lib/categoryHelpers';
+import { convertImageToBase64 } from '@/lib/imageHelpers'; // 🆕
 import TaskList from './TaskList';
 import FieldList from './FieldList';
 import ComponentInstanceList from './ComponentInstanceList';
@@ -16,42 +17,67 @@ interface ComponentDetailProps {
 export default function ComponentDetail({ projectId, componentId }: ComponentDetailProps) {
   const projects = useProjectStore(state => state.projects);
   const setActiveComponent = useProjectStore(state => state.setActiveComponent);
-  const updateComponent = useProjectStore(state => state.updateComponent); // 🆕
+  const updateComponent = useProjectStore(state => state.updateComponent);
 
-  const [isEditing, setIsEditing] = useState(false); // 🆕
-  const [editName, setEditName] = useState(''); // 🆕
-  const [editDescription, setEditDescription] = useState(''); // 🆕
-  const [editCategory, setEditCategory] = useState<ComponentCategory>('element'); // 🆕
+  const [isEditing, setIsEditing] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [editDescription, setEditDescription] = useState('');
+  const [editCategory, setEditCategory] = useState<ComponentCategory>('element');
+  const [editImageBase64, setEditImageBase64] = useState<string | undefined>(undefined); // 🆕
+  const [imageError, setImageError] = useState<string | null>(null); // 🆕
 
   const activeProject = projects.find(p => p.id === projectId);
   const activeComponent = activeProject?.components.find(c => c.id === componentId);
 
   if (!activeProject || !activeComponent) return null;
 
-  // 🆕 Démarrer l'édition
   function startEditing() {
     setEditName(activeComponent.name);
     setEditDescription(activeComponent.description || '');
     setEditCategory(activeComponent.category);
+    setEditImageBase64(activeComponent.imageBase64); // 🆕
+    setImageError(null); // 🆕
     setIsEditing(true);
   }
 
-  // 🆕 Sauvegarder les modifications
   function handleSaveEdit() {
     if (!editName.trim()) return;
 
     updateComponent(activeProject.id, activeComponent.id, {
       name: editName,
       description: editDescription || undefined,
-      category: editCategory
+      category: editCategory,
+      imageBase64: editImageBase64 // 🆕
     });
 
     setIsEditing(false);
   }
 
-  // 🆕 Annuler l'édition
   function handleCancelEdit() {
     setIsEditing(false);
+    setImageError(null); // 🆕
+  }
+
+  // 🆕 Gérer l'upload d'image
+  async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setImageError(null);
+    
+    const result = await convertImageToBase64(file);
+    
+    if (result.valid && result.base64) {
+      setEditImageBase64(result.base64);
+    } else {
+      setImageError(result.error || 'Erreur inconnue');
+    }
+  }
+
+  // 🆕 Supprimer l'image
+  function handleRemoveImage() {
+    setEditImageBase64(undefined);
+    setImageError(null);
   }
 
   return (
@@ -65,7 +91,7 @@ export default function ComponentDetail({ projectId, componentId }: ComponentDet
       
       <div className="mb-6">
         {isEditing ? (
-          // 🆕 Mode édition
+          // Mode édition
           <div className="border p-4 rounded bg-gray-50">
             <input
               type="text"
@@ -94,6 +120,49 @@ export default function ComponentDetail({ projectId, componentId }: ComponentDet
                 </option>
               ))}
             </select>
+
+            {/* 🆕 Section Image */}
+            <div className="mb-4">
+              <label className="block font-semibold mb-2">Image du composant</label>
+              
+              {editImageBase64 ? (
+                <div className="relative inline-block">
+                  <img 
+                    src={editImageBase64} 
+                    alt="Aperçu" 
+                    className="max-w-xs max-h-48 rounded border"
+                  />
+                  <button
+                    onClick={handleRemoveImage}
+                    className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center"
+                    type="button"
+                  >
+                    ×
+                  </button>
+                </div>
+              ) : (
+                <div className="border-2 border-dashed border-gray-300 rounded p-4 text-center">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    className="hidden"
+                    id="image-upload"
+                  />
+                  <label
+                    htmlFor="image-upload"
+                    className="cursor-pointer text-blue-500 hover:text-blue-700"
+                  >
+                    📷 Cliquer pour ajouter une image
+                  </label>
+                  <p className="text-xs text-gray-500 mt-1">Maximum 1 MB</p>
+                </div>
+              )}
+              
+              {imageError && (
+                <p className="text-red-500 text-sm mt-2">{imageError}</p>
+              )}
+            </div>
             
             <div className="flex gap-2">
               <button
@@ -113,25 +182,37 @@ export default function ComponentDetail({ projectId, componentId }: ComponentDet
         ) : (
           // Mode lecture
           <div>
-            <div className="flex items-center gap-3 mb-2">
-              <h1 className="text-2xl font-bold">{activeComponent.name}</h1>
-              <span className={`text-sm px-3 py-1 rounded ${getCategoryColor(activeComponent.category)}`}>
-                {getCategoryLabel(activeComponent.category)}
-              </span>
-              {/* 🆕 Bouton modifier */}
-              <button
-                onClick={startEditing}
-                className="bg-blue-500 text-white px-3 py-1 rounded text-sm ml-auto"
-              >
-                Modifier
-              </button>
+            <div className="flex items-start gap-4 mb-4">
+              {/* 🆕 Image à gauche */}
+              {activeComponent.imageBase64 && (
+                <img 
+                  src={activeComponent.imageBase64} 
+                  alt={activeComponent.name}
+                  className="w-24 h-24 object-cover rounded border"
+                />
+              )}
+              
+              <div className="flex-1">
+                <div className="flex items-center gap-3 mb-2">
+                  <h1 className="text-2xl font-bold">{activeComponent.name}</h1>
+                  <span className={`text-sm px-3 py-1 rounded ${getCategoryColor(activeComponent.category)}`}>
+                    {getCategoryLabel(activeComponent.category)}
+                  </span>
+                  <button
+                    onClick={startEditing}
+                    className="bg-blue-500 text-white px-3 py-1 rounded text-sm ml-auto"
+                  >
+                    Modifier
+                  </button>
+                </div>
+                
+                {activeComponent.description && (
+                  <p className="text-gray-600 italic">
+                    {activeComponent.description}
+                  </p>
+                )}
+              </div>
             </div>
-            
-            {activeComponent.description && (
-              <p className="text-gray-600 italic">
-                {activeComponent.description}
-              </p>
-            )}
           </div>
         )}
       </div>

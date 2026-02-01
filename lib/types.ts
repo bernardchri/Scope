@@ -30,8 +30,9 @@ export interface Task {
 export interface Component {
   id: string;
   name: string;
-  description?: string;           // 🆕
-  category: ComponentCategory;    // 🆕
+  description?: string;
+  category: ComponentCategory;
+  imageBase64?: string; // 🆕
   instances: ComponentInstance[];
   tasks: Task[];
   fields: Field[];

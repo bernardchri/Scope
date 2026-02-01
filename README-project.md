@@ -219,3 +219,36 @@ Permettre d'organiser mon travail dans la création d'une application, d'un site
     ]
     }
 ```
+
+
+---
+
+## améliorations
+
+### global
+- [ ]  dev : Refactorisation des éléments 
+- [ ] ui : Installation et utilisation de shadcn/ui 
+- [ ] v2 ux : ajouter des options globales à scope
+  
+
+## Composant list
+- [ ] ux : possibilité de trier en drag-and-drop l'ordre des composants
+- [ ] v2 : ux : possibilté de trier l'ordre des composants : trie par categorie, par taches à accomplir 
+
+## Composant detail 
+
+### Les todolists
+- [ ] dev : Ajouter une catégorie : "front-end", "back-end","seo","motion". (par défaut front-end)
+- [ ] ux : A la création d'une nouvelle tache avoir un select à gauche du champ de nom
+- [ ] ux : Afficher la catégorie avant le nom de la tache. 
+- [ ] ux : Avoir la possibilité de modifier une tache
+- [ ] ux : Bouton ajouter une nouvelle tache 
+- [ ] ui : Visuellement gagner de la Par défaut ne pas relier directement à champ pour
+- [ ] ux : améliorer la manière dont on crée les nouvelle tâche, l'idéal serait de ne pas avoir à toucher la souris à la création de plusieurs todo. un champ texte en dessous de la liste, Entrée pour valider, on rentre dans de nouveau dans ce champs
+
+### Champs CMS
+- [ ] rien pour le moment
+
+## Liste des composants
+- [ ] ux: ajouter la possibilité de dupliquer un composants afficher le select à gauche du champ nom 
+- 

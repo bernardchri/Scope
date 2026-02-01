@@ -6,8 +6,9 @@ export function migrateProjectsToV2(projects: Project[]): Project[] {
     components: project.components.map(component => ({
       ...component,
       instances: (component as any).instances || [],
-      description: (component as any).description || undefined,  // 🆕
-      category: (component as any).category || 'element'         // 🆕 Défaut: element
+      description: (component as any).description || undefined,
+      category: (component as any).category || 'element',
+      imageBase64: (component as any).imageBase64 || undefined // 🆕
     }))
   }));
 }

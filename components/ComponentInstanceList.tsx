@@ -104,45 +104,52 @@ export default function ComponentInstanceList({
         <ul className="space-y-2">
           {Object.values(instancesGrouped).map(({ component, instances: compInstances }) => (
             compInstances.map((instance, index) => (
-              <li key={instance.id} className="border p-4 rounded">
-                <div className="flex justify-between items-start">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="font-semibold">{component.name} #{index + 1}</span>
-                      {/* 🆕 Badge catégorie mini */}
-                      <span className={`text-xs px-2 py-0.5 rounded ${getCategoryColor(component.category)}`}>
-                        {getCategoryLabel(component.category).split(' ')[0]} {/* Juste l'emoji */}
-                      </span>
-                    </div>
-                    <p className="text-sm text-gray-500">
-                      {component.tasks.length} tâche(s) · {component.fields.length} champ(s)
-                    </p>
-                    {/* 🆕 Description courte */}
-                    {component.description && (
-                      <p className="text-xs text-gray-400 italic mt-1">
-                        {component.description.length > 50 
-                          ? component.description.substring(0, 50) + '...' 
-                          : component.description
-                        }
-                      </p>
-                    )}
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => setActiveComponent(component.id)}
-                      className="bg-blue-500 text-white px-3 py-1 rounded text-sm"
-                    >
-                      →
-                    </button>
-                    <button
-                      onClick={() => removeComponentInstance(projectId, componentId, instance.id)}
-                      className="bg-red-500 text-white px-3 py-1 rounded text-sm"
-                    >
-                      ×
-                    </button>
-                  </div>
-                </div>
-              </li>
+         <li key={instance.id} className="border p-4 rounded">
+  <div className="flex justify-between items-start gap-3">
+    {/* 🆕 Miniature */}
+    {component.imageBase64 && (
+      <img 
+        src={component.imageBase64} 
+        alt={component.name}
+        className="w-12 h-12 object-cover rounded border flex-shrink-0"
+      />
+    )}
+    
+    <div className="flex-1">
+      <div className="flex items-center gap-2 mb-1">
+        <span className="font-semibold">{component.name} #{index + 1}</span>
+        <span className={`text-xs px-2 py-0.5 rounded ${getCategoryColor(component.category)}`}>
+          {getCategoryLabel(component.category).split(' ')[0]}
+        </span>
+      </div>
+      <p className="text-sm text-gray-500">
+        {component.tasks.length} tâche(s) · {component.fields.length} champ(s)
+      </p>
+      {component.description && (
+        <p className="text-xs text-gray-400 italic mt-1">
+          {component.description.length > 50 
+            ? component.description.substring(0, 50) + '...' 
+            : component.description
+          }
+        </p>
+      )}
+    </div>
+    <div className="flex gap-2">
+      <button
+        onClick={() => setActiveComponent(component.id)}
+        className="bg-blue-500 text-white px-3 py-1 rounded text-sm"
+      >
+        →
+      </button>
+      <button
+        onClick={() => removeComponentInstance(projectId, componentId, instance.id)}
+        className="bg-red-500 text-white px-3 py-1 rounded text-sm"
+      >
+        ×
+      </button>
+    </div>
+  </div>
+</li>
             ))
           ))}
         </ul>
