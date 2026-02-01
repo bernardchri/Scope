@@ -1,3 +1,8 @@
+export interface ComponentInstance {
+  id: string;
+  componentId: string;
+}
+
 export interface Field {
   id: string;
   name: string;
@@ -9,12 +14,13 @@ export interface Task {
   id: string;
   name: string;
   completed: boolean;
-  linkedFieldIds: string[]; // IDs des champs liés à cette tâche
+  linkedFieldIds: string[];
 }
 
 export interface Component {
   id: string;
   name: string;
+  instances: ComponentInstance[]; // 🆕
   tasks: Task[];
   fields: Field[];
 }

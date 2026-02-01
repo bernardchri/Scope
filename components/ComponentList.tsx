@@ -14,6 +14,7 @@ export default function ComponentList({ projectId }: ComponentListProps) {
   const setActiveComponent = useProjectStore(state => state.setActiveComponent);
   const addComponent = useProjectStore(state => state.addComponent);
   const deleteComponent = useProjectStore(state => state.deleteComponent);
+  const canDeleteComponent = useProjectStore(state => state.canDeleteComponent); // 🆕
   
   const [newComponentName, setNewComponentName] = useState('');
   const [isCreatingComponent, setIsCreatingComponent] = useState(false);
@@ -28,6 +29,7 @@ export default function ComponentList({ projectId }: ComponentListProps) {
     const newComponent: Component = {
       id: `component-${Date.now()}`,
       name: newComponentName,
+      instances: [], // 🆕
       tasks: [],
       fields: []
     };
@@ -35,6 +37,21 @@ export default function ComponentList({ projectId }: ComponentListProps) {
     addComponent(activeProject.id, newComponent);
     setNewComponentName('');
     setIsCreatingComponent(false);
+  }
+
+  function handleDeleteComponent(componentId: string) {
+    // 🆕 Vérifier si on peut supprimer
+    if (!canDeleteComponent(activeProject.id, componentId)) {
+      // Compter où il est utilisé
+      const usages = activeProject.components.filter(c =>
+        c.instances.some(i => i.componentId === componentId)
+      );
+      
+      alert(`Impossible de supprimer ce composant, il est utilisé dans ${usages.length} composant(s) : ${usages.map(c => c.name).join(', ')}`);
+      return;
+    }
+
+    deleteComponent(activeProject.id, componentId);
   }
 
   return (
@@ -100,6 +117,13 @@ export default function ComponentList({ projectId }: ComponentListProps) {
             const linkedFields = linkedFieldsSet.size;
             
             const taskProgress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+
+            // 🆕 Compter où ce composant est utilisé
+            const usageCount = activeProject.components.reduce((count, c) => {
+              return count + c.instances.filter(i => i.componentId === component.id).length;
+            }, 0);
+
+            const canDelete = canDeleteComponent(activeProject.id, component.id);
             
             return (
               <li key={component.id} className="border p-4 rounded">
@@ -117,6 +141,19 @@ export default function ComponentList({ projectId }: ComponentListProps) {
                     <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
                       {totalFields} champ{totalFields > 1 ? 's' : ''}
                     </span>
+                    
+                    {/* 🆕 Badge d'utilisation */}
+                    {component.instances.length > 0 && (
+                      <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">
+                        {component.instances.length} instance{component.instances.length > 1 ? 's' : ''}
+                      </span>
+                    )}
+
+                    {usageCount > 0 && (
+                      <span className="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded">
+                        🔗 Utilisé {usageCount}× dans le projet
+                      </span>
+                    )}
                     
                     {completedTasks === totalTasks && totalTasks > 0 && (
                       <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">
@@ -143,8 +180,14 @@ export default function ComponentList({ projectId }: ComponentListProps) {
                 </div>
                 
                 <button
-                  onClick={() => deleteComponent(activeProject.id, component.id)}
-                  className="bg-red-500 text-white px-3 py-1 rounded text-sm mt-2"
+                  onClick={() => handleDeleteComponent(component.id)}
+                  className={`px-3 py-1 rounded text-sm mt-2 ${
+                    canDelete 
+                      ? 'bg-red-500 text-white hover:bg-red-600' 
+                      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  }`}
+                  disabled={!canDelete}
+                  title={!canDelete ? 'Ce composant est utilisé ailleurs' : ''}
                 >
                   Supprimer
                 </button>

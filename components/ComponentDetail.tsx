@@ -3,6 +3,7 @@
 import { useProjectStore } from '@/lib/projectStore';
 import TaskList from './TaskList';
 import FieldList from './FieldList';
+import ComponentInstanceList from './ComponentInstanceList'; // 🆕
 
 interface ComponentDetailProps {
   projectId: string;
@@ -26,10 +27,10 @@ export default function ComponentDetail({ projectId, componentId }: ComponentDet
       >
         ← Retour au projet {activeProject.name}
       </button>
-
+      
       <h1 className="text-2xl font-bold mb-6">{activeComponent.name}</h1>
 
-      <TaskList
+      <TaskList 
         projectId={projectId}
         componentId={componentId}
         tasks={activeComponent.tasks}
@@ -42,6 +43,16 @@ export default function ComponentDetail({ projectId, componentId }: ComponentDet
         fields={activeComponent.fields}
         tasks={activeComponent.tasks}
       />
+
+      {/* 🆕 Section Composants utilisés */}
+      <div className="mt-8">
+        <ComponentInstanceList
+          projectId={projectId}
+          componentId={componentId}
+          instances={activeComponent.instances}
+          allComponents={activeProject.components}
+        />
+      </div>
     </div>
   );
 }
