@@ -229,11 +229,17 @@ Permettre d'organiser mon travail dans la création d'une application, d'un site
 - [ ]  dev : Refactorisation des éléments 
 - [ ] ui : Installation et utilisation de shadcn/ui 
 - [ ] v2 ux : ajouter des options globales à scope
-  
+- [ ] v2 ux: j'aimerai améliorer visuellement l'ensemble. Au clic sur le projet, avoir la liste des composants dans un panneau à gauche, et les détails dans un panneau à droite. Dans ce panneau de droite avoir l'image de référence et 
+- [ ] Faire un export global de tout le projet sous forme de markdown
+
+## Projet liste
+- [ ] ux : Mettre une alerte avant de supprimer du contenu
 
 ## Composant list
 - [ ] ux : possibilité de trier en drag-and-drop l'ordre des composants
 - [ ] v2 : ux : possibilté de trier l'ordre des composants : trie par categorie, par taches à accomplir 
+- [ ] ux : Mettre une alerte avant de supprimer un composant
+
 
 ## Composant detail 
 
@@ -247,7 +253,12 @@ Permettre d'organiser mon travail dans la création d'une application, d'un site
 - [ ] ux : améliorer la manière dont on crée les nouvelle tâche, l'idéal serait de ne pas avoir à toucher la souris à la création de plusieurs todo. un champ texte en dessous de la liste, Entrée pour valider, on rentre dans de nouveau dans ce champs
 
 ### Champs CMS
-- [ ] rien pour le moment
+- [ ] ux : Ajouter une categorie "array", "repeteur", "acf lien tableau". 
+- [ ] V2 : ux Globalement je pense qu'il faudra gérer dans une option global les types de champs pour que cela s'adapte à la techno que l'on souhaite utiliser pour les projets.
+
+
+### Composants utilisés
+- [ ] ux : possibilité de changer l'ordre de la liste en drag and drop
 
 ## Liste des composants
 - [ ] ux: ajouter la possibilité de dupliquer un composants afficher le select à gauche du champ nom 
