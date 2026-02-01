@@ -8,23 +8,19 @@ export type ComponentCategory =
   | 'form'
   | 'content';
 
+export type TaskCategory = 'frontend' | 'backend' | 'seo' | 'motion'; // 🆕
+
 export interface ComponentInstance {
   id: string;
   componentId: string;
 }
 
-export interface Field {
-  id: string;
-  name: string;
-  type: 'text' | 'textarea' | 'image' | 'number' | 'date' | 'select' | 'checkbox';
-  required: boolean;
-}
 
 export interface Task {
   id: string;
   name: string;
   completed: boolean;
-  linkedFieldIds: string[];
+  category: TaskCategory; // 🆕
 }
 
 export interface Component {
@@ -32,10 +28,9 @@ export interface Component {
   name: string;
   description?: string;
   category: ComponentCategory;
-  imageBase64?: string; // 🆕
+  imageBase64?: string;
   instances: ComponentInstance[];
   tasks: Task[];
-  fields: Field[];
 }
 
 export interface Project {

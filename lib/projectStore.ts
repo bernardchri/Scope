@@ -3,15 +3,13 @@ import { ProjectStore } from './store/types';
 import { createProjectSlice } from './store/projectSlice';
 import { createComponentSlice } from './store/componentSlice';
 import { createTaskSlice } from './store/taskSlice';
-import { createFieldSlice } from './store/fieldSlice';
-import { createInstanceSlice } from './store/instanceSlice'; // 🆕
+import { createInstanceSlice } from './store/instanceSlice';
 import { saveProjects } from './persistence';
 
 export const useProjectStore = create<ProjectStore>()((set, get, api) => ({
   ...createProjectSlice(set),
-  ...createComponentSlice(set, get), // Seul celui-ci utilise get pour l'instant
+  ...createComponentSlice(set, get),
   ...createTaskSlice(set),
-  ...createFieldSlice(set),
   ...createInstanceSlice(set),
 }));
 

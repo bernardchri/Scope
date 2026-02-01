@@ -4,9 +4,8 @@ import { useState } from 'react';
 import { useProjectStore } from '@/lib/projectStore';
 import { ComponentCategory } from '@/lib/types';
 import { getCategoryLabel, getCategoryColor, CATEGORY_LABELS } from '@/lib/categoryHelpers';
-import { convertImageToBase64 } from '@/lib/imageHelpers'; // 🆕
+import { convertImageToBase64 } from '@/lib/imageHelpers';
 import TaskList from './TaskList';
-import FieldList from './FieldList';
 import ComponentInstanceList from './ComponentInstanceList';
 
 interface ComponentDetailProps {
@@ -23,8 +22,8 @@ export default function ComponentDetail({ projectId, componentId }: ComponentDet
   const [editName, setEditName] = useState('');
   const [editDescription, setEditDescription] = useState('');
   const [editCategory, setEditCategory] = useState<ComponentCategory>('element');
-  const [editImageBase64, setEditImageBase64] = useState<string | undefined>(undefined); // 🆕
-  const [imageError, setImageError] = useState<string | null>(null); // 🆕
+  const [editImageBase64, setEditImageBase64] = useState<string | undefined>(undefined);
+  const [imageError, setImageError] = useState<string | null>(null);
 
   const activeProject = projects.find(p => p.id === projectId);
   const activeComponent = activeProject?.components.find(c => c.id === componentId);
@@ -35,8 +34,8 @@ export default function ComponentDetail({ projectId, componentId }: ComponentDet
     setEditName(activeComponent.name);
     setEditDescription(activeComponent.description || '');
     setEditCategory(activeComponent.category);
-    setEditImageBase64(activeComponent.imageBase64); // 🆕
-    setImageError(null); // 🆕
+    setEditImageBase64(activeComponent.imageBase64);
+    setImageError(null);
     setIsEditing(true);
   }
 
@@ -47,7 +46,7 @@ export default function ComponentDetail({ projectId, componentId }: ComponentDet
       name: editName,
       description: editDescription || undefined,
       category: editCategory,
-      imageBase64: editImageBase64 // 🆕
+      imageBase64: editImageBase64
     });
 
     setIsEditing(false);
@@ -55,10 +54,9 @@ export default function ComponentDetail({ projectId, componentId }: ComponentDet
 
   function handleCancelEdit() {
     setIsEditing(false);
-    setImageError(null); // 🆕
+    setImageError(null);
   }
 
-  // 🆕 Gérer l'upload d'image
   async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -74,7 +72,6 @@ export default function ComponentDetail({ projectId, componentId }: ComponentDet
     }
   }
 
-  // 🆕 Supprimer l'image
   function handleRemoveImage() {
     setEditImageBase64(undefined);
     setImageError(null);
@@ -91,7 +88,6 @@ export default function ComponentDetail({ projectId, componentId }: ComponentDet
       
       <div className="mb-6">
         {isEditing ? (
-          // Mode édition
           <div className="border p-4 rounded bg-gray-50">
             <input
               type="text"
@@ -121,7 +117,6 @@ export default function ComponentDetail({ projectId, componentId }: ComponentDet
               ))}
             </select>
 
-            {/* 🆕 Section Image */}
             <div className="mb-4">
               <label className="block font-semibold mb-2">Image du composant</label>
               
@@ -180,10 +175,8 @@ export default function ComponentDetail({ projectId, componentId }: ComponentDet
             </div>
           </div>
         ) : (
-          // Mode lecture
           <div>
             <div className="flex items-start gap-4 mb-4">
-              {/* 🆕 Image à gauche */}
               {activeComponent.imageBase64 && (
                 <img 
                   src={activeComponent.imageBase64} 
@@ -220,14 +213,6 @@ export default function ComponentDetail({ projectId, componentId }: ComponentDet
       <TaskList 
         projectId={projectId}
         componentId={componentId}
-        tasks={activeComponent.tasks}
-        fields={activeComponent.fields}
-      />
-
-      <FieldList
-        projectId={projectId}
-        componentId={componentId}
-        fields={activeComponent.fields}
         tasks={activeComponent.tasks}
       />
 

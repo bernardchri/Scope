@@ -2,8 +2,9 @@
 
 import { useState } from 'react';
 import { useProjectStore } from '@/lib/projectStore';
-import { Component, ComponentCategory } from '@/lib/types';
-import { CATEGORY_LABELS, getCategoryLabel, getCategoryColor } from '@/lib/categoryHelpers'; // 🆕
+import { Component, ComponentCategory, TaskCategory } from '@/lib/types';
+import { CATEGORY_LABELS, getCategoryLabel, getCategoryColor } from '@/lib/categoryHelpers';
+import { getTaskStatsByCategory, getTaskCategoryLabel } from '@/lib/taskCategoryHelpers';
 
 interface ComponentListProps {
   projectId: string;
@@ -18,8 +19,8 @@ export default function ComponentList({ projectId }: ComponentListProps) {
   const canDeleteComponent = useProjectStore(state => state.canDeleteComponent);
   
   const [newComponentName, setNewComponentName] = useState('');
-  const [newComponentDescription, setNewComponentDescription] = useState(''); // 🆕
-  const [newComponentCategory, setNewComponentCategory] = useState<ComponentCategory>('element'); // 🆕
+  const [newComponentDescription, setNewComponentDescription] = useState('');
+  const [newComponentCategory, setNewComponentCategory] = useState<ComponentCategory>('element');
   const [isCreatingComponent, setIsCreatingComponent] = useState(false);
 
   const activeProject = projects.find(p => p.id === projectId);
@@ -32,17 +33,16 @@ export default function ComponentList({ projectId }: ComponentListProps) {
     const newComponent: Component = {
       id: `component-${Date.now()}`,
       name: newComponentName,
-      description: newComponentDescription || undefined, // 🆕
-      category: newComponentCategory, // 🆕
+      description: newComponentDescription || undefined,
+      category: newComponentCategory,
       instances: [],
-      tasks: [],
-      fields: []
+      tasks: []
     };
     
     addComponent(activeProject.id, newComponent);
     setNewComponentName('');
-    setNewComponentDescription(''); // 🆕
-    setNewComponentCategory('element'); // 🆕
+    setNewComponentDescription('');
+    setNewComponentCategory('element');
     setIsCreatingComponent(false);
   }
 
@@ -89,7 +89,6 @@ export default function ComponentList({ projectId }: ComponentListProps) {
             autoFocus
           />
           
-          {/* 🆕 Description */}
           <textarea
             value={newComponentDescription}
             onChange={(e) => setNewComponentDescription(e.target.value)}
@@ -97,7 +96,6 @@ export default function ComponentList({ projectId }: ComponentListProps) {
             className="border p-2 w-full mb-2 h-20"
           />
           
-          {/* 🆕 Catégorie */}
           <select
             value={newComponentCategory}
             onChange={(e) => setNewComponentCategory(e.target.value as ComponentCategory)}
@@ -121,8 +119,8 @@ export default function ComponentList({ projectId }: ComponentListProps) {
               onClick={() => {
                 setIsCreatingComponent(false);
                 setNewComponentName('');
-                setNewComponentDescription(''); // 🆕
-                setNewComponentCategory('element'); // 🆕
+                setNewComponentDescription('');
+                setNewComponentCategory('element');
               }}
               className="bg-gray-300 px-4 py-2 rounded"
             >
@@ -139,10 +137,9 @@ export default function ComponentList({ projectId }: ComponentListProps) {
           {activeProject.components.map(component => {
             const totalTasks = component.tasks.length;
             const completedTasks = component.tasks.filter(t => t.completed).length;
-            const totalFields = component.fields.length;
-            const linkedFieldsSet = new Set();
-            component.tasks.forEach(t => t.linkedFieldIds.forEach(id => linkedFieldsSet.add(id)));
-            const linkedFields = linkedFieldsSet.size;
+            
+            // Calcul des stats par catégorie
+            const taskStats = getTaskStatsByCategory(component.tasks);
             
             const taskProgress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
@@ -158,63 +155,79 @@ export default function ComponentList({ projectId }: ComponentListProps) {
                   onClick={() => setActiveComponent(component.id)}
                   className="cursor-pointer mb-2"
                 >
-                  <div className="flex items-start gap-2 mb-2">
-                    <h3 className="font-semibold text-lg">{component.name}</h3>
-                    {/* 🆕 Badge catégorie */}
-                    <span className={`text-xs px-2 py-1 rounded ${getCategoryColor(component.category)}`}>
-                      {getCategoryLabel(component.category)}
-                    </span>
-                  </div>
-
-                  {/* 🆕 Description */}
-                  {component.description && (
-                    <p className="text-sm text-gray-600 mb-2 italic">
-                      {component.description}
-                    </p>
-                  )}
-                  
-                  {/* Badges */}
-                  <div className="flex gap-2 mb-2 flex-wrap">
-                    <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded">
-                      {totalTasks} tâche{totalTasks > 1 ? 's' : ''}
-                    </span>
-                    <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
-                      {totalFields} champ{totalFields > 1 ? 's' : ''}
-                    </span>
-                    
-                    {component.instances.length > 0 && (
-                      <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">
-                        {component.instances.length} instance{component.instances.length > 1 ? 's' : ''}
-                      </span>
-                    )}
-
-                    {usageCount > 0 && (
-                      <span className="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded">
-                        🔗 Utilisé {usageCount}× dans le projet
-                      </span>
-                    )}
-                    
-                    {completedTasks === totalTasks && totalTasks > 0 && (
-                      <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">
-                        ✓ Terminé
-                      </span>
-                    )}
-                    
-                    {linkedFields < totalFields && totalFields > 0 && (
-                      <span className="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded">
-                        ⚠ {totalFields - linkedFields} champ{totalFields - linkedFields > 1 ? 's' : ''} non lié{totalFields - linkedFields > 1 ? 's' : ''}
-                      </span>
-                    )}
-                  </div>
-                  
-                  {totalTasks > 0 && (
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div 
-                        className="bg-purple-500 h-2 rounded-full transition-all"
-                        style={{ width: `${taskProgress}%` }}
+                  <div className="flex items-start gap-3 mb-2">
+                    {component.imageBase64 && (
+                      <img 
+                        src={component.imageBase64} 
+                        alt={component.name}
+                        className="w-16 h-16 object-cover rounded border flex-shrink-0"
                       />
+                    )}
+                    
+                    <div className="flex-1">
+                      <div className="flex items-start gap-2 mb-2">
+                        <h3 className="font-semibold text-lg">{component.name}</h3>
+                        <span className={`text-xs px-2 py-1 rounded ${getCategoryColor(component.category)}`}>
+                          {getCategoryLabel(component.category)}
+                        </span>
+                      </div>
+
+                      {component.description && (
+                        <p className="text-sm text-gray-600 mb-2 italic">
+                          {component.description}
+                        </p>
+                      )}
+                      
+                      {/* Badges par catégorie de tâche */}
+                      <div className="flex gap-2 mb-2 flex-wrap">
+                        {Object.entries(taskStats).map(([category, stats]) => {
+                          if (stats.total === 0) return null;
+                          
+                          const isComplete = stats.completed === stats.total;
+                          
+                          return (
+                            <span
+                              key={category}
+                              className={`text-xs px-2 py-1 rounded ${
+                                isComplete
+                                  ? 'bg-green-100 text-green-700'
+                                  : 'bg-gray-100 text-gray-700'
+                              }`}
+                            >
+                              {getTaskCategoryLabel(category as TaskCategory).split(' ')[0]} {stats.completed}/{stats.total}
+                            </span>
+                          );
+                        })}
+
+                        {component.instances.length > 0 && (
+                          <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">
+                            {component.instances.length} instance{component.instances.length > 1 ? 's' : ''}
+                          </span>
+                        )}
+
+                        {usageCount > 0 && (
+                          <span className="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded">
+                            🔗 Utilisé {usageCount}× dans le projet
+                          </span>
+                        )}
+                        
+                        {completedTasks === totalTasks && totalTasks > 0 && (
+                          <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">
+                            ✓ Terminé
+                          </span>
+                        )}
+                      </div>
+                      
+                      {totalTasks > 0 && (
+                        <div className="w-full bg-gray-200 rounded-full h-2">
+                          <div 
+                            className="bg-purple-500 h-2 rounded-full transition-all"
+                            style={{ width: `${taskProgress}%` }}
+                          />
+                        </div>
+                      )}
                     </div>
-                  )}
+                  </div>
                 </div>
                 
                 <button

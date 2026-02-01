@@ -1,6 +1,6 @@
 import { ProjectSlice } from './projectSlice';
 import { ComponentSlice } from './componentSlice';
 import { TaskSlice } from './taskSlice';
-import { FieldSlice } from './fieldSlice';
+import { InstanceSlice } from './instanceSlice';
 
-export type ProjectStore = ProjectSlice & ComponentSlice & TaskSlice & FieldSlice;
+export type ProjectStore = ProjectSlice & ComponentSlice & TaskSlice & InstanceSlice;

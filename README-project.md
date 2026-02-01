@@ -244,7 +244,7 @@ Permettre d'organiser mon travail dans la création d'une application, d'un site
 ## Composant detail 
 
 ### Les todolists
-- [ ] dev : Ajouter une catégorie : "front-end", "back-end","seo","motion". (par défaut front-end)
+- [X] dev : Ajouter une catégorie : "front-end", "back-end","seo","motion". (par défaut front-end)
 - [ ] ux : A la création d'une nouvelle tache avoir un select à gauche du champ de nom
 - [ ] ux : Afficher la catégorie avant le nom de la tache. 
 - [ ] ux : Avoir la possibilité de modifier une tache
@@ -253,8 +253,7 @@ Permettre d'organiser mon travail dans la création d'une application, d'un site
 - [ ] ux : améliorer la manière dont on crée les nouvelle tâche, l'idéal serait de ne pas avoir à toucher la souris à la création de plusieurs todo. un champ texte en dessous de la liste, Entrée pour valider, on rentre dans de nouveau dans ce champs
 
 ### Champs CMS
-- [ ] ux : Ajouter une categorie "array", "repeteur", "acf lien tableau". 
-- [ ] V2 : ux Globalement je pense qu'il faudra gérer dans une option global les types de champs pour que cela s'adapte à la techno que l'on souhaite utiliser pour les projets.
+- [X] suppression de la notion de champs pour mettre dans la todo des categories
 
 
 ### Composants utilisés

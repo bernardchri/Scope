@@ -100,15 +100,8 @@ export default function ProjectList() {
               (acc, c) => acc + c.tasks.filter(t => t.completed).length,
               0
             );
-            const totalFields = project.components.reduce((acc, c) => acc + c.fields.length, 0);
-            const linkedFields = project.components.reduce((acc, c) => {
-              const linked = new Set();
-              c.tasks.forEach(t => t.linkedFieldIds.forEach(id => linked.add(id)));
-              return acc + linked.size;
-            }, 0);
             
             const taskProgress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
-            const fieldProgress = totalFields > 0 ? Math.round((linkedFields / totalFields) * 100) : 0;
             
             return (
               <li key={project.id} className="border p-4 rounded">
@@ -159,18 +152,6 @@ export default function ProjectList() {
                               : 'bg-gray-100 text-gray-700'
                           }`}>
                             Tâches: {completedTasks}/{totalTasks} ({taskProgress}%)
-                          </span>
-                        )}
-                        
-                        {totalFields > 0 && (
-                          <span className={`text-xs px-2 py-1 rounded ${
-                            fieldProgress === 100 
-                              ? 'bg-green-100 text-green-700' 
-                              : fieldProgress > 0 
-                              ? 'bg-yellow-100 text-yellow-700'
-                              : 'bg-gray-100 text-gray-700'
-                          }`}>
-                            Champs liés: {linkedFields}/{totalFields} ({fieldProgress}%)
                           </span>
                         )}
                       </div>

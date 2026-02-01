@@ -4,8 +4,7 @@ export interface TaskSlice {
   addTask: (projectId: string, componentId: string, task: Task) => void;
   deleteTask: (projectId: string, componentId: string, taskId: string) => void;
   toggleTask: (projectId: string, componentId: string, taskId: string) => void;
-  linkTaskToField: (projectId: string, componentId: string, taskId: string, fieldId: string) => void;
-  unlinkTaskFromField: (projectId: string, componentId: string, taskId: string, fieldId: string) => void;
+  updateTask: (projectId: string, componentId: string, taskId: string, updates: Partial<Task>) => void; // 🆕
 }
 
 export const createTaskSlice = (set: any) => ({
@@ -64,8 +63,9 @@ export const createTaskSlice = (set: any) => ({
       )
     }));
   },
-  
-  linkTaskToField: (projectId: string, componentId: string, taskId: string, fieldId: string) => {
+
+  // 🆕 Nouvelle action pour mettre à jour une tâche (notamment la catégorie)
+  updateTask: (projectId: string, componentId: string, taskId: string, updates: Partial<Task>) => {
     set((state: any) => ({
       projects: state.projects.map((p: any) =>
         p.id === projectId
@@ -76,33 +76,7 @@ export const createTaskSlice = (set: any) => ({
                   ? {
                       ...c,
                       tasks: c.tasks.map((t: any) =>
-                        t.id === taskId
-                          ? { ...t, linkedFieldIds: [...new Set([...t.linkedFieldIds, fieldId])] }
-                          : t
-                      )
-                    }
-                  : c
-              )
-            }
-          : p
-      )
-    }));
-  },
-  
-  unlinkTaskFromField: (projectId: string, componentId: string, taskId: string, fieldId: string) => {
-    set((state: any) => ({
-      projects: state.projects.map((p: any) =>
-        p.id === projectId
-          ? {
-              ...p,
-              components: p.components.map((c: any) =>
-                c.id === componentId
-                  ? {
-                      ...c,
-                      tasks: c.tasks.map((t: any) =>
-                        t.id === taskId
-                          ? { ...t, linkedFieldIds: t.linkedFieldIds.filter((id: string) => id !== fieldId) }
-                          : t
+                        t.id === taskId ? { ...t, ...updates } : t
                       )
                     }
                   : c
