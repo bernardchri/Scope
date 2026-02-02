@@ -10,32 +10,35 @@ interface ComponentDetailHeaderProps {
 
 export default function ComponentDetailHeader({ component, onEdit }: ComponentDetailHeaderProps) {
   return (
-    <div className="flex items-start gap-4">
-      {component.imageBase64 && (
-        <img 
-          src={component.imageBase64} 
-          alt={component.name}
-          className="w-24 h-24 object-cover rounded border"
-        />
-      )}
-      
-      <div className="flex-1">
-        <div className="flex items-center gap-3 mb-2">
-          <h1 className="text-2xl font-bold">{component.name}</h1>
-          <Badge className={getCategoryColor(component.category)}>
-            {getCategoryLabel(component.category)}
-          </Badge>
-          <Button variant="outline" size="sm" onClick={onEdit} className="ml-auto">
-            Modifier
-          </Button>
-        </div>
-        
-        {component.description && (
-          <p className="text-muted-foreground italic">
-            {component.description}
-          </p>
-        )}
+    <div className="space-y-4">
+      {/* Titre + Badge + Bouton */}
+      <div className="flex items-center gap-3">
+        <h1 className="text-2xl font-bold flex-1">{component.name}</h1>
+        <Badge className={getCategoryColor(component.category)}>
+          {getCategoryLabel(component.category)}
+        </Badge>
+        <Button variant="outline" size="sm" onClick={onEdit}>
+          Modifier
+        </Button>
       </div>
+
+      {/* Description */}
+      {component.description && (
+        <p className="text-muted-foreground italic">
+          {component.description}
+        </p>
+      )}
+
+      {/* Image en pleine largeur sur fond gris */}
+      {component.imageBase64 && (
+        <div className="w-full bg-gray-100 rounded-lg p-6 flex items-center justify-center">
+          <img
+            src={component.imageBase64}
+            alt={component.name}
+            className="max-w-full max-h-96 object-contain rounded"
+          />
+        </div>
+      )}
     </div>
   );
 }
