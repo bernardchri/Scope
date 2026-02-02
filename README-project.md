@@ -226,8 +226,8 @@ Permettre d'organiser mon travail dans la création d'une application, d'un site
 ## améliorations
 
 ### global
-- [ ] Dev : Refactorisation des éléments 
-- [ ] ui : Installation et utilisation de shadcn/ui 
+- [x] Dev : Refactorisation des éléments 
+- [x] ui : Installation et utilisation de shadcn/ui 
 - [ ] v2 ux : ajouter des options globales à scope
 - [ ] v2 ux: j'aimerai améliorer visuellement l'ensemble. Au clic sur le projet, avoir la liste des composants dans un panneau à gauche, et les détails dans un panneau à droite. Dans ce panneau de droite avoir l'image de référence et 
 - [ ] Faire un export global de tout le projet sous forme de markdown
