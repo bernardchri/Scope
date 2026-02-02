@@ -122,3 +122,8 @@
     @apply bg-background text-foreground;
   }
 }
+
+
+[data-sidebar="sidebar"] {
+  position: relative !important;
+}

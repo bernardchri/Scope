@@ -4,7 +4,9 @@ import { useState } from 'react';
 import { useProjectStore } from '@/lib/projectStore';
 import { Component, ComponentCategory } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import ComponentCard from './molecules/ComponentCard';
+import ComponentSidebar from './ComponentSidebar';
+import ComponentGridView from './ComponentGridView';
+import ComponentDetailView from './ComponentDetailView';
 import ComponentForm from './forms/ComponentForm';
 
 interface ComponentListProps {
@@ -14,16 +16,22 @@ interface ComponentListProps {
 export default function ComponentList({ projectId }: ComponentListProps) {
   const projects = useProjectStore(state => state.projects);
   const setActiveProject = useProjectStore(state => state.setActiveProject);
-  const setActiveComponent = useProjectStore(state => state.setActiveComponent);
   const addComponent = useProjectStore(state => state.addComponent);
   const deleteComponent = useProjectStore(state => state.deleteComponent);
+  const updateComponent = useProjectStore(state => state.updateComponent);
   const canDeleteComponent = useProjectStore(state => state.canDeleteComponent);
 
+  const [selectedComponentId, setSelectedComponentId] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const activeProject = projects.find(p => p.id === projectId);
 
   if (!activeProject) return null;
+
+  const selectedComponent = selectedComponentId
+    ? activeProject.components.find(c => c.id === selectedComponentId)
+    : null;
 
   function handleCreateComponent(name: string, description: string, category: ComponentCategory) {
     const newComponent: Component = {
@@ -47,52 +55,88 @@ export default function ComponentList({ projectId }: ComponentListProps) {
       alert(`Impossible de supprimer ce composant, il est utilisé dans ${usages.length} composant(s) : ${usages.map(c => c.name).join(', ')}`);
       return;
     }
+
+    if (selectedComponentId === componentId) {
+      setSelectedComponentId(null);
+    }
+
     deleteComponent(activeProject.id, componentId);
   }
 
+  function handleUpdateComponent(componentId: string, updates: Partial<Component>) {
+    updateComponent(activeProject.id, componentId, updates);
+  }
+
   return (
-    <div className="p-8 space-y-6">
-      <Button variant="ghost" onClick={() => setActiveProject(null)}>
-        ← Retour aux projets
-      </Button>
-
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">{activeProject.name}</h1>
-        <Button onClick={() => setIsCreating(true)}>
-          Nouveau composant
-        </Button>
-      </div>
-
-      {isCreating && (
-        <ComponentForm
-          onSubmit={handleCreateComponent}
-          onCancel={() => setIsCreating(false)}
-        />
-      )}
-
-      {activeProject.components.length === 0 ? (
-        <p className="text-gray-500">Aucun composant</p>
-      ) : (
-        <div className="grid gap-4">
-          {activeProject.components.map(component => {
-            const usageCount = activeProject.components.reduce(
-              (count, c) => count + c.instances.filter(i => i.componentId === component.id).length,
-              0
-            );
-
-            return (
-              <ComponentCard
-                key={component.id}
-                component={component}
-                usageCount={usageCount}
-                canDelete={canDeleteComponent(activeProject.id, component.id)}
-                onSelect={() => setActiveComponent(component.id)}
-                onDelete={() => handleDeleteComponent(component.id)}
-              />
-            );
-          })}
+    <div className="flex h-screen w-full overflow-hidden">
+      {/* Sidebar gauche - STATIQUE */}
+      {sidebarOpen && (
+        <div className="w-64 border-r flex-shrink-0 overflow-y-auto">
+          <ComponentSidebar
+            components={activeProject.components}
+            selectedComponentId={selectedComponentId}
+            onSelectComponent={setSelectedComponentId}
+          />
         </div>
       )}
+
+      {/* Contenu principal */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Header */}
+        <div className="border-b p-4 flex-shrink-0">
+          <div className="flex items-center gap-4">
+            <Button 
+              variant="ghost" 
+              size="icon"
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+            >
+              {sidebarOpen ? '◀' : '▶'}
+            </Button>
+            <Button variant="ghost" onClick={() => setActiveProject(null)}>
+              ← Retour aux projets
+            </Button>
+            <h1 className="text-2xl font-bold flex-1">{activeProject.name}</h1>
+            <Button onClick={() => setIsCreating(true)}>
+              Nouveau composant
+            </Button>
+          </div>
+
+          {isCreating && (
+            <div className="mt-4">
+              <ComponentForm
+                onSubmit={handleCreateComponent}
+                onCancel={() => setIsCreating(false)}
+              />
+            </div>
+          )}
+        </div>
+
+        {/* Contenu scrollable */}
+        <div className="flex-1 overflow-y-auto p-8">
+          {selectedComponent ? (
+            <ComponentDetailView
+              projectId={projectId}
+              component={selectedComponent}
+              allComponents={activeProject.components}
+              onUpdate={handleUpdateComponent}
+              onBack={() => setSelectedComponentId(null)}
+            />
+          ) : (
+            <>
+              {activeProject.components.length === 0 ? (
+                <p className="text-muted-foreground">Aucun composant</p>
+              ) : (
+                <ComponentGridView
+                  components={activeProject.components}
+                  canDeleteComponent={(id) => canDeleteComponent(activeProject.id, id)}
+                  onSelectComponent={setSelectedComponentId}
+                  onDeleteComponent={handleDeleteComponent}
+                />
+              )}
+            </>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
