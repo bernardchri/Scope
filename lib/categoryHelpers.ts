@@ -1,6 +1,7 @@
 import { ComponentCategory } from './types';
 
 export const CATEGORY_LABELS: Record<ComponentCategory, string> = {
+  document: '📄 Document',     // 🆕
   template: '📄 Template',
   section: '📦 Section',
   composition: '🔲 Composition',
@@ -12,6 +13,7 @@ export const CATEGORY_LABELS: Record<ComponentCategory, string> = {
 };
 
 export const CATEGORY_COLORS: Record<ComponentCategory, string> = {
+  document: 'bg-slate-100 text-slate-700',  // 🆕
   template: 'bg-purple-100 text-purple-700',
   section: 'bg-blue-100 text-blue-700',
   composition: 'bg-green-100 text-green-700',

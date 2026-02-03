@@ -30,7 +30,9 @@ export default function ComponentSidebar({
     return acc;
   }, {} as Record<ComponentCategory, Component[]>);
 
+  // 🆕 Documents EN PREMIER
   const categories: ComponentCategory[] = [
+    'document',      // 🆕
     'template',
     'section',
     'composition',
