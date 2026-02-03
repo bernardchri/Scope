@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import ComponentHeader from './ComponentHeader';
 import ComponentStats from './ComponentStats';
 import ComponentProgress from './ComponentProgress';
+import { Trash2 } from 'lucide-react';
 
 interface ComponentCardProps {
   component: Component;
@@ -27,16 +28,15 @@ export default function ComponentCard({
     <Card className="hover:shadow-md transition-shadow">
       <CardContent className="pt-6 cursor-pointer" onClick={onSelect}>
         <ComponentHeader component={component} />
-        
+
         <div className="mt-3">
           <ComponentStats component={component} usageCount={usageCount} />
           <ComponentProgress totalTasks={totalTasks} completedTasks={completedTasks} />
         </div>
       </CardContent>
-      
+
       <CardFooter>
         <Button
-          variant="destructive"
           size="sm"
           disabled={!canDelete}
           onClick={(e) => {
@@ -44,7 +44,7 @@ export default function ComponentCard({
             onDelete();
           }}
         >
-          Supprimer
+          <Trash2 className="h-4 w-4" />
         </Button>
       </CardFooter>
     </Card>

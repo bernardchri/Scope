@@ -1,3 +1,5 @@
+// components/ProjectList.tsx
+
 'use client';
 
 import { useState } from 'react';
@@ -60,7 +62,7 @@ export default function ProjectList() {
       {projects.length === 0 ? (
         <p className="text-muted-foreground">Aucun projet pour le moment</p>
       ) : (
-        <div className="grid gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {projects.map(project => (
             <ProjectCard
               key={project.id}

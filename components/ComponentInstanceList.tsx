@@ -25,7 +25,7 @@ export default function ComponentInstanceList({
   const addComponentInstance = useProjectStore(state => state.addComponentInstance);
   const removeComponentInstance = useProjectStore(state => state.removeComponentInstance);
   const setActiveComponent = useProjectStore(state => state.setActiveComponent);
-  
+
   const [isAdding, setIsAdding] = useState(false);
   const [selectedComponentId, setSelectedComponentId] = useState('');
 
@@ -45,7 +45,7 @@ export default function ComponentInstanceList({
 
   function handleAddInstance() {
     if (!selectedComponentId) return;
-    
+
     addComponentInstance(projectId, componentId, selectedComponentId);
     setSelectedComponentId('');
     setIsAdding(false);
@@ -96,7 +96,7 @@ export default function ComponentInstanceList({
       {instances.length === 0 ? (
         <p className="text-muted-foreground">Aucun composant utilisé</p>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-3 grid grid-cols-3 gap-2">
           {Object.values(instancesGrouped).map(({ component, instances: compInstances }) => (
             compInstances.map((instance, index) => (
               <InstanceItem
@@ -113,3 +113,4 @@ export default function ComponentInstanceList({
     </div>
   );
 }
+
