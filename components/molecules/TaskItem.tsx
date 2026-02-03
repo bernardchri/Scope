@@ -91,7 +91,7 @@ export default function TaskItem({
           {/* Poignée drag & drop */}
           <div 
             {...dragHandleProps}
-            className="opacity-0 group-hover/item:opacity-100 transition-opacity cursor-grab active:cursor-grabbing -ml-1"
+            className="transition-opacity cursor-grab active:cursor-grabbing -ml-1"
           >
             <GripVertical className="h-5 w-5 text-muted-foreground" />
           </div>
@@ -130,12 +130,12 @@ export default function TaskItem({
           </span>
           
           {/* Icônes au hover */}
-          <div className="flex gap-1 opacity-0 group-hover/item:opacity-100 transition-opacity">
+          <div className="flex gap-1 transition-opacity">
             <Button 
               variant="ghost" 
               size="icon"
               onClick={onStartEdit}
-              className="h-8 w-8"
+              className="h-8 w-8 opacity-20 hover:opacity-100"
             >
               <Pencil className="h-4 w-4" />
             </Button>
@@ -143,7 +143,7 @@ export default function TaskItem({
               variant="ghost" 
               size="icon"
               onClick={onDelete}
-              className="h-8 w-8 hover:text-destructive"
+              className="h-8 w-8 hover:text-destructive opacity-20 hover:opacity-100"
             >
               <Trash2 className="h-4 w-4" />
             </Button>
