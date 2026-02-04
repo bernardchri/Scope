@@ -7,6 +7,7 @@
   ],
   "permissions": [
     "core:default",
+    "core:path:default",
     "store:default",
     "store:allow-get",
     "store:allow-set",
@@ -16,6 +17,15 @@
     "store:allow-clear",
     "store:allow-keys",
     "store:allow-values",
-    "store:allow-entries"
+    "store:allow-entries",
+    "fs:allow-read-text-file",
+    "fs:allow-write-text-file",
+    "fs:allow-read-dir",
+    "fs:allow-exists",
+    "fs:allow-create",
+    "fs:allow-remove",
+    "dialog:default",
+    "dialog:allow-open",
+    "dialog:allow-save"
   ]
 }

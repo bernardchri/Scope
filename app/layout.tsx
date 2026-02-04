@@ -1,23 +1,29 @@
 'use client';
 
-import '../styles/global.css';
 import { useEffect } from 'react';
 import { useProjectStore } from '@/lib/projectStore';
 import { loadProjects } from '@/lib/persistence';
+import { createAutoBackup } from '@/lib/backup';
+import '../styles/global.css';
 
 export default function RootLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
-  const setProjects = useProjectStore(state => state.setProjects);
-
   useEffect(() => {
-    // Charger les projets au démarrage
-    loadProjects().then(projects => {
-      setProjects(projects);
-    });
-  }, [setProjects]);
+    async function init() {
+      const projects = await loadProjects();
+      
+      // 🆕 Utiliser setState directement
+      useProjectStore.setState({ projects });
+      
+      if (projects.length > 0) {
+        await createAutoBackup(projects);
+      }
+    }
+    init();
+  }, []);
 
   return (
     <html lang="fr">
