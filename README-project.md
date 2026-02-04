@@ -262,33 +262,8 @@ Permettre d'organiser mon travail dans la création d'une application, d'un site
 ## Liste des composants
 - [ ] ux: ajouter la possibilité de dupliquer un composants afficher le select à gauche du champ nom 
 
-
-
-
-## Prochaine étape CLaude :
-
-Ma recommandation 🎯
-Ordre d'exécution :
-
-Installer shadcn/ui (5 min)
-Remplacer progressivement les éléments HTML de base par shadcn
-
-Commencer par Button, Input, Card
-Ça améliore immédiatement le look
-
-
-Découper en petits composants au fur et à mesure
-
-Pas besoin de tout refactoriser d'un coup
-Fais-le feature par feature
-
-
-
-Exemple de roadmap :
-
-Jour 1 : Install shadcn + remplacer tous les <button> par <Button>
-Jour 2 : Créer ComponentCard et ProjectCard
-Jour 3 : Créer les formulaires avec Dialog
-Jour 4 : Ajouter Tabs dans ComponentDetail
-Jour 5 : Polish général
-
+## BUG
+- [ ] Dans le détail des composant ajouter un bouton suppression du composant
+- [ ] DAns la liste des composants bugfix suppression du Composant
+- [ ] Liste des tâches : au clic sur l'étiquette : bugfix du changement de catégorie
+- [ ] Composition Document : avoir un style spécifique des différents elements ( titres, listes, etc )
