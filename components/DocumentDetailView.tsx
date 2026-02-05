@@ -13,14 +13,14 @@ interface DocumentDetailViewProps {
   projectId: string;
   document: Component;
   onUpdate: (documentId: string, updates: Partial<Component>) => void;
-  onBack: () => void;
+  // 🆕 onBack supprimé
 }
 
 export default function DocumentDetailView({
   projectId,
   document,
   onUpdate,
-  onBack
+  // 🆕 onBack supprimé
 }: DocumentDetailViewProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [mode, setMode] = useState<'edit' | 'preview'>('preview');
@@ -53,9 +53,7 @@ export default function DocumentDetailView({
 
   return (
     <div className="space-y-6">
-      <Button variant="ghost" onClick={onBack}>
-        ← Retour à la liste
-      </Button>
+      {/* 🆕 Bouton "Retour" supprimé */}
 
       {/* Header */}
       <div className="flex items-center justify-between">
@@ -142,7 +140,6 @@ export default function DocumentDetailView({
             </div>
           )}
 
-          {/* Boutons d'action */}
           <div className="flex gap-2">
             <Button onClick={handleSave}>Enregistrer</Button>
             <Button variant="outline" onClick={handleCancel}>Annuler</Button>

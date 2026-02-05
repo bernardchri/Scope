@@ -1,20 +1,24 @@
 import { Button } from '@/components/ui/button';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, LayoutGrid } from 'lucide-react';
 
 interface ProjectHeaderProps {
   projectName: string;
   sidebarOpen: boolean;
+  showingAllComponents: boolean; // 🆕
   onToggleSidebar: () => void;
   onBack: () => void;
   onNewComponent: () => void;
+  onShowAllComponents: () => void; // 🆕
 }
 
 export default function ProjectHeader({
   projectName,
   sidebarOpen,
+  showingAllComponents, // 🆕
   onToggleSidebar,
   onBack,
-  onNewComponent
+  onNewComponent,
+  onShowAllComponents // 🆕
 }: ProjectHeaderProps) {
   return (
     <div className="border-b bg-white shadow-sm">
@@ -43,10 +47,21 @@ export default function ProjectHeader({
           {projectName}
         </h1>
 
-        {/* Droite : Nouveau composant */}
-        <Button onClick={onNewComponent}>
-          Nouveau composant
-        </Button>
+        {/* Droite : Tous les composants + Nouveau composant */}
+        <div className="flex items-center gap-2">
+          <Button 
+            variant={showingAllComponents ? "secondary" : "ghost"}
+            size="icon"
+            onClick={onShowAllComponents}
+            title="Voir tous les composants"
+          >
+            <LayoutGrid className="h-4 w-4" />
+          </Button>
+          
+          <Button onClick={onNewComponent}>
+            Nouveau composant
+          </Button>
+        </div>
       </div>
     </div>
   );

@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { Component, ComponentCategory } from '@/lib/types';
-import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import ComponentDetailHeader from './molecules/ComponentDetailHeader';
 import ComponentEditForm from './forms/ComponentEditForm';
@@ -14,7 +13,7 @@ interface ComponentDetailViewProps {
   component: Component;
   allComponents: Component[];
   onUpdate: (componentId: string, updates: Partial<Component>) => void;
-  onBack: () => void;
+  // 🆕 onBack supprimé
 }
 
 export default function ComponentDetailView({
@@ -22,7 +21,7 @@ export default function ComponentDetailView({
   component,
   allComponents,
   onUpdate,
-  onBack
+  // 🆕 onBack supprimé
 }: ComponentDetailViewProps) {
   const [isEditing, setIsEditing] = useState(false);
 
@@ -43,9 +42,7 @@ export default function ComponentDetailView({
 
   return (
     <div className="space-y-6">
-      <Button variant="ghost" onClick={onBack}>
-        ← Retour à la liste
-      </Button>
+      {/* 🆕 Bouton "Retour" supprimé */}
 
       {isEditing ? (
         <ComponentEditForm

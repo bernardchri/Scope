@@ -7,8 +7,8 @@ import ComponentSidebar from './ComponentSidebar';
 import ComponentGridView from './ComponentGridView';
 import ComponentDetailView from './ComponentDetailView';
 import DocumentDetailView from './DocumentDetailView';
-import ProjectHeader from './ProjectHeader'; // 🆕
-import CreateComponentModal from './modals/CreateComponentModal'; // 🆕
+import ProjectHeader from './ProjectHeader';
+import CreateComponentModal from './modals/CreateComponentModal';
 
 interface ComponentListProps {
   projectId: string;
@@ -23,7 +23,7 @@ export default function ComponentList({ projectId }: ComponentListProps) {
   const canDeleteComponent = useProjectStore(state => state.canDeleteComponent);
 
   const [selectedComponentId, setSelectedComponentId] = useState<string | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false); // 🆕
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const activeProject = projects.find(p => p.id === projectId);
@@ -35,6 +35,7 @@ export default function ComponentList({ projectId }: ComponentListProps) {
     : null;
 
   const isDocument = selectedItem?.category === 'document';
+  const showingAllComponents = !selectedComponentId; // 🆕
 
   function handleCreateComponent(name: string, description: string, category: ComponentCategory) {
     if (!activeProject) return;
@@ -50,7 +51,7 @@ export default function ComponentList({ projectId }: ComponentListProps) {
     };
 
     addComponent(activeProject.id, newComponent);
-    setIsModalOpen(false); // 🆕 Fermer la modale
+    setIsModalOpen(false);
   }
 
   function handleDeleteComponent(componentId: string) {
@@ -76,27 +77,30 @@ export default function ComponentList({ projectId }: ComponentListProps) {
     updateComponent(activeProject.id, componentId, updates);
   }
 
+  // 🆕 Retour à la vue "tous les composants"
+  function handleShowAllComponents() {
+    setSelectedComponentId(null);
+  }
+
   return (
     <div className="flex flex-col h-screen w-full overflow-hidden">
-      {/* 🆕 Header fixe en haut */}
       <ProjectHeader
         projectName={activeProject.name}
         sidebarOpen={sidebarOpen}
+        showingAllComponents={showingAllComponents} // 🆕
         onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
         onBack={() => setActiveProject(null)}
         onNewComponent={() => setIsModalOpen(true)}
+        onShowAllComponents={handleShowAllComponents} // 🆕
       />
 
-      {/* 🆕 Modale de création */}
       <CreateComponentModal
         open={isModalOpen}
         onOpenChange={setIsModalOpen}
         onSubmit={handleCreateComponent}
       />
 
-      {/* Contenu principal */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Sidebar */}
         {sidebarOpen && (
           <div className="w-64 border-r flex-shrink-0 overflow-y-auto">
             <ComponentSidebar
@@ -107,7 +111,6 @@ export default function ComponentList({ projectId }: ComponentListProps) {
           </div>
         )}
 
-        {/* Zone de contenu */}
         <div className="flex-1 overflow-y-auto p-8">
           {selectedItem ? (
             isDocument ? (
@@ -115,7 +118,7 @@ export default function ComponentList({ projectId }: ComponentListProps) {
                 projectId={projectId}
                 document={selectedItem}
                 onUpdate={handleUpdateComponent}
-                onBack={() => setSelectedComponentId(null)}
+                // 🆕 onBack supprimé
               />
             ) : (
               <ComponentDetailView
@@ -123,7 +126,7 @@ export default function ComponentList({ projectId }: ComponentListProps) {
                 component={selectedItem}
                 allComponents={activeProject.components}
                 onUpdate={handleUpdateComponent}
-                onBack={() => setSelectedComponentId(null)}
+                // 🆕 onBack supprimé
               />
             )
           ) : (
