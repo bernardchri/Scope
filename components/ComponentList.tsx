@@ -3,12 +3,12 @@
 import { useState } from 'react';
 import { useProjectStore } from '@/lib/projectStore';
 import { Component, ComponentCategory } from '@/lib/types';
-import { Button } from '@/components/ui/button';
 import ComponentSidebar from './ComponentSidebar';
 import ComponentGridView from './ComponentGridView';
 import ComponentDetailView from './ComponentDetailView';
 import DocumentDetailView from './DocumentDetailView';
-import ComponentForm from './forms/ComponentForm';
+import ProjectHeader from './ProjectHeader'; // 🆕
+import CreateComponentModal from './modals/CreateComponentModal'; // 🆕
 
 interface ComponentListProps {
   projectId: string;
@@ -23,7 +23,7 @@ export default function ComponentList({ projectId }: ComponentListProps) {
   const canDeleteComponent = useProjectStore(state => state.canDeleteComponent);
 
   const [selectedComponentId, setSelectedComponentId] = useState<string | null>(null);
-  const [isCreating, setIsCreating] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false); // 🆕
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const activeProject = projects.find(p => p.id === projectId);
@@ -37,7 +37,7 @@ export default function ComponentList({ projectId }: ComponentListProps) {
   const isDocument = selectedItem?.category === 'document';
 
   function handleCreateComponent(name: string, description: string, category: ComponentCategory) {
-    if (!activeProject) return; // 🆕
+    if (!activeProject) return;
 
     const newComponent: Component = {
       id: `component-${Date.now()}`,
@@ -50,11 +50,11 @@ export default function ComponentList({ projectId }: ComponentListProps) {
     };
 
     addComponent(activeProject.id, newComponent);
-    setIsCreating(false);
+    setIsModalOpen(false); // 🆕 Fermer la modale
   }
 
   function handleDeleteComponent(componentId: string) {
-    if (!activeProject) return; // 🆕
+    if (!activeProject) return;
     
     if (!canDeleteComponent(activeProject.id, componentId)) {
       const usages = activeProject.components.filter(c =>
@@ -72,51 +72,42 @@ export default function ComponentList({ projectId }: ComponentListProps) {
   }
 
   function handleUpdateComponent(componentId: string, updates: Partial<Component>) {
-    if (!activeProject) return; // 🆕
+    if (!activeProject) return;
     updateComponent(activeProject.id, componentId, updates);
   }
 
   return (
-    <div className="flex h-screen w-full overflow-hidden">
-      {sidebarOpen && (
-        <div className="w-64 border-r flex-shrink-0 overflow-y-auto">
-          <ComponentSidebar
-            components={activeProject.components}
-            selectedComponentId={selectedComponentId}
-            onSelectComponent={setSelectedComponentId}
-          />
-        </div>
-      )}
+    <div className="flex flex-col h-screen w-full overflow-hidden">
+      {/* 🆕 Header fixe en haut */}
+      <ProjectHeader
+        projectName={activeProject.name}
+        sidebarOpen={sidebarOpen}
+        onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
+        onBack={() => setActiveProject(null)}
+        onNewComponent={() => setIsModalOpen(true)}
+      />
 
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <div className="border-b p-4 flex-shrink-0">
-          <div className="flex items-center gap-4">
-            <Button 
-              variant="ghost" 
-              size="icon"
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-            >
-              {sidebarOpen ? '◀' : '▶'}
-            </Button>
-            <Button variant="ghost" onClick={() => setActiveProject(null)}>
-              ← Retour aux projets
-            </Button>
-            <h1 className="text-2xl font-bold flex-1">{activeProject.name}</h1>
-            <Button onClick={() => setIsCreating(true)}>
-              Nouveau composant
-            </Button>
+      {/* 🆕 Modale de création */}
+      <CreateComponentModal
+        open={isModalOpen}
+        onOpenChange={setIsModalOpen}
+        onSubmit={handleCreateComponent}
+      />
+
+      {/* Contenu principal */}
+      <div className="flex flex-1 overflow-hidden">
+        {/* Sidebar */}
+        {sidebarOpen && (
+          <div className="w-64 border-r flex-shrink-0 overflow-y-auto">
+            <ComponentSidebar
+              components={activeProject.components}
+              selectedComponentId={selectedComponentId}
+              onSelectComponent={setSelectedComponentId}
+            />
           </div>
+        )}
 
-          {isCreating && (
-            <div className="mt-4">
-              <ComponentForm
-                onSubmit={handleCreateComponent}
-                onCancel={() => setIsCreating(false)}
-              />
-            </div>
-          )}
-        </div>
-
+        {/* Zone de contenu */}
         <div className="flex-1 overflow-y-auto p-8">
           {selectedItem ? (
             isDocument ? (
