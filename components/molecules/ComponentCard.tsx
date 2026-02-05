@@ -1,10 +1,9 @@
 import { Component } from '@/lib/types';
-import { Card, CardContent, CardFooter } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import ComponentHeader from './ComponentHeader';
-import ComponentStats from './ComponentStats';
-import ComponentProgress from './ComponentProgress';
 import { Trash2 } from 'lucide-react';
+import ComponentCardImage from './ComponentCardImage';
+import ComponentCardContent from './ComponentCardContent';
 
 interface ComponentCardProps {
   component: Component;
@@ -25,28 +24,39 @@ export default function ComponentCard({
   const completedTasks = component.tasks.filter(t => t.completed).length;
 
   return (
-    <Card className="hover:shadow-md transition-shadow">
-      <CardContent className="pt-6 cursor-pointer" onClick={onSelect}>
-        <ComponentHeader component={component} />
+    <Card className="group hover:shadow-lg transition-all overflow-hidden">
+      <ComponentCardImage 
+        imageBase64={component.imageBase64} 
+        name={component.name}
+        onClick={onSelect}
+      />
 
-        <div className="mt-3">
-          <ComponentStats component={component} usageCount={usageCount} />
-          <ComponentProgress totalTasks={totalTasks} completedTasks={completedTasks} />
-        </div>
-      </CardContent>
+      <ComponentCardContent
+        component={component}
+        usageCount={usageCount}
+        totalTasks={totalTasks}
+        completedTasks={completedTasks}
+        onClick={onSelect}
+      />
 
-      <CardFooter>
+      <div className="px-4 pb-4">
         <Button
+          variant="ghost"
           size="sm"
-          disabled={!canDelete}
           onClick={(e) => {
             e.stopPropagation();
-            onDelete();
+            if (canDelete) {
+              onDelete();
+            }
           }}
+          disabled={!canDelete}
+          className={`w-full ${!canDelete ? 'opacity-20 cursor-not-allowed' : 'hover:bg-destructive hover:text-destructive-foreground'}`}
+          title={!canDelete ? 'Ce composant est utilisé ailleurs' : 'Supprimer'}
         >
-          <Trash2 className="h-4 w-4" />
+          <Trash2 className="h-4 w-4 mr-2" />
+          Supprimer
         </Button>
-      </CardFooter>
+      </div>
     </Card>
   );
 }

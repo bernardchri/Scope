@@ -42,8 +42,6 @@ export default function ComponentDetailView({
 
   return (
     <div className="space-y-6">
-      {/* 🆕 Bouton "Retour" supprimé */}
-
       {isEditing ? (
         <ComponentEditForm
           name={component.name}
