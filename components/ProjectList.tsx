@@ -75,7 +75,7 @@ export default function ProjectList() {
         'L\'import va remplacer tous vos projets actuels. Continuer ?',
         {
           title: 'Attention',
-          type: 'warning'
+          kind: 'warning'
         }
       );
       
@@ -93,11 +93,11 @@ export default function ProjectList() {
       useProjectStore.setState({ projects: importedProjects });
       
       // 🆕 Message de succès avec dialog Tauri
-      await ask('Import réussi !', { title: 'Succès', type: 'info' });
+      await ask('Import réussi !', { title: 'Succès', kind: 'info' });
     } catch (error) {
       console.error('Erreur import:', error);
       // 🆕 Message d'erreur avec dialog Tauri
-      await ask(`Erreur lors de l'import: ${error}`, { title: 'Erreur', type: 'error' });
+      await ask(`Erreur lors de l'import: ${error}`, { title: 'Erreur', kind: 'error' });
     } finally {
       setIsImporting(false);
     }
@@ -109,7 +109,7 @@ export default function ProjectList() {
       'Êtes-vous sûr de vouloir supprimer TOUS les projets ? Cette action est irréversible.',
       {
         title: 'Confirmation',
-        type: 'warning'
+        kind: 'warning'
       }
     );
     

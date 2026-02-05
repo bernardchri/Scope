@@ -1,54 +1,59 @@
 import { Project } from './types';
 
-export const mockProject: Project = {
-  id: 'project-1',
-  name: 'Mon site WordPress',
-  createdAt: new Date().toISOString(),
-  components: [
-    {
-      id: 'comp-1',
-      name: 'Page d\'accueil',
-      tasks: [
-        {
-          id: 'task-1',
-          name: 'Créer le template',
-          completed: false,
-          linkedFieldIds: []
-        },
-        {
-          id: 'task-2',
-          name: 'Ajouter les champs ACF',
-          completed: false,
-          linkedFieldIds: ['field-1', 'field-2']
-        }
-      ],
-      fields: [
-        {
-          id: 'field-1',
-          name: 'Titre hero',
-          type: 'text',
-          required: true
-        },
-        {
-          id: 'field-2',
-          name: 'Image hero',
-          type: 'image',
-          required: true
-        }
-      ]
-    },
-    {
-      id: 'comp-2',
-      name: 'Blog',
-      tasks: [
-        {
-          id: 'task-3',
-          name: 'Créer le post type',
-          completed: true,
-          linkedFieldIds: []
-        }
-      ],
-      fields: []
-    },
-  ]
-};
+export const mockProjects: Project[] = [
+  {
+    id: 'project-1',
+    name: 'Site WordPress - Menuiserie',
+    createdAt: new Date().toISOString(),
+    components: [
+      {
+        id: 'component-1',
+        name: 'Hero Section',
+        description: 'Section hero de la page d\'accueil',
+        category: 'section',
+        instances: [],
+        tasks: [
+          {
+            id: 'task-1',
+            name: 'Créer le template',
+            completed: false,
+            category: 'frontend'  // 🆕
+          },
+          {
+            id: 'task-2',
+            name: 'Ajouter les champs ACF',
+            completed: false,
+            category: 'backend'  // 🆕
+          },
+          {
+            id: 'task-3',
+            name: 'Intégrer le design',
+            completed: true,
+            category: 'frontend'  // 🆕
+          }
+        ]
+      },
+      {
+        id: 'component-2',
+        name: 'Bouton CTA',
+        description: 'Bouton d\'appel à l\'action réutilisable',
+        category: 'element',
+        instances: [],
+        tasks: [
+          {
+            id: 'task-4',
+            name: 'Créer les variantes',
+            completed: false,
+            category: 'frontend'  // 🆕
+          },
+          {
+            id: 'task-5',
+            name: 'Ajouter les animations',
+            completed: false,
+            category: 'motion'  // 🆕
+          }
+        ]
+      }
+    ]
+  }
+];

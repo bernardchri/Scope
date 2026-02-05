@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import ComponentSidebar from './ComponentSidebar';
 import ComponentGridView from './ComponentGridView';
 import ComponentDetailView from './ComponentDetailView';
-import DocumentDetailView from './DocumentDetailView'; // 🆕
+import DocumentDetailView from './DocumentDetailView';
 import ComponentForm from './forms/ComponentForm';
 
 interface ComponentListProps {
@@ -34,10 +34,11 @@ export default function ComponentList({ projectId }: ComponentListProps) {
     ? activeProject.components.find(c => c.id === selectedComponentId)
     : null;
 
-  // 🆕 Déterminer si c'est un document ou un composant
   const isDocument = selectedItem?.category === 'document';
 
   function handleCreateComponent(name: string, description: string, category: ComponentCategory) {
+    if (!activeProject) return; // 🆕
+
     const newComponent: Component = {
       id: `component-${Date.now()}`,
       name,
@@ -45,7 +46,6 @@ export default function ComponentList({ projectId }: ComponentListProps) {
       category,
       instances: [],
       tasks: [],
-      // 🆕 Si c'est un document, initialiser content
       ...(category === 'document' && { content: '' })
     };
 
@@ -54,6 +54,8 @@ export default function ComponentList({ projectId }: ComponentListProps) {
   }
 
   function handleDeleteComponent(componentId: string) {
+    if (!activeProject) return; // 🆕
+    
     if (!canDeleteComponent(activeProject.id, componentId)) {
       const usages = activeProject.components.filter(c =>
         c.instances.some(i => i.componentId === componentId)
@@ -70,6 +72,7 @@ export default function ComponentList({ projectId }: ComponentListProps) {
   }
 
   function handleUpdateComponent(componentId: string, updates: Partial<Component>) {
+    if (!activeProject) return; // 🆕
     updateComponent(activeProject.id, componentId, updates);
   }
 
@@ -116,7 +119,6 @@ export default function ComponentList({ projectId }: ComponentListProps) {
 
         <div className="flex-1 overflow-y-auto p-8">
           {selectedItem ? (
-            // 🆕 Router vers DocumentDetailView ou ComponentDetailView
             isDocument ? (
               <DocumentDetailView
                 projectId={projectId}
