@@ -30,16 +30,16 @@ export default function CreateComponentModal({
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState<ComponentCategory>('element');
 
-  function handleSubmit() {
-    if (!name.trim()) return;
-    
-    onSubmit(name, description, category);
-    
-    // Reset
-    setName('');
-    setDescription('');
-    setCategory('element');
-  }
+function handleSubmit() {
+  if (!name.trim()) return;
+  
+  onSubmit(name, description, category);
+  
+  // Reset
+  setName('');
+  setDescription('');
+  setCategory('element');
+}
 
   function handleCancel() {
     onOpenChange(false);

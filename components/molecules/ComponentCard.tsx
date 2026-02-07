@@ -26,8 +26,10 @@ export default function ComponentCard({
   return (
     <Card className="group hover:shadow-lg transition-all overflow-hidden">
       <ComponentCardImage 
-        imageBase64={component.imageBase64} 
+        imageBase64={component.imageBase64}
+        images={component.images}
         name={component.name}
+        category={component.category} // 🆕
         onClick={onSelect}
       />
 

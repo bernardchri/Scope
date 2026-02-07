@@ -1,5 +1,5 @@
 export type ComponentCategory = 
-  | 'document'      // 🆕 En premier !
+  | 'document'
   | 'template'
   | 'section'
   | 'composition'
@@ -23,17 +23,25 @@ export interface Task {
   category: TaskCategory;
 }
 
+// 🆕 Nouvelle interface pour les images
+export interface ComponentImage {
+  id: string;
+  base64: string;
+  caption?: string;
+  isPrimary: boolean; // Une seule image peut être principale
+}
+
 export interface Component {
   id: string;
   name: string;
   description?: string;
   category: ComponentCategory;
-  imageBase64?: string;
   
-  // 🆕 Pour les documents
-  content?: string;  // Markdown content (si category === 'document')
+  // 🆕 Remplacer imageBase64 par images (array)
+  imageBase64?: string; // @deprecated - Garder pour compatibilité
+  images?: ComponentImage[]; // 🆕 Nouvelle propriété
   
-  // Pour les composants normaux
+  content?: string;
   instances: ComponentInstance[];
   tasks: Task[];
 }

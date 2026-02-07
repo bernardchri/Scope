@@ -2,6 +2,7 @@ import { Component } from '@/lib/types';
 import { getCategoryLabel, getCategoryColor } from '@/lib/categoryHelpers';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import ImageCarousel from '../ImageCarousel'; // 🆕
 
 interface ComponentDetailHeaderProps {
   component: Component;
@@ -9,6 +10,13 @@ interface ComponentDetailHeaderProps {
 }
 
 export default function ComponentDetailHeader({ component, onEdit }: ComponentDetailHeaderProps) {
+  // 🆕 Convertir ancienne structure en nouvelle si nécessaire
+  const images = component.images || (component.imageBase64 ? [{
+    id: 'legacy',
+    base64: component.imageBase64,
+    isPrimary: true
+  }] : []);
+
   return (
     <div className="space-y-4">
       {/* Titre + Badge + Bouton */}
@@ -29,16 +37,8 @@ export default function ComponentDetailHeader({ component, onEdit }: ComponentDe
         </p>
       )}
 
-      {/* Image en pleine largeur sur fond gris */}
-      {component.imageBase64 && (
-        <div className="w-full bg-gray-100 rounded-lg p-6 flex items-center justify-center">
-          <img
-            src={component.imageBase64}
-            alt={component.name}
-            className="max-w-full max-h-96 object-contain rounded"
-          />
-        </div>
-      )}
+      {/* 🆕 Carrousel d'images */}
+      <ImageCarousel images={images} />
     </div>
   );
 }

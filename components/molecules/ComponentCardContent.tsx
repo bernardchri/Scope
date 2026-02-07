@@ -1,8 +1,7 @@
 import { Component } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { getCategoryLabel, getCategoryColor } from '@/lib/categoryHelpers';
-import { getTaskStatsByCategory } from '@/lib/taskCategoryHelpers'; // 🆕 Bon nom
+import { getTaskStatsByCategory } from '@/lib/taskCategoryHelpers';
 
 interface ComponentCardContentProps {
   component: Component;
@@ -20,19 +19,14 @@ export default function ComponentCardContent({
   onClick
 }: ComponentCardContentProps) {
   const taskProgress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
-  const stats = getTaskStatsByCategory(component.tasks); // 🆕
+  const stats = getTaskStatsByCategory(component.tasks);
 
   return (
     <div className="p-4 cursor-pointer" onClick={onClick}>
-      {/* Catégorie + Titre */}
-      <div className="flex items-start gap-2 mb-2">
-        <Badge className={getCategoryColor(component.category)}>
-          {getCategoryLabel(component.category)}
-        </Badge>
-        <h3 className="font-bold text-lg flex-1 leading-tight">
-          {component.name}
-        </h3>
-      </div>
+      {/* 🆕 Titre sans badge catégorie */}
+      <h3 className="font-bold text-lg leading-tight mb-2">
+        {component.name}
+      </h3>
 
       {/* Description */}
       {component.description && (

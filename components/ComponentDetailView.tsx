@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Component, ComponentCategory } from '@/lib/types';
+import { Component, ComponentCategory, ComponentImage } from '@/lib/types';
 import { Separator } from '@/components/ui/separator';
 import ComponentDetailHeader from './molecules/ComponentDetailHeader';
 import ComponentEditForm from './forms/ComponentEditForm';
@@ -13,7 +13,6 @@ interface ComponentDetailViewProps {
   component: Component;
   allComponents: Component[];
   onUpdate: (componentId: string, updates: Partial<Component>) => void;
-  // 🆕 onBack supprimé
 }
 
 export default function ComponentDetailView({
@@ -21,7 +20,6 @@ export default function ComponentDetailView({
   component,
   allComponents,
   onUpdate,
-  // 🆕 onBack supprimé
 }: ComponentDetailViewProps) {
   const [isEditing, setIsEditing] = useState(false);
 
@@ -29,13 +27,14 @@ export default function ComponentDetailView({
     name: string,
     description: string,
     category: ComponentCategory,
-    imageBase64?: string
+    images: ComponentImage[] // 🆕
   ) {
     onUpdate(component.id, {
       name,
       description: description || undefined,
       category,
-      imageBase64
+      images, // 🆕
+      imageBase64: images.find(img => img.isPrimary)?.base64 // 🆕 Garder la rétrocompatibilité
     });
     setIsEditing(false);
   }
@@ -48,6 +47,7 @@ export default function ComponentDetailView({
           description={component.description}
           category={component.category}
           imageBase64={component.imageBase64}
+          images={component.images} // 🆕
           onSubmit={handleSaveEdit}
           onCancel={() => setIsEditing(false)}
         />
