@@ -19,7 +19,7 @@ export const createInstanceSlice = (set: any) => ({
                       instances: [
                         ...c.instances,
                         {
-                          id: `instance-${Date.now()}`,
+                          id: crypto.randomUUID(),
                           componentId
                         }
                       ]

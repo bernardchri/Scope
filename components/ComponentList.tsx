@@ -42,7 +42,7 @@ export default function ComponentList({ projectId }: ComponentListProps) {
     if (!activeProject) return;
 
     const newComponent: Component = {
-      id: `component-${Date.now()}`,
+      id: crypto.randomUUID(),
       name,
       description: description || undefined,
       category,

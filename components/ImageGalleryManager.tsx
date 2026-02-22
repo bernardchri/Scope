@@ -25,7 +25,7 @@ export default function ImageGalleryManager({ images, onChange }: ImageGalleryMa
 
     if (result.valid && result.base64) {
       const newImage: ComponentImage = {
-        id: `img-${Date.now()}`,
+        id: crypto.randomUUID(),
         base64: result.base64,
         caption: '',
         isPrimary: images.length === 0 // Première image = principale

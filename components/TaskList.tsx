@@ -101,7 +101,7 @@ export default function TaskList({ projectId, componentId, tasks }: TaskListProp
     if (!newTaskName.trim()) return;
     
     const newTask: Task = {
-      id: `task-${Date.now()}`,
+      id: crypto.randomUUID(),
       name: newTaskName,
       completed: false,
       category: selectedCategory

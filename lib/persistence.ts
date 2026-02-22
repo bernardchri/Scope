@@ -51,7 +51,7 @@ export async function createNewProjectFile(
   if (!filePath) return null;
 
   const project: Project = {
-    id: `project-${Date.now()}`,
+    id: crypto.randomUUID(),
     name,
     filename: slugify(name),
     components: [],
