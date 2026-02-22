@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Project, Component, ComponentCategory } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ChevronRight, Clock, CheckSquare, FileText, Euro } from 'lucide-react';
+import { ChevronRight, Clock, CheckSquare, FileText, Euro, TriangleAlert } from 'lucide-react';
 import { exportProjectPDF } from '@/lib/pdfExport';
 
 interface ProjectDashboardProps {
@@ -39,6 +39,8 @@ export default function ProjectDashboard({
   const [descDraft, setDescDraft] = useState(project.description ?? '');
   const [isEditingRate, setIsEditingRate] = useState(false);
   const [rateDraft, setRateDraft] = useState(project.hourlyRate?.toString() ?? '');
+  const [isEditingCap, setIsEditingCap] = useState(false);
+  const [capDraft, setCapDraft] = useState(project.budgetCap?.toString() ?? '');
   const [isExporting, setIsExporting] = useState(false);
 
   async function handleExportPDF() {
@@ -61,11 +63,18 @@ export default function ProjectDashboard({
     setIsEditingRate(false);
   }
 
+  function saveCap() {
+    const cap = parseFloat(capDraft);
+    onUpdateProject({ budgetCap: !isNaN(cap) && cap > 0 ? cap : undefined });
+    setIsEditingCap(false);
+  }
+
   // Calculs globaux
   const totalHours = project.components.reduce(
     (acc, c) => acc + (c.estimatedHours ?? 0), 0
   );
   const totalCost = project.hourlyRate ? totalHours * project.hourlyRate : null;
+  const overBudget = totalCost !== null && project.budgetCap !== undefined && totalCost > project.budgetCap;
   const totalTasks = project.components.reduce(
     (acc, c) => acc + c.tasks.length, 0
   );
@@ -136,45 +145,7 @@ export default function ProjectDashboard({
         )}
       </section>
 
-      {/* Export PDF */}
-      <div className="flex justify-end -mt-4">
-        <Button variant="outline" size="sm" onClick={handleExportPDF} disabled={isExporting}>
-          <FileText className="w-4 h-4 mr-2" />
-          {isExporting ? 'Génération…' : 'Exporter en PDF'}
-        </Button>
-      </div>
-
-      {/* Statistiques globales */}
-      <section className="flex flex-wrap gap-6 border-y py-5">
-        <div className="flex items-center gap-2 text-sm">
-          <Clock className="w-4 h-4 text-muted-foreground" />
-          <span className="font-semibold text-lg">{totalHours}h</span>
-          <span className="text-muted-foreground">estimées</span>
-        </div>
-        <div className="w-px bg-border" />
-        <div className="flex items-center gap-2 text-sm">
-          <CheckSquare className="w-4 h-4 text-muted-foreground" />
-          <span className="font-semibold text-lg">{doneTasks}/{totalTasks}</span>
-          <span className="text-muted-foreground">tâches complétées</span>
-        </div>
-        <div className="w-px bg-border" />
-        <div className="flex items-center gap-2 text-sm">
-          <span className="font-semibold text-lg">{project.components.length}</span>
-          <span className="text-muted-foreground">composant{project.components.length > 1 ? 's' : ''}</span>
-        </div>
-        {totalCost !== null && (
-          <>
-            <div className="w-px bg-border" />
-            <div className="flex items-center gap-2 text-sm">
-              <Euro className="w-4 h-4 text-muted-foreground" />
-              <span className="font-semibold text-lg text-green-700">{totalCost.toLocaleString('fr-FR')} € HT</span>
-              <span className="text-muted-foreground">estimés</span>
-            </div>
-          </>
-        )}
-      </section>
-
-      {/* Taux horaire */}
+         {/* Taux horaire */}
       <section className="flex items-center gap-3 text-sm">
         <Euro className="w-4 h-4 text-muted-foreground shrink-0" />
         <span className="text-muted-foreground">Taux horaire :</span>
@@ -211,6 +182,80 @@ export default function ProjectDashboard({
         )}
       </section>
 
+      {/* Plafond budget */}
+      <section className="flex items-center gap-3 text-sm">
+        <TriangleAlert className={`w-4 h-4 shrink-0 ${overBudget ? 'text-red-500' : 'text-muted-foreground'}`} />
+        <span className="text-muted-foreground">Plafond budget :</span>
+        {isEditingCap ? (
+          <div className="flex items-center gap-2">
+            <input
+              type="number"
+              value={capDraft}
+              onChange={e => setCapDraft(e.target.value)}
+              onBlur={saveCap}
+              onKeyDown={e => {
+                if (e.key === 'Enter') saveCap();
+                if (e.key === 'Escape') { setCapDraft(project.budgetCap?.toString() ?? ''); setIsEditingCap(false); }
+              }}
+              placeholder="ex: 2500"
+              min="0"
+              step="100"
+              className="w-28 border-b border-gray-300 outline-none bg-transparent text-sm"
+              autoFocus
+            />
+            <span className="text-muted-foreground">€ HT</span>
+          </div>
+        ) : (
+          <button
+            onClick={() => { setCapDraft(project.budgetCap?.toString() ?? ''); setIsEditingCap(true); }}
+            className="hover:text-foreground transition-colors"
+          >
+            {project.budgetCap ? (
+              <span className="font-semibold">{project.budgetCap.toLocaleString('fr-FR')} € HT</span>
+            ) : (
+              <span className="italic text-muted-foreground/50">Définir un plafond…</span>
+            )}
+          </button>
+        )}
+        {overBudget && totalCost !== null && project.budgetCap !== undefined && (
+          <span className="text-red-600 font-medium flex items-center gap-1">
+            Dépassement de {(totalCost - project.budgetCap).toLocaleString('fr-FR')} € HT
+          </span>
+        )}
+      </section>
+
+      {/* Statistiques globales */}
+      <section className="flex flex-wrap gap-6 border-y py-5">
+        <div className="flex items-center gap-2 text-sm">
+          <Clock className="w-4 h-4 text-muted-foreground" />
+          <span className="font-semibold text-lg">{totalHours}h</span>
+          <span className="text-muted-foreground">estimées</span>
+        </div>
+        <div className="w-px bg-border" />
+        <div className="flex items-center gap-2 text-sm">
+          <CheckSquare className="w-4 h-4 text-muted-foreground" />
+          <span className="font-semibold text-lg">{doneTasks}/{totalTasks}</span>
+          <span className="text-muted-foreground">tâches complétées</span>
+        </div>
+        <div className="w-px bg-border" />
+        <div className="flex items-center gap-2 text-sm">
+          <span className="font-semibold text-lg">{project.components.length}</span>
+          <span className="text-muted-foreground">composant{project.components.length > 1 ? 's' : ''}</span>
+        </div>
+        {totalCost !== null && (
+          <>
+            <div className="w-px bg-border" />
+            <div className="flex items-center gap-2 text-sm">
+              <Euro className="w-4 h-4 text-muted-foreground" />
+              <span className="font-semibold text-lg text-green-700">{totalCost.toLocaleString('fr-FR')} € HT</span>
+              <span className="text-muted-foreground">estimés</span>
+            </div>
+          </>
+        )}
+      </section>
+
+
+
       {/* Listing composants */}
       {project.components.length === 0 ? (
         <p className="text-muted-foreground text-sm">Aucun composant pour le moment.</p>
@@ -233,8 +278,8 @@ export default function ProjectDashboard({
                       onClick={() => onSelectComponent(component.id)}
                       className="flex items-center justify-between px-4 py-3 bg-card hover:bg-accent transition-colors text-left group"
                     >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <span className="font-medium truncate">{component.name}</span>
+                      <div className="flex-1 items-center gap-3 min-w-0">
+                        <span className="font-medium ">{component.name}</span>
                         {component.description && (
                           <span className="text-xs text-muted-foreground truncate hidden sm:block">
                             {component.description}
@@ -263,6 +308,14 @@ export default function ProjectDashboard({
           ))}
         </section>
       )}
+
+         {/* Export PDF */}
+      <div className="flex justify-end -mt-4">
+        <Button variant="outline" size="sm" onClick={handleExportPDF} disabled={isExporting}>
+          <FileText className="w-4 h-4 mr-2" />
+          {isExporting ? 'Génération…' : 'Exporter en PDF'}
+        </Button>
+      </div>
     </div>
   );
 }

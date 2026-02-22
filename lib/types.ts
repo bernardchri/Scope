@@ -53,6 +53,7 @@ export interface Project {
   description?: string;
   filename?: string; // slug utilisé pour le fichier, ex: "site-menuiserie"
   hourlyRate?: number;
+  budgetCap?: number;
   components: Component[];
   createdAt: string;
 }
