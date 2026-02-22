@@ -9,7 +9,9 @@ const config: Config = {
   theme: {
     extend: {},
   },
-  plugins: [    require("@tailwindcss/typography"), // 🆕
-],
+  plugins: [
+    require("tailwindcss-animate"),
+    require("@tailwindcss/typography")
+  ],
 };
 export default config;

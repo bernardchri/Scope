@@ -1,5 +1,5 @@
 import { Component } from '@/lib/types';
-import ComponentCard from './molecules/ComponentCard';
+import ComponentCard from './ComponentCard';
 
 interface ComponentGridViewProps {
   components: Component[];

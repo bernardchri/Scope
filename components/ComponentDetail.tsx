@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useProjectStore } from '@/lib/projectStore';
-import { ComponentCategory } from '@/lib/types';
+import { ComponentCategory, ComponentImage } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import ComponentDetailHeader from './molecules/ComponentDetailHeader';
@@ -31,7 +31,7 @@ export default function ComponentDetail({ projectId, componentId }: ComponentDet
     name: string,
     description: string,
     category: ComponentCategory,
-    imageBase64?: string
+    images: ComponentImage[]
   ) {
     if (!activeProject || !activeComponent) return;
 
@@ -39,7 +39,7 @@ export default function ComponentDetail({ projectId, componentId }: ComponentDet
       name,
       description: description || undefined,
       category,
-      imageBase64
+      images
     });
     setIsEditing(false);
   }
@@ -55,8 +55,8 @@ export default function ComponentDetail({ projectId, componentId }: ComponentDet
           name={activeComponent.name}
           description={activeComponent.description}
           category={activeComponent.category}
-          imageBase64={activeComponent.imageBase64}
-          onSubmit={handleSaveEdit}
+          images={activeComponent.images}
+          onSubmit={handleSaveEdit} 
           onCancel={() => setIsEditing(false)}
         />
       ) : (
