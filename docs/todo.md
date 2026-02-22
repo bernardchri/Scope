@@ -10,12 +10,14 @@
 ## Informations globales du projet
 - [ ] Ajouter le nom du créateur / studio (ex : "Studio Bergall") — utilisé dans le PDF et l'export
 - [ ] Ajouter un numéro de version au projet (ex : v1.0) pour le PDF
+- [x] Taux horaire configurable pour calculer les coûts estimés (affiché HT dans le dashboard)
+- [x] Ajouter un champ plafond budget — alerte rouge + montant du dépassement si `totalCost > budgetCap`
 
 ## Export PDF
 - [ ] Page de garde : nom projet, date, version, nom du créateur
 - [ ] Tableau récapitulatif : composants × estimation × coût (si taux horaire configuré)
 - [ ] Section "Hors périmètre" : lister les tâches marquées `v2`
-- [x] Taux horaire configurable pour calculer les coûts estimés (affiché HT dans le dashboard)
+
 
 ## Export Devis
 - [ ] Export PDF devis commercial : tableau composants × estimation × coût (taux horaire × heures)
