@@ -16,7 +16,7 @@ interface ComponentListProps {
 
 export default function ComponentList({ projectId }: ComponentListProps) {
   const projects = useProjectStore(state => state.projects);
-  const setActiveProject = useProjectStore(state => state.setActiveProject);
+  const closeProject = useProjectStore(state => state.closeProject);
   const addComponent = useProjectStore(state => state.addComponent);
   const deleteComponent = useProjectStore(state => state.deleteComponent);
   const updateComponent = useProjectStore(state => state.updateComponent);
@@ -89,7 +89,7 @@ export default function ComponentList({ projectId }: ComponentListProps) {
         sidebarOpen={sidebarOpen}
         showingAllComponents={showingAllComponents} // 🆕
         onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
-        onBack={() => setActiveProject(null)}
+        onBack={() => closeProject()}
         onNewComponent={() => setIsModalOpen(true)}
         onShowAllComponents={handleShowAllComponents} // 🆕
       />

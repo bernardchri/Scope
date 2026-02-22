@@ -27,7 +27,7 @@ export default function ProjectHeader({
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="sm" onClick={onBack}>
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Retour aux projets
+            Changer de projet
           </Button>
           
           <div className="h-6 w-px bg-gray-300" />

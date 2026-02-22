@@ -4,7 +4,8 @@ import { createProjectSlice } from './store/projectSlice';
 import { createComponentSlice } from './store/componentSlice';
 import { createTaskSlice } from './store/taskSlice';
 import { createInstanceSlice } from './store/instanceSlice';
-import { saveProjects } from './persistence';
+import { saveProjectToPath } from './persistence';
+import { Project } from './types';
 
 export const useProjectStore = create<ProjectStore>()((set, get, api) => ({
   ...createProjectSlice(set),
@@ -13,7 +14,20 @@ export const useProjectStore = create<ProjectStore>()((set, get, api) => ({
   ...createInstanceSlice(set),
 }));
 
-// Middleware pour auto-save après chaque mutation
+let previousProject: Project | null = null;
+
+// Initialiser avant d'appeler setState pour éviter un save inutile au chargement
+export function initPreviousProject(project: Project | null) {
+  previousProject = project;
+}
+
 useProjectStore.subscribe((state) => {
-  saveProjects(state.projects);
+  const { projects, currentProjectPath } = state;
+  if (!currentProjectPath || projects.length === 0) return;
+
+  const project = projects[0];
+  if (project !== previousProject) {
+    saveProjectToPath(currentProjectPath, project);
+    previousProject = project;
+  }
 });

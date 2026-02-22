@@ -3,6 +3,7 @@ import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { Download } from 'lucide-react';
 
 interface ProjectCardProps {
   project: Project;
@@ -14,6 +15,7 @@ interface ProjectCardProps {
   onSaveEdit: () => void;
   onCancelEdit: () => void;
   onDelete: () => void;
+  onExport: () => void;
 }
 
 export default function ProjectCard({
@@ -25,7 +27,8 @@ export default function ProjectCard({
   onStartEdit,
   onSaveEdit,
   onCancelEdit,
-  onDelete
+  onDelete,
+  onExport
 }: ProjectCardProps) {
   const totalComponents = project.components.length;
   const totalTasks = project.components.reduce((acc, c) => acc + c.tasks.length, 0);
@@ -96,8 +99,8 @@ export default function ProjectCard({
       </CardContent>
       
       <CardFooter className="flex gap-2">
-        <Button 
-          variant="outline" 
+        <Button
+          variant="outline"
           size="sm"
           onClick={(e) => {
             e.stopPropagation();
@@ -106,8 +109,19 @@ export default function ProjectCard({
         >
           Renommer
         </Button>
-        <Button 
-          variant="destructive" 
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={(e) => {
+            e.stopPropagation();
+            onExport();
+          }}
+        >
+          <Download className="h-3 w-3 mr-1" />
+          Exporter
+        </Button>
+        <Button
+          variant="destructive"
           size="sm"
           onClick={(e) => {
             e.stopPropagation();

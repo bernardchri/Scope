@@ -1,41 +1,45 @@
 import { StateCreator } from 'zustand';
 import { Project } from '../types';
+import { slugify } from '../persistence';
 
 export interface ProjectSlice {
   projects: Project[];
   activeProjectId: string | null;
-  
-  setProjects: (projects: Project[]) => void;
+  currentProjectPath: string | null;
+
+  openProject: (project: Project, path: string) => void;
+  closeProject: () => void;
   setActiveProject: (projectId: string | null) => void;
-  addProject: (project: Project) => void;
-  deleteProject: (projectId: string) => void;
   updateProject: (projectId: string, updates: Partial<Project>) => void;
+  setProjects: (projects: Project[]) => void;
 }
 
 export const createProjectSlice = (set: any) => ({
   projects: [],
   activeProjectId: null,
-  
-  setProjects: (projects: Project[]) => set({ projects }),
-  
+  currentProjectPath: null,
+
+  openProject: (project: Project, path: string) =>
+    set({ projects: [project], activeProjectId: project.id, currentProjectPath: path }),
+
+  closeProject: () =>
+    set({ projects: [], activeProjectId: null, currentProjectPath: null }),
+
   setActiveProject: (projectId: string | null) => set({ activeProjectId: projectId }),
-  
-  addProject: (project: Project) => {
-    set((state: any) => ({ projects: [...state.projects, project] }));
-  },
-  
-  deleteProject: (projectId: string) => {
-    set((state: any) => ({
-      projects: state.projects.filter((p: Project) => p.id !== projectId),
-      activeProjectId: state.activeProjectId === projectId ? null : state.activeProjectId
-    }));
-  },
-  
+
+  setProjects: (projects: Project[]) => set({ projects }),
+
   updateProject: (projectId: string, updates: Partial<Project>) => {
-    set((state: any) => ({
-      projects: state.projects.map((p: Project) =>
-        p.id === projectId ? { ...p, ...updates } : p
-      )
-    }));
-  }
+    set((state: any) => {
+      const computedUpdates = { ...updates };
+      if (updates.name) {
+        computedUpdates.filename = slugify(updates.name);
+      }
+      return {
+        projects: state.projects.map((p: Project) =>
+          p.id === projectId ? { ...p, ...computedUpdates } : p
+        )
+      };
+    });
+  },
 });
