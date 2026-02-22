@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Project, Component, ComponentCategory } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ChevronRight, Clock, CheckSquare, FileText } from 'lucide-react';
+import { ChevronRight, Clock, CheckSquare, FileText, Euro } from 'lucide-react';
 import { exportProjectPDF } from '@/lib/pdfExport';
 
 interface ProjectDashboardProps {
@@ -37,6 +37,8 @@ export default function ProjectDashboard({
 }: ProjectDashboardProps) {
   const [isEditingDesc, setIsEditingDesc] = useState(false);
   const [descDraft, setDescDraft] = useState(project.description ?? '');
+  const [isEditingRate, setIsEditingRate] = useState(false);
+  const [rateDraft, setRateDraft] = useState(project.hourlyRate?.toString() ?? '');
   const [isExporting, setIsExporting] = useState(false);
 
   async function handleExportPDF() {
@@ -53,10 +55,17 @@ export default function ProjectDashboard({
     setIsEditingDesc(false);
   }
 
+  function saveRate() {
+    const rate = parseFloat(rateDraft);
+    onUpdateProject({ hourlyRate: !isNaN(rate) && rate > 0 ? rate : undefined });
+    setIsEditingRate(false);
+  }
+
   // Calculs globaux
   const totalHours = project.components.reduce(
     (acc, c) => acc + (c.estimatedHours ?? 0), 0
   );
+  const totalCost = project.hourlyRate ? totalHours * project.hourlyRate : null;
   const totalTasks = project.components.reduce(
     (acc, c) => acc + c.tasks.length, 0
   );
@@ -136,7 +145,7 @@ export default function ProjectDashboard({
       </div>
 
       {/* Statistiques globales */}
-      <section className="flex gap-6 border-y py-5">
+      <section className="flex flex-wrap gap-6 border-y py-5">
         <div className="flex items-center gap-2 text-sm">
           <Clock className="w-4 h-4 text-muted-foreground" />
           <span className="font-semibold text-lg">{totalHours}h</span>
@@ -153,6 +162,53 @@ export default function ProjectDashboard({
           <span className="font-semibold text-lg">{project.components.length}</span>
           <span className="text-muted-foreground">composant{project.components.length > 1 ? 's' : ''}</span>
         </div>
+        {totalCost !== null && (
+          <>
+            <div className="w-px bg-border" />
+            <div className="flex items-center gap-2 text-sm">
+              <Euro className="w-4 h-4 text-muted-foreground" />
+              <span className="font-semibold text-lg text-green-700">{totalCost.toLocaleString('fr-FR')} € HT</span>
+              <span className="text-muted-foreground">estimés</span>
+            </div>
+          </>
+        )}
+      </section>
+
+      {/* Taux horaire */}
+      <section className="flex items-center gap-3 text-sm">
+        <Euro className="w-4 h-4 text-muted-foreground shrink-0" />
+        <span className="text-muted-foreground">Taux horaire :</span>
+        {isEditingRate ? (
+          <div className="flex items-center gap-2">
+            <input
+              type="number"
+              value={rateDraft}
+              onChange={e => setRateDraft(e.target.value)}
+              onBlur={saveRate}
+              onKeyDown={e => {
+                if (e.key === 'Enter') saveRate();
+                if (e.key === 'Escape') { setRateDraft(project.hourlyRate?.toString() ?? ''); setIsEditingRate(false); }
+              }}
+              placeholder="ex: 60"
+              min="0"
+              step="1"
+              className="w-24 border-b border-gray-300 outline-none bg-transparent text-sm"
+              autoFocus
+            />
+            <span className="text-muted-foreground">€/h</span>
+          </div>
+        ) : (
+          <button
+            onClick={() => { setRateDraft(project.hourlyRate?.toString() ?? ''); setIsEditingRate(true); }}
+            className="hover:text-foreground transition-colors"
+          >
+            {project.hourlyRate ? (
+              <span className="font-semibold">{project.hourlyRate} € HT/h</span>
+            ) : (
+              <span className="italic text-muted-foreground/50">Définir un taux…</span>
+            )}
+          </button>
+        )}
       </section>
 
       {/* Listing composants */}
