@@ -41,6 +41,7 @@ export interface Component {
   imageBase64?: string; // @deprecated - Garder pour compatibilité
   images?: ComponentImage[]; // 🆕 Nouvelle propriété
   
+  estimatedHours?: number;
   content?: string;
   instances: ComponentInstance[];
   tasks: Task[];

@@ -27,14 +27,16 @@ export default function ComponentDetailView({
     name: string,
     description: string,
     category: ComponentCategory,
-    images: ComponentImage[] // 🆕
+    images: ComponentImage[],
+    estimatedHours?: number
   ) {
     onUpdate(component.id, {
       name,
       description: description || undefined,
       category,
-      images, // 🆕
-      imageBase64: images.find(img => img.isPrimary)?.base64 // 🆕 Garder la rétrocompatibilité
+      images,
+      estimatedHours,
+      imageBase64: images.find(img => img.isPrimary)?.base64
     });
     setIsEditing(false);
   }
@@ -46,8 +48,9 @@ export default function ComponentDetailView({
           name={component.name}
           description={component.description}
           category={component.category}
+          estimatedHours={component.estimatedHours}
           imageBase64={component.imageBase64}
-          images={component.images} // 🆕
+          images={component.images}
           onSubmit={handleSaveEdit}
           onCancel={() => setIsEditing(false)}
         />

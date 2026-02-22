@@ -12,9 +12,10 @@ interface ComponentEditFormProps {
   name: string;
   description?: string;
   category: ComponentCategory;
+  estimatedHours?: number;
   imageBase64?: string; // @deprecated
-  images?: ComponentImage[]; // 🆕
-  onSubmit: (name: string, description: string, category: ComponentCategory, images: ComponentImage[]) => void;
+  images?: ComponentImage[];
+  onSubmit: (name: string, description: string, category: ComponentCategory, images: ComponentImage[], estimatedHours?: number) => void;
   onCancel: () => void;
 }
 
@@ -22,6 +23,7 @@ export default function ComponentEditForm({
   name: initialName,
   description: initialDescription,
   category: initialCategory,
+  estimatedHours: initialEstimatedHours,
   imageBase64: initialImageBase64,
   images: initialImages,
   onSubmit,
@@ -30,6 +32,9 @@ export default function ComponentEditForm({
   const [name, setName] = useState(initialName);
   const [description, setDescription] = useState(initialDescription || '');
   const [category, setCategory] = useState(initialCategory);
+  const [estimatedHours, setEstimatedHours] = useState<string>(
+    initialEstimatedHours !== undefined ? String(initialEstimatedHours) : ''
+  );
   
   // 🆕 Gérer la galerie d'images
   const [images, setImages] = useState<ComponentImage[]>(() => {
@@ -48,7 +53,8 @@ export default function ComponentEditForm({
 
   function handleSubmit() {
     if (!name.trim()) return;
-    onSubmit(name, description, category, images);
+    const hours = estimatedHours !== '' ? parseFloat(estimatedHours) : undefined;
+    onSubmit(name, description, category, images, hours && !isNaN(hours) ? hours : undefined);
   }
 
   return (
@@ -82,7 +88,21 @@ export default function ComponentEditForm({
           </SelectContent>
         </Select>
 
-        {/* 🆕 Gestionnaire de galerie d'images */}
+        {/* Estimation de temps */}
+        <div className="flex items-center gap-3">
+          <Input
+            type="number"
+            min="0"
+            step="0.5"
+            value={estimatedHours}
+            onChange={(e) => setEstimatedHours(e.target.value)}
+            placeholder="Estimation (heures)"
+            className="w-48"
+          />
+          <span className="text-sm text-muted-foreground">heures estimées</span>
+        </div>
+
+        {/* Gestionnaire de galerie d'images */}
         <ImageGalleryManager
           images={images}
           onChange={setImages}

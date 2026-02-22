@@ -19,7 +19,7 @@ export default function ComponentDetailHeader({ component, onEdit }: ComponentDe
 
   return (
     <div className="space-y-4">
-      {/* Titre + Badge + Bouton */}
+      {/* Titre + Badge catégorie + Bouton */}
       <div className="flex items-center gap-3">
         <h1 className="text-2xl font-bold flex-1">{component.name}</h1>
         <Badge className={getCategoryColor(component.category)}>
@@ -34,6 +34,13 @@ export default function ComponentDetailHeader({ component, onEdit }: ComponentDe
       {component.description && (
         <p className="text-muted-foreground italic">
           {component.description}
+        </p>
+      )}
+
+      {/* Estimation de temps */}
+      {component.estimatedHours !== undefined && (
+        <p className="text-sm font-medium text-orange-600">
+          ⏱ Estimation : {component.estimatedHours}h
         </p>
       )}
 

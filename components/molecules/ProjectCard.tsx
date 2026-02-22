@@ -34,6 +34,10 @@ export default function ProjectCard({
     0
   );
   const taskProgress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+  const totalEstimatedHours = project.components.reduce(
+    (acc, c) => acc + (c.estimatedHours ?? 0),
+    0
+  );
 
   if (isEditing) {
     return (
@@ -66,17 +70,22 @@ export default function ProjectCard({
           </Badge>
           
           {totalTasks > 0 && (
-            <Badge 
+            <Badge
               variant="secondary"
               className={
-                taskProgress === 100 
-                  ? 'bg-green-100 text-green-700' 
-                  : taskProgress > 0 
+                taskProgress === 100
+                  ? 'bg-green-100 text-green-700'
+                  : taskProgress > 0
                   ? 'bg-yellow-100 text-yellow-700'
                   : 'bg-gray-100 text-gray-700'
               }
             >
               Tâches: {completedTasks}/{totalTasks} ({taskProgress}%)
+            </Badge>
+          )}
+          {totalEstimatedHours > 0 && (
+            <Badge variant="secondary" className="bg-orange-100 text-orange-700">
+              ⏱ {totalEstimatedHours}h estimées
             </Badge>
           )}
         </div>

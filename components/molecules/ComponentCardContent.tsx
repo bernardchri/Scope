@@ -73,6 +73,13 @@ export default function ComponentCardContent({
         </div>
       )}
 
+      {/* Estimation de temps */}
+      {component.estimatedHours !== undefined && (
+        <Badge variant="outline" className="text-xs mb-3 text-orange-600 border-orange-300">
+          ⏱ {component.estimatedHours}h
+        </Badge>
+      )}
+
       {/* Instances utilisées */}
       {usageCount > 0 && (
         <Badge variant="outline" className="text-xs mb-3">

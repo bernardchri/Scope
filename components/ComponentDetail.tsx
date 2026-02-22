@@ -31,7 +31,8 @@ export default function ComponentDetail({ projectId, componentId }: ComponentDet
     name: string,
     description: string,
     category: ComponentCategory,
-    images: ComponentImage[]
+    images: ComponentImage[],
+    estimatedHours?: number
   ) {
     if (!activeProject || !activeComponent) return;
 
@@ -39,7 +40,8 @@ export default function ComponentDetail({ projectId, componentId }: ComponentDet
       name,
       description: description || undefined,
       category,
-      images
+      images,
+      estimatedHours
     });
     setIsEditing(false);
   }
@@ -56,6 +58,7 @@ export default function ComponentDetail({ projectId, componentId }: ComponentDet
           description={activeComponent.description}
           category={activeComponent.category}
           images={activeComponent.images}
+          estimatedHours={activeComponent.estimatedHours}
           onSubmit={handleSaveEdit} 
           onCancel={() => setIsEditing(false)}
         />

@@ -24,8 +24,9 @@ export function migrateProjectsToV2(projects: Project[]): Project[] {
         instances: (component as any).instances || [],
         description: (component as any).description || undefined,
         category: (component as any).category || 'element',
-        imageBase64: (component as any).imageBase64 || undefined, // Garder pour compatibilité
-        images, // 🆕
+        estimatedHours: (component as any).estimatedHours,
+        imageBase64: (component as any).imageBase64 || undefined,
+        images,
         tasks: ((component as any).tasks || []).map((task: any) => ({
           id: task.id,
           name: task.name,
