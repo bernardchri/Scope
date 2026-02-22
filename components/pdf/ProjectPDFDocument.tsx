@@ -4,9 +4,10 @@ import {
   Text,
   View,
   Image,
+  Link,
   StyleSheet,
 } from '@react-pdf/renderer';
-import { Project, Component, ComponentCategory } from '@/lib/types';
+import { Project, Component, ComponentCategory, TaskCategory } from '@/lib/types';
 
 // ─── Données ──────────────────────────────────────────────────────────────────
 
@@ -26,6 +27,19 @@ const CATEGORY_ORDER: ComponentCategory[] = [
   'template', 'navigation', 'section', 'composition',
   'element', 'media', 'form', 'content', 'document',
 ];
+
+const TASK_CATEGORY_LABELS: Record<TaskCategory, string> = {
+  frontend: 'Frontend',
+  backend:  'Backend',
+  seo:      'SEO',
+  motion:   'Motion',
+};
+
+const TASK_CATEGORY_ORDER: TaskCategory[] = ['frontend', 'backend', 'seo', 'motion'];
+
+function componentAnchorId(component: Component): string {
+  return `comp-${component.id}`;
+}
 
 function getPrimaryImage(component: Component): string | null {
   const images = component.images ?? [];
@@ -64,7 +78,7 @@ const s = StyleSheet.create({
     borderBottomColor: '#e0e0e0',
     borderBottomStyle: 'solid',
   },
-  pageHeaderApp: { fontSize: 8, letterSpacing: 2, color: '#aaa' },
+  pageHeaderApp:  { fontSize: 8, letterSpacing: 2, color: '#aaa' },
   pageHeaderDate: { fontSize: 8, color: '#aaa' },
 
   // Titre projet (page 1)
@@ -127,7 +141,51 @@ const s = StyleSheet.create({
     textAlign: 'center',
   },
 
-  // Entête catégorie
+  // ─── Sommaire ────────────────────────────────────────────────────────────────
+  tocPageTitle: {
+    fontSize: 22,
+    fontFamily: 'Helvetica-Bold',
+    marginBottom: 28,
+    color: '#1a1a1a',
+  },
+  tocCategorySection: {
+    marginBottom: 18,
+  },
+  tocCategoryHeader: {
+    fontSize: 7,
+    fontFamily: 'Helvetica-Bold',
+    letterSpacing: 2,
+    color: '#aaa',
+    textTransform: 'uppercase',
+    marginBottom: 4,
+    paddingBottom: 5,
+    borderBottomWidth: 1,
+    borderBottomColor: '#efefef',
+    borderBottomStyle: 'solid',
+  },
+  tocRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 5,
+    paddingHorizontal: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f8f8f8',
+    borderBottomStyle: 'solid',
+  },
+  tocName: {
+    fontSize: 10,
+    color: '#1a1a1a',
+    flex: 1,
+    textDecoration: 'none',
+  },
+  tocHours: {
+    fontSize: 8,
+    color: '#bbb',
+    marginLeft: 8,
+  },
+
+  // ─── Détail composants ───────────────────────────────────────────────────────
   categoryHeader: {
     marginTop: 36,
     marginBottom: 14,
@@ -145,42 +203,117 @@ const s = StyleSheet.create({
   },
 
   // Bloc composant
-  componentRow: {
+  componentDetailBlock: {
+    marginBottom: 28,
+    paddingBottom: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+    borderBottomStyle: 'solid',
+  },
+  componentDetailHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 20,
-    paddingLeft: 12,
-    borderLeftWidth: 2,
-    borderLeftColor: '#ebebeb',
-    borderLeftStyle: 'solid',
   },
-  componentContent: { flex: 1 },
-  componentName: {
-    fontSize: 11,
+  componentDetailContent: {
+    flex: 1,
+    paddingRight: 16,
+  },
+  componentDetailName: {
+    fontSize: 13,
     fontFamily: 'Helvetica-Bold',
     color: '#1a1a1a',
-    marginBottom: 3,
+    marginBottom: 4,
   },
-  componentDesc: {
+  componentDetailDesc: {
     fontSize: 9,
     color: '#555',
     lineHeight: 1.5,
-    marginBottom: 4,
+    marginBottom: 5,
   },
-  componentHours: {
+  componentDetailHours: {
     fontSize: 9,
     color: '#aaa',
   },
-  componentImage: {
-    width: 160,
-    height: 110,
+  componentDetailImage: {
+    width: 150,
+    height: 100,
     objectFit: 'contain',
-    marginLeft: 16,
     borderWidth: 1,
     borderColor: '#ebebeb',
     borderStyle: 'solid',
     borderRadius: 2,
+    flexShrink: 0,
+  },
+
+  // Tâches
+  taskSection: {
+    marginTop: 14,
+  },
+  taskSectionLabel: {
+    fontSize: 7,
+    fontFamily: 'Helvetica-Bold',
+    letterSpacing: 1.5,
+    color: '#bbb',
+    textTransform: 'uppercase',
+    marginBottom: 8,
+  },
+  taskCategoryGroup: {
+    marginBottom: 8,
+  },
+  taskCategoryTitle: {
+    fontSize: 7,
+    fontFamily: 'Helvetica-Bold',
+    color: '#ccc',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+    marginBottom: 4,
+  },
+  taskRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+    gap: 7,
+  },
+  taskCheckbox: {
+    width: 9,
+    height: 9,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderStyle: 'solid',
+    borderRadius: 2,
+    flexShrink: 0,
+  },
+  taskCheckboxDone: {
+    backgroundColor: '#22c55e',
+    borderColor: '#22c55e',
+  },
+  taskName: {
+    fontSize: 9,
+    color: '#333',
+  },
+  taskNameDone: {
+    fontSize: 9,
+    color: '#bbb',
+  },
+
+  // Composants utilisés
+  instancesSection: {
+    marginTop: 12,
+  },
+  instancesSectionLabel: {
+    fontSize: 7,
+    fontFamily: 'Helvetica-Bold',
+    letterSpacing: 1.5,
+    color: '#bbb',
+    textTransform: 'uppercase',
+    marginBottom: 6,
+  },
+  instanceName: {
+    fontSize: 9,
+    color: '#555',
+    marginBottom: 3,
+    textDecoration: 'none',
   },
 
   // Numéro de page
@@ -267,21 +400,93 @@ function PageNum() {
   );
 }
 
-function ComponentBlock({ component }: { component: Component }) {
-  const imageSrc = getPrimaryImage(component);
+function TocRow({ component }: { component: Component }) {
   return (
-    <View style={s.componentRow} wrap={false}>
-      <View style={s.componentContent}>
-        <Text style={s.componentName}>{component.name}</Text>
-        {component.description && (
-          <Text style={s.componentDesc}>{component.description}</Text>
-        )}
+    <Link src={`#${componentAnchorId(component)}`}>
+      <View style={s.tocRow}>
+        <Text style={s.tocName}>{component.name}</Text>
         {component.estimatedHours != null && component.estimatedHours > 0 && (
-          <Text style={s.componentHours}>⏱ {component.estimatedHours}h estimées</Text>
+          <Text style={s.tocHours}>{component.estimatedHours}h</Text>
         )}
       </View>
-      {imageSrc && (
-        <Image src={imageSrc} style={s.componentImage} />
+    </Link>
+  );
+}
+
+function ComponentDetailBlock({
+  component,
+  allComponents,
+}: {
+  component: Component;
+  allComponents: Component[];
+}) {
+  const imageSrc = getPrimaryImage(component);
+
+  const tasksByCategory = TASK_CATEGORY_ORDER.reduce<Partial<Record<TaskCategory, typeof component.tasks>>>(
+    (acc, cat) => {
+      const tasks = component.tasks.filter(t => t.category === cat);
+      if (tasks.length > 0) acc[cat] = tasks;
+      return acc;
+    }, {}
+  );
+
+  const instanceComponents = component.instances
+    .map(inst => allComponents.find(c => c.id === inst.componentId))
+    .filter((c): c is Component => !!c);
+
+  return (
+    <View id={componentAnchorId(component)} style={s.componentDetailBlock}>
+
+      {/* En-tête : nom + image côte à côte */}
+      <View style={s.componentDetailHeader} wrap={false}>
+        <View style={s.componentDetailContent}>
+          <Text style={s.componentDetailName}>{component.name}</Text>
+          {component.description && (
+            <Text style={s.componentDetailDesc}>{component.description}</Text>
+          )}
+          {component.estimatedHours != null && component.estimatedHours > 0 && (
+            <Text style={s.componentDetailHours}>⏱ {component.estimatedHours}h estimées</Text>
+          )}
+        </View>
+        {imageSrc && (
+          <Image src={imageSrc} style={s.componentDetailImage} />
+        )}
+      </View>
+
+      {/* Liste des tâches groupées par catégorie */}
+      {component.tasks.length > 0 && (
+        <View style={s.taskSection}>
+          <Text style={s.taskSectionLabel}>Tâches</Text>
+          {TASK_CATEGORY_ORDER.map(cat => {
+            const tasks = tasksByCategory[cat];
+            if (!tasks) return null;
+            return (
+              <View key={cat} style={s.taskCategoryGroup}>
+                <Text style={s.taskCategoryTitle}>{TASK_CATEGORY_LABELS[cat]}</Text>
+                {tasks.map(task => (
+                  <View key={task.id} style={s.taskRow}>
+                    <View style={[s.taskCheckbox, ...(task.completed ? [s.taskCheckboxDone] : [])]} />
+                    <Text style={task.completed ? s.taskNameDone : s.taskName}>
+                      {task.name}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            );
+          })}
+        </View>
+      )}
+
+      {/* Composants utilisés (instances) */}
+      {instanceComponents.length > 0 && (
+        <View style={s.instancesSection}>
+          <Text style={s.instancesSectionLabel}>Composants utilisés</Text>
+          {instanceComponents.map(inst => (
+            <Link key={inst.id} src={`#${componentAnchorId(inst)}`}>
+              <Text style={s.instanceName}>→ {inst.name}</Text>
+            </Link>
+          ))}
+        </View>
       )}
     </View>
   );
@@ -342,29 +547,42 @@ export function ProjectPDFDocument({ project }: Props) {
           </View>
         </View>
 
-        {/* Sommaire */}
-        <Text style={s.sectionLabel}>Sommaire</Text>
+        <PageNum />
+      </Page>
+
+      {/* ── Page 2 : Sommaire ────────────────────────────────────────────────── */}
+      <Page size="A4" style={s.page}>
+        <PageHeader projectName={project.name} date={today} />
+
+        <Text style={s.tocPageTitle}>Sommaire</Text>
+
         {grouped.map(({ cat, components }) => (
-          <View key={cat} style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
-            <Text style={{ fontSize: 10, color: '#444' }}>{CATEGORY_LABELS[cat]}</Text>
-            <Text style={{ fontSize: 10, color: '#aaa' }}>{components.length} composant{components.length > 1 ? 's' : ''}</Text>
+          <View key={cat} style={s.tocCategorySection}>
+            <Text style={s.tocCategoryHeader}>{CATEGORY_LABELS[cat]}</Text>
+            {components.map(component => (
+              <TocRow key={component.id} component={component} />
+            ))}
           </View>
         ))}
 
         <PageNum />
       </Page>
 
-      {/* ── Pages composants ────────────────────────────────────────────────── */}
+      {/* ── Pages composants (détail) ────────────────────────────────────────── */}
       <Page size="A4" style={s.page}>
         <PageHeader projectName={project.name} date={today} />
 
         {grouped.map(({ cat, components }) => (
           <View key={cat}>
-            <View style={s.categoryHeader}>
+            <View style={s.categoryHeader} wrap={false}>
               <Text style={s.categoryTitle}>{CATEGORY_LABELS[cat]}</Text>
             </View>
             {components.map(component => (
-              <ComponentBlock key={component.id} component={component} />
+              <ComponentDetailBlock
+                key={component.id}
+                component={component}
+                allComponents={project.components}
+              />
             ))}
           </View>
         ))}
