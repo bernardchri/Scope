@@ -433,7 +433,7 @@ function ComponentDetailBlock({
 
   const instanceComponents = component.instances
     .map(inst => allComponents.find(c => c.id === inst.componentId))
-    .filter((c): c is Component => !!c);
+    .filter((c, i, arr): c is Component => !!c && arr.findIndex(x => x?.id === c.id) === i);
 
   return (
     <View id={componentAnchorId(component)} style={s.componentDetailBlock}>
@@ -508,13 +508,16 @@ interface Props { project: Project }
 export function ProjectPDFDocument({ project }: Props) {
   const today = formatDate(new Date().toISOString());
 
-  const totalHours = project.components.reduce((acc, c) => acc + (c.estimatedHours ?? 0), 0);
-  const totalTasks = project.components.reduce((acc, c) => acc + c.tasks.length, 0);
-  const doneTasks  = project.components.reduce((acc, c) => acc + c.tasks.filter(t => t.completed).length, 0);
+  // Dédupliquer par ID (sécurité contre les données corrompues)
+  const components = project.components.filter((c, i, arr) => arr.findIndex(x => x.id === c.id) === i);
+
+  const totalHours = components.reduce((acc, c) => acc + (c.estimatedHours ?? 0), 0);
+  const totalTasks = components.reduce((acc, c) => acc + c.tasks.length, 0);
+  const doneTasks  = components.reduce((acc, c) => acc + c.tasks.filter(t => t.completed).length, 0);
 
   const grouped = CATEGORY_ORDER.reduce<Array<{ cat: ComponentCategory; components: Component[] }>>(
     (acc, cat) => {
-      const items = project.components.filter(c => c.category === cat);
+      const items = components.filter(c => c.category === cat);
       if (items.length > 0) acc.push({ cat, components: items });
       return acc;
     }, []
@@ -590,7 +593,7 @@ export function ProjectPDFDocument({ project }: Props) {
               <ComponentDetailBlock
                 key={component.id}
                 component={component}
-                allComponents={project.components}
+                allComponents={components}
               />
             ))}
           </View>
