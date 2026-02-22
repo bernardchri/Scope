@@ -8,6 +8,7 @@ import {
   StyleSheet,
 } from '@react-pdf/renderer';
 import { Project, Component, ComponentCategory, TaskCategory } from '@/lib/types';
+import { renderMarkdown } from './renderMarkdown';
 
 // ─── Données ──────────────────────────────────────────────────────────────────
 
@@ -474,6 +475,14 @@ function ComponentDetailBlock({
               </View>
             );
           })}
+        </View>
+      )}
+
+      {/* Contenu markdown (documents) */}
+      {component.category === 'document' && component.content && (
+        <View style={{ marginTop: 14 }}>
+          <Text style={s.taskSectionLabel}>Contenu</Text>
+          {renderMarkdown(component.content)}
         </View>
       )}
 
