@@ -2,112 +2,65 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Vision & intégrations
-
-Voir [`docs/philosophie-et-integrations.md`](./docs/philosophie-et-integrations.md) pour la philosophie du projet et l'intégration avec **Story-compiler**.
-
-En résumé : SCOPE couvre la phase de cadrage (côté client — composants, mockups, estimations, PDF cahier des charges). Story-compiler prend le relais pour la phase de développement. Le lien entre les deux est un export `STORIES.md` généré par SCOPE.
-
 ## Commands
 
 ```bash
-# Development
-npm run dev          # Next.js dev server on http://localhost:3000
-npm run tauri        # Tauri desktop app in dev mode (connects to dev server)
-
-# Build
-npm run build        # Next.js static export to ./out
-npm run build:tauri  # Build Tauri desktop app (bundles ./out)
-
-# Lint
-npm run lint         # ESLint
+npm run dev          # Next.js dev server (localhost:3000)
+npm run tauri        # Tauri dev mode
+npm run build        # Next.js static export → ./out
+npm run build:tauri  # Full Tauri production build + DMG
+npm run lint
 ```
 
-No test suite is configured.
+No test suite.
 
 ## Architecture
 
-**SCOPE** is a Tauri v2 desktop app wrapping a Next.js 15 static export. There is no backend or API.
+Tauri v2 desktop app wrapping a Next.js 15 static export. No backend/API. All data on local filesystem via Rust commands.
 
-### Data flow
+**Document-centric**: one project open at a time, stored as a plain JSON `.scope` file.
 
-1. Next.js builds a static export to `./out`
-2. Tauri serves `./out` in production, or proxies `http://localhost:3000` during dev
-3. React Client Components handle all interactivity
-4. Zustand store manages global state and auto-saves on every change via middleware
-5. Persistence uses plain JSON `.scope` files on the filesystem (via Rust commands)
+### Routing (`app/page.tsx`)
 
-### Persistence model — one `.scope` file per project
+Single page acting as client router:
+- no `activeProjectId` → `HomeScreen`
+- `activeProjectId` only → `ComponentList` (sidebar + dashboard or component detail)
+- both `activeProjectId` + `activeComponentId` → `ComponentDetail` / `DocumentDetailView`
 
-SCOPE is **document-centric**: one project is open at a time, stored in a single `.scope` file (plain JSON) chosen by the user.
+### State (`lib/store/`)
 
-- **Open a project**: file picker → `openProjectFile(path)` → `useProjectStore.openProject(project, path)`
-- **Create a project**: user types a name → save dialog → `createNewProjectFile(name)` → file created → project opened
-- **Auto-save**: `useProjectStore.subscribe()` in `lib/projectStore.ts` detects any change to `projects[0]` and calls `saveProjectToPath(currentProjectPath, project)`. Call `initPreviousProject(project)` before `setState` to prevent a spurious save on load.
-- **Close / switch project**: `closeProject()` clears `projects`, `activeProjectId`, `currentProjectPath`. User goes back to `HomeScreen` and opens another file.
-- **No deletion from the app** — users delete `.scope` files directly from Finder.
-- **Recent files**: last 3 opened file paths stored in `config.dat` via `getRecentFiles()` / `addRecentFile()`.
-- **Export**: a project can be exported as a gzip `.scope` archive (for sharing/backup) via `exportProject()` in `lib/backup.ts`. The gzip format wraps `{ projects: [...] }` in a `ScopeFile` envelope. `load_project_file` (Rust) handles both plain JSON and gzip automatically.
+Zustand store split into 4 slices: `projectSlice`, `componentSlice`, `taskSlice`, `instanceSlice`.
 
-Rust filesystem commands (in `src-tauri/src/main.rs`):
-- `save_project_file(path, data)` — write plain JSON
-- `load_project_file(path)` — read plain JSON, falls back to gzip if needed
-- `list_scope_files(dir)` — list `.scope` files in a directory
-- `delete_project_file(path)` — delete a file
-- `rename_project_file(old_path, new_path)` — rename a file
+`projectSlice` holds `projects` (0 or 1 item), `activeProjectId`, `currentProjectPath`.
 
-Config is stored in `config.dat` (via `@tauri-apps/plugin-store`):
-- `recentFiles` — `Array<{ name, path, openedAt }>`, max 3 entries
+### Persistence (`lib/persistence.ts` + `lib/projectStore.ts`)
 
-### State management (`lib/store/`)
+- **Open**: `openProjectFile(path)` → `openProject(project, path)`. Always call `initPreviousProject(project)` before `openProject` to avoid a spurious auto-save on load.
+- **Auto-save**: subscribe in `lib/projectStore.ts` compares `projects[0]` by reference → calls `saveProjectToPath` on any change.
+- **Close/switch**: `closeProject()` → back to `HomeScreen`.
+- **Recent files**: last 3 paths in `config.dat` (`recentFiles: Array<{name, path, openedAt}>`).
+- **No in-app deletion** — users delete `.scope` files from Finder.
+- **Export/backup**: gzip archive wrapping `{ projects: [] }` via `lib/backup.ts`. `load_project_file` (Rust) handles both plain JSON and gzip.
 
-The Zustand store is composed of four slices:
+Rust commands (`src-tauri/src/main.rs`): `save_project_file`, `load_project_file`, `list_scope_files`, `delete_project_file`, `rename_project_file`, `write_pdf_file`.
 
-- `projectSlice` — holds `projects` (0 or 1 item), `activeProjectId`, `currentProjectPath`; exposes `openProject()`, `closeProject()`, `updateProject()`
-- `componentSlice` — component CRUD, active component selection; `canDeleteComponent()` prevents deletion of components used as instances elsewhere
-- `taskSlice` — task CRUD and toggle within a component
-- `instanceSlice` — component-instance references (tracking reuse of components)
-
-Auto-save is wired in `lib/projectStore.ts` via `useProjectStore.subscribe()`. The subscribe compares `projects[0]` by reference — any mutation creates a new object, triggering a save.
+Config in `config.dat` via `@tauri-apps/plugin-store` (separate from project data).
 
 ### Data types (`lib/types.ts`)
 
-Key interfaces:
-- `Project` → `{ id, name, filename?, components[], createdAt }`; `filename` is the slugified name used when exporting
-- `Component` → has `category`, `tasks[]`, `instances[]`, `images[]` (base64-encoded), optional `content` (for `document` category)
-- `Task` → has `category: 'frontend' | 'backend' | 'seo' | 'motion'`
-- `ComponentImage` → `base64` string + `isPrimary` flag
+- `Project`: `{ id, name, description?, filename?, components[], createdAt }`
+- `Component`: `{ category, tasks[], instances[], images[], content? }` — `filename` is slugified name for file exports
+- `Task`: `{ category: 'frontend'|'backend'|'seo'|'motion' }`
+- `ComponentImage`: `{ base64, isPrimary }` — supersedes legacy `imageBase64` field (migration in `lib/migrations.ts`)
 
-Legacy field `imageBase64` on `Component` is superseded by `images[]`. Migration runs in `lib/migrations.ts`.
+### PDF export (`components/pdf/ProjectPDFDocument.tsx`)
 
-### Routing / navigation
-
-The app has a single Next.js page (`app/page.tsx`) that acts as a client-side router:
-
-- `activeProjectId === null` → `HomeScreen` (open/create project, recent files)
-- `activeProjectId` set, `activeComponentId === null` → `ComponentList` (sidebar + grid)
-- both set → `ComponentDetail` / `DocumentDetailView`
-
-Navigation state is held in the Zustand store (`activeProjectId`, `activeComponentId`).
-
-### Component structure
-
-```
-components/
-  ui/              # shadcn/ui primitives (do not edit directly)
-  molecules/       # Reusable mid-level components
-  forms/           # Controlled form components
-  modals/          # Dialog-based creation flows
-  HomeScreen.tsx   # Home screen: recent files, create, open
-  ComponentList.tsx
-  ProjectHeader.tsx
-  *.tsx            # Other page-level / feature components
-```
-
-All interactive components use `'use client'`. shadcn/ui is configured with the `new-york` style and `lucide` icons.
+4 pages: overview → sommaire (with internal `#anchor` links) → component details (tasks + instances) → bon pour accord. Dynamic import via `lib/pdfExport.tsx` to avoid SSR issues. PDF bytes transferred to Rust as base64.
 
 ### Styling
 
-- Tailwind CSS 4 with CSS variables using OKLch color space (defined in `styles/global.css`)
-- Light/dark mode variables are defined; use CSS variables (`--color-*`) rather than hardcoded colors
-- `cn()` from `lib/utils.ts` combines `clsx` + `tailwind-merge` — use it for conditional class names
+Tailwind CSS 4, OKLch color space, CSS variables in `styles/global.css`. Use `cn()` from `lib/utils.ts`. shadcn/ui `new-york` style + lucide icons. No hardcoded colors.
+
+### Vision
+
+SCOPE = cadrage client (composants, mockups, estimations, PDF). Story-compiler = développement. Lien = export `STORIES.md`. Voir `docs/philosophie-et-integrations.md`.
