@@ -8,32 +8,43 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { Trash2 } from 'lucide-react';
+import { Trash2, Clock } from 'lucide-react';
+import TaskList from './TaskList';
+import ComponentInstanceList from './ComponentInstanceList';
 
 interface DocumentDetailViewProps {
   projectId: string;
   document: Component;
+  allComponents: Component[];
   onUpdate: (documentId: string, updates: Partial<Component>) => void;
   onDelete: () => void;
+  onNavigate: (componentId: string) => void;
 }
 
 export default function DocumentDetailView({
   projectId,
   document,
+  allComponents,
   onUpdate,
   onDelete,
+  onNavigate,
 }: DocumentDetailViewProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [mode, setMode] = useState<'edit' | 'preview'>('preview');
   const [editName, setEditName] = useState(document.name);
   const [editDescription, setEditDescription] = useState(document.description || '');
   const [editContent, setEditContent] = useState(document.content || '');
+  const [editHours, setEditHours] = useState<string>(
+    document.estimatedHours !== undefined ? String(document.estimatedHours) : ''
+  );
 
   function handleSave() {
+    const hours = editHours !== '' ? parseFloat(editHours) : undefined;
     onUpdate(document.id, {
       name: editName,
       description: editDescription || undefined,
-      content: editContent
+      content: editContent,
+      estimatedHours: hours && !isNaN(hours) ? hours : undefined,
     });
     setIsEditing(false);
     setMode('preview');
@@ -43,6 +54,7 @@ export default function DocumentDetailView({
     setEditName(document.name);
     setEditDescription(document.description || '');
     setEditContent(document.content || '');
+    setEditHours(document.estimatedHours !== undefined ? String(document.estimatedHours) : '');
     setIsEditing(false);
     setMode('preview');
   }
@@ -103,6 +115,30 @@ export default function DocumentDetailView({
         document.description && (
           <p className="text-muted-foreground italic text-lg">
             {document.description}
+          </p>
+        )
+      )}
+
+      {/* Estimation de temps */}
+      {isEditing ? (
+        <div className="flex items-center gap-2">
+          <Clock className="h-4 w-4 text-orange-500" />
+          <input
+            type="number"
+            value={editHours}
+            onChange={(e) => setEditHours(e.target.value)}
+            placeholder="Heures estimées"
+            min="0"
+            step="0.5"
+            className="w-32 border-b border-gray-300 outline-none pb-1 bg-transparent text-sm"
+          />
+          <span className="text-sm text-muted-foreground">h estimées</span>
+        </div>
+      ) : (
+        document.estimatedHours !== undefined && (
+          <p className="text-sm font-medium text-orange-600 flex items-center gap-1">
+            <Clock className="h-4 w-4" />
+            Estimation : {document.estimatedHours}h
           </p>
         )
       )}
@@ -169,6 +205,24 @@ export default function DocumentDetailView({
           )}
         </div>
       )}
+
+      <Separator />
+
+      <TaskList
+        projectId={projectId}
+        componentId={document.id}
+        tasks={document.tasks}
+      />
+
+      <Separator />
+
+      <ComponentInstanceList
+        projectId={projectId}
+        componentId={document.id}
+        instances={document.instances}
+        allComponents={allComponents}
+        onNavigate={onNavigate}
+      />
     </div>
   );
 }

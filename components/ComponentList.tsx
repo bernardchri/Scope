@@ -136,8 +136,10 @@ export default function ComponentList({ projectId }: ComponentListProps) {
                   key={selectedItem.id}
                   projectId={projectId}
                   document={selectedItem}
+                  allComponents={activeProject.components}
                   onUpdate={handleUpdateComponent}
                   onDelete={() => handleDeleteComponent(selectedItem.id)}
+                  onNavigate={navigateTo}
                 />
               ) : (
                 <ComponentDetailView
