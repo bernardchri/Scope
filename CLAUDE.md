@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 npm run dev          # Next.js dev server (localhost:3000)
 npm run tauri        # Tauri dev mode
 npm run build        # Next.js static export → ./out
-npm run build:tauri  # Full Tauri production build + DMG
+npm run build:tauri  # Full Tauri production build (DMG may fail, .app is generated)
 npm run lint
 ```
 
@@ -27,6 +27,8 @@ Single page acting as client router:
 - `activeProjectId` only → `ComponentList` (sidebar + dashboard or component detail)
 - both `activeProjectId` + `activeComponentId` → `ComponentDetail` / `DocumentDetailView`
 
+Also registers global Tauri event listeners: `menu-open-file` and `menu-close-project` (triggered by native macOS menu).
+
 ### State (`lib/store/`)
 
 Zustand store split into 4 slices: `projectSlice`, `componentSlice`, `taskSlice`, `instanceSlice`.
@@ -44,22 +46,32 @@ Zustand store split into 4 slices: `projectSlice`, `componentSlice`, `taskSlice`
 
 Rust commands (`src-tauri/src/main.rs`): `save_project_file`, `load_project_file`, `list_scope_files`, `delete_project_file`, `rename_project_file`, `write_pdf_file`.
 
+Native macOS menu (`src-tauri/src/main.rs` `.setup()`): `SCOPE > Ouvrir un fichier… (Cmd+O)`, `SCOPE > Fermer le projet (Cmd+W)`, `Quitter`. Menu events emit Tauri events to the frontend.
+
 Config in `config.dat` via `@tauri-apps/plugin-store` (separate from project data).
 
 ### Data types (`lib/types.ts`)
 
-- `Project`: `{ id, name, description?, filename?, components[], createdAt }`
-- `Component`: `{ category, tasks[], instances[], images[], content? }` — `filename` is slugified name for file exports
+- `Project`: `{ id, name, description?, filename?, hourlyRate?, budgetCap?, components[], createdAt }`
+- `Component`: `{ category, tasks[], instances[], images[], content?, estimatedHours? }` — category `'document'` is separate from other categories
 - `Task`: `{ category: 'frontend'|'backend'|'seo'|'motion' }`
 - `ComponentImage`: `{ base64, isPrimary }` — supersedes legacy `imageBase64` field (migration in `lib/migrations.ts`)
 
+### Navigation (`components/ComponentList.tsx`)
+
+`navHistory: string[]` stack — last item is active component. Sidebar click resets stack, instance link pushes to stack, back button pops. `onGoHome` resets to `[]` (shows dashboard).
+
+### Component vs Document
+
+Category `'document'` is isolated: separate sidebar section (top), separate creation modal, separate detail view (`DocumentDetailView`). Use `COMPONENT_CATEGORIES` from `lib/categoryHelpers.ts` (excludes `'document'`) for component selects.
+
 ### PDF export (`components/pdf/ProjectPDFDocument.tsx`)
 
-4 pages: overview → sommaire (with internal `#anchor` links) → component details (tasks + instances) → bon pour accord. Dynamic import via `lib/pdfExport.tsx` to avoid SSR issues. PDF bytes transferred to Rust as base64.
+4 pages: overview → sommaire (with internal `#anchor` links) → component details (tasks + instances + markdown content for documents) → bon pour accord. Dynamic import via `lib/pdfExport.tsx` to avoid SSR issues. PDF bytes transferred to Rust as base64.
 
 ### Styling
 
-Tailwind CSS 4, OKLch color space, CSS variables in `styles/global.css`. Use `cn()` from `lib/utils.ts`. shadcn/ui `new-york` style + lucide icons. No hardcoded colors.
+Tailwind CSS 4, OKLch color space, CSS variables in `styles/global.css`. Use `cn()` from `lib/utils.ts`. shadcn/ui `new-york` style + lucide icons. No hardcoded colors. `@plugin "@tailwindcss/typography"` required for prose/markdown rendering.
 
 ### Vision
 
