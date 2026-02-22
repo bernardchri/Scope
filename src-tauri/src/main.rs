@@ -123,30 +123,37 @@ pub fn run() {
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
-            // Menu natif : Fichier > Ouvrir un fichier…
+            // Menu natif
             let open_item = MenuItem::with_id(app, "open-file", "Ouvrir un fichier…", true, Some("CmdOrCtrl+O"))?;
-            let file_menu = Submenu::with_items(app, "Fichier", true, &[
+            let close_item = MenuItem::with_id(app, "close-project", "Fermer le projet", true, Some("CmdOrCtrl+W"))?;
+            let scope_menu = Submenu::with_items(app, "SCOPE", true, &[
                 &open_item,
+                &close_item,
                 &PredefinedMenuItem::separator(app)?,
                 &PredefinedMenuItem::quit(app, Some("Quitter"))?,
             ])?;
-            let menu = Menu::with_items(app, &[&file_menu])?;
+            let menu = Menu::with_items(app, &[&scope_menu])?;
             app.set_menu(menu)?;
 
             let app_handle = app.handle().clone();
             app.on_menu_event(move |_app, event| {
-                if event.id() == "open-file" {
-                    let app_clone = app_handle.clone();
-                    app_handle
-                        .dialog()
-                        .file()
-                        .add_filter("SCOPE Files", &["scope"])
-                        .pick_file(move |path| {
-                            if let Some(path) = path {
-                                let path_str = path.to_string();
-                                app_clone.emit("menu-open-file", path_str).ok();
-                            }
-                        });
+                match event.id().as_ref() {
+                    "open-file" => {
+                        let app_clone = app_handle.clone();
+                        app_handle
+                            .dialog()
+                            .file()
+                            .add_filter("SCOPE Files", &["scope"])
+                            .pick_file(move |path| {
+                                if let Some(path) = path {
+                                    app_clone.emit("menu-open-file", path.to_string()).ok();
+                                }
+                            });
+                    }
+                    "close-project" => {
+                        app_handle.emit("menu-close-project", ()).ok();
+                    }
+                    _ => {}
                 }
             });
 

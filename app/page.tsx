@@ -13,9 +13,11 @@ export default function Home() {
   const activeProjectId = useProjectStore(state => state.activeProjectId);
   const activeComponentId = useProjectStore(state => state.activeComponentId);
   const openProject = useProjectStore(state => state.openProject);
+  const closeProject = useProjectStore(state => state.closeProject);
 
   useEffect(() => {
-    let unlisten: (() => void) | undefined;
+    const unlisteners: (() => void)[] = [];
+
     listen<string>('menu-open-file', async (event) => {
       const path = event.payload;
       const project = await openProjectFile(path);
@@ -24,9 +26,14 @@ export default function Home() {
       await addRecentFile(project.name, path);
       initPreviousProject(project);
       openProject(project, path);
-    }).then(fn => { unlisten = fn; });
-    return () => { unlisten?.(); };
-  }, [openProject]);
+    }).then(fn => unlisteners.push(fn));
+
+    listen('menu-close-project', () => {
+      closeProject();
+    }).then(fn => unlisteners.push(fn));
+
+    return () => { unlisteners.forEach(fn => fn()); };
+  }, [openProject, closeProject]);
 
   if (activeProjectId && activeComponentId) {
     return <ComponentDetail projectId={activeProjectId} componentId={activeComponentId} />;
