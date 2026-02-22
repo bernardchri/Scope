@@ -2,27 +2,19 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { LayoutGrid, FileText, HomeIcon } from 'lucide-react';
+import { FileText } from 'lucide-react';
 
 interface ProjectHeaderProps {
   projectName: string;
-  sidebarOpen: boolean;
-  showingDashboard: boolean;
-  onToggleSidebar: () => void;
   onNewComponent: () => void;
   onNewDocument: () => void;
-  onGoHome: () => void;
   onRenameProject: (name: string) => void;
 }
 
 export default function ProjectHeader({
   projectName,
-  sidebarOpen,
-  showingDashboard,
-  onToggleSidebar,
   onNewComponent,
   onNewDocument,
-  onGoHome,
   onRenameProject,
 }: ProjectHeaderProps) {
   const [isEditing, setIsEditing] = useState(false);
@@ -52,29 +44,8 @@ export default function ProjectHeader({
   return (
     <div className="border-b bg-white shadow-sm">
       <div className="relative flex items-center justify-between px-4 py-3">
-        {/* Gauche : Toggle Sidebar */}
-        <div className="flex items-center gap-3">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onToggleSidebar}
-            title={sidebarOpen ? 'Masquer la sidebar' : 'Afficher la sidebar'}
-          >
-            {sidebarOpen ? '◀' : '▶'}
-          </Button>
-          <Button
-            variant={showingDashboard ? 'secondary' : 'ghost'}
-            size="icon"
-            onClick={onGoHome}
-            title="Voir tous les composants"
-          >
-            <HomeIcon className="h-4 w-4" />
-          </Button>
-
-        </div>
-
         {/* Centre : Nom du projet (éditable) */}
-        <div className="absolute left-1/2 transform -translate-x-1/2">
+        <div className="absolute left-1/2 -translate-x-1/2">
           {isEditing ? (
             <input
               ref={inputRef}
@@ -98,14 +69,15 @@ export default function ProjectHeader({
           )}
         </div>
 
-        {/* Droite : Dashboard + Nouveau document + Nouveau composant */}
-        <div className="flex items-center gap-2">
+        {/* Gauche : espace réservé pour aligner le centre */}
+        <div className="w-24" />
 
+        {/* Droite : Nouveau document + Nouveau composant */}
+        <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={onNewDocument}>
             <FileText className="h-4 w-4 mr-2" />
             Document
           </Button>
-
           <Button size="sm" onClick={onNewComponent}>
             Nouveau composant
           </Button>

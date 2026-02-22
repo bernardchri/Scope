@@ -8,40 +8,35 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import { Separator } from '@/components/ui/separator';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, Home, PanelLeftClose } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface ComponentSidebarProps {
   components: Component[];
   selectedComponentId: string | null;
+  showingDashboard: boolean;
   onSelectComponent: (componentId: string | null) => void;
+  onGoHome: () => void;
+  onToggleSidebar: () => void;
 }
 
 export default function ComponentSidebar({
   components,
   selectedComponentId,
-  onSelectComponent
+  showingDashboard,
+  onSelectComponent,
+  onGoHome,
+  onToggleSidebar,
 }: ComponentSidebarProps) {
-  // Grouper les composants par catégorie
   const groupedComponents = components.reduce((acc, component) => {
-    if (!acc[component.category]) {
-      acc[component.category] = [];
-    }
+    if (!acc[component.category]) acc[component.category] = [];
     acc[component.category].push(component);
     return acc;
   }, {} as Record<ComponentCategory, Component[]>);
 
-  // 🆕 Documents EN PREMIER
   const categories: ComponentCategory[] = [
-    'document',      // 🆕
-    'template',
-    'section',
-    'composition',
-    'element',
-    'navigation',
-    'media',
-    'form',
-    'content'
+    'document', 'template', 'section', 'composition',
+    'element', 'navigation', 'media', 'form', 'content',
   ];
 
   const hasDocuments = (groupedComponents['document'] || []).length > 0;
@@ -77,19 +72,41 @@ export default function ComponentSidebar({
   }
 
   return (
-    <div className="p-4 space-y-2">
-      {/* Documents — section séparée en haut */}
-      {hasDocuments && renderCategory('document')}
+    <div className="flex flex-col h-full">
+      {/* Header sidebar : toggle + Accueil */}
+      <div className="flex items-center gap-1 p-2 border-b">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onToggleSidebar}
+          title="Masquer la sidebar"
+          className="shrink-0"
+        >
+          <PanelLeftClose className="h-4 w-4" />
+        </Button>
+        <Button
+          variant={showingDashboard ? 'secondary' : 'ghost'}
+          size="sm"
+          className="flex-1 justify-start gap-2"
+          onClick={onGoHome}
+        >
+          <Home className="h-4 w-4" />
+          Accueil
+        </Button>
+      </div>
 
-      {/* Séparateur si les deux sections sont présentes */}
-      {hasDocuments && hasComponents && (
-        <div className="py-1">
-          <Separator />
-        </div>
-      )}
+      {/* Liste des composants */}
+      <div className="p-4 space-y-2 overflow-y-auto flex-1">
+        {hasDocuments && renderCategory('document')}
 
-      {/* Composants */}
-      {componentCategories.map(renderCategory)}
+        {hasDocuments && hasComponents && (
+          <div className="py-1">
+            <Separator />
+          </div>
+        )}
+
+        {componentCategories.map(renderCategory)}
+      </div>
     </div>
   );
 }
