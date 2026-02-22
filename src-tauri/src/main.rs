@@ -1,6 +1,7 @@
 mod backup;
 
-use tauri::Manager;
+use tauri::{menu::{Menu, MenuItem, Submenu, PredefinedMenuItem}, Manager, Emitter};
+use tauri_plugin_dialog::DialogExt;
 use std::path::PathBuf;
 
 #[tauri::command]
@@ -121,6 +122,36 @@ pub fn run() {
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
+        .setup(|app| {
+            // Menu natif : Fichier > Ouvrir un fichier…
+            let open_item = MenuItem::with_id(app, "open-file", "Ouvrir un fichier…", true, Some("CmdOrCtrl+O"))?;
+            let file_menu = Submenu::with_items(app, "Fichier", true, &[
+                &open_item,
+                &PredefinedMenuItem::separator(app)?,
+                &PredefinedMenuItem::quit(app, Some("Quitter"))?,
+            ])?;
+            let menu = Menu::with_items(app, &[&file_menu])?;
+            app.set_menu(menu)?;
+
+            let app_handle = app.handle().clone();
+            app.on_menu_event(move |_app, event| {
+                if event.id() == "open-file" {
+                    let app_clone = app_handle.clone();
+                    app_handle
+                        .dialog()
+                        .file()
+                        .add_filter("SCOPE Files", &["scope"])
+                        .pick_file(move |path| {
+                            if let Some(path) = path {
+                                let path_str = path.to_string();
+                                app_clone.emit("menu-open-file", path_str).ok();
+                            }
+                        });
+                }
+            });
+
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             export_to_file,
             import_from_file,
