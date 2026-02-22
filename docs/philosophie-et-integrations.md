@@ -69,8 +69,8 @@ Le PDF généré par SCOPE doit ressembler à un livrable pro, pas à un export 
 
 ## Prochaines étapes (ordre logique)
 
-1. **Ajouter les estimations de temps** dans SCOPE par composant
-2. **Améliorer l'export PDF** vers un format cahier des charges professionnel
+1. **Ajouter les estimations de temps** dans SCOPE par composant -> ok
+2. **Améliorer l'export PDF** vers un format cahier des charges professionnel -> ok
 3. **Ajouter l'export STORIES.md** — un fichier par composant ou un fichier global selon la taille du projet
 
 Le pont entre les deux outils (export STORIES.md) est la fonctionnalité clé qui justifie que les deux projets existent et se complètent plutôt que se dupliquent.
