@@ -67,6 +67,7 @@ export default function ComponentDetail({ projectId, componentId }: ComponentDet
       ) : (
         <ComponentDetailHeader
           component={activeComponent}
+          onBack={() => setActiveComponent(null)}
           onEdit={() => setIsEditing(true)}
           onDelete={() => {
             if (!confirm(`Supprimer "${activeComponent.name}" ?`)) return;
@@ -98,6 +99,7 @@ export default function ComponentDetail({ projectId, componentId }: ComponentDet
         componentId={componentId}
         instances={activeComponent.instances}
         allComponents={activeProject.components}
+        onNavigate={(id) => setActiveComponent(id)}
       />
     </div>
   );

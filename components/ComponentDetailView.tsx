@@ -7,13 +7,14 @@ import ComponentDetailHeader from './molecules/ComponentDetailHeader';
 import ComponentEditForm from './forms/ComponentEditForm';
 import TaskList from './TaskList';
 import ComponentInstanceList from './ComponentInstanceList';
-
 interface ComponentDetailViewProps {
   projectId: string;
   component: Component;
   allComponents: Component[];
   onUpdate: (componentId: string, updates: Partial<Component>) => void;
   onDelete: () => void;
+  onBack?: () => void;
+  onNavigate: (componentId: string) => void;
 }
 
 export default function ComponentDetailView({
@@ -22,6 +23,8 @@ export default function ComponentDetailView({
   allComponents,
   onUpdate,
   onDelete,
+  onBack,
+  onNavigate,
 }: ComponentDetailViewProps) {
   const [isEditing, setIsEditing] = useState(false);
 
@@ -45,6 +48,7 @@ export default function ComponentDetailView({
 
   return (
     <div className="space-y-6">
+       
       {isEditing ? (
         <ComponentEditForm
           name={component.name}
@@ -59,6 +63,7 @@ export default function ComponentDetailView({
       ) : (
         <ComponentDetailHeader
           component={component}
+          onBack={onBack}
           onEdit={() => setIsEditing(true)}
           onDelete={onDelete}
         />
@@ -79,6 +84,7 @@ export default function ComponentDetailView({
         componentId={component.id}
         instances={component.instances}
         allComponents={allComponents}
+        onNavigate={onNavigate}
       />
     </div>
   );

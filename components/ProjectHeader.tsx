@@ -27,13 +27,6 @@ export default function ProjectHeader({
       <div className="flex items-center justify-between px-4 py-3">
         {/* Gauche : Retour + Toggle Sidebar */}
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="sm" onClick={onBack}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Changer de projet
-          </Button>
-
-          <div className="h-6 w-px bg-gray-300" />
-
           <Button
             variant="ghost"
             size="icon"

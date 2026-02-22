@@ -14,17 +14,18 @@ interface ComponentInstanceListProps {
   componentId: string;
   instances: ComponentInstance[];
   allComponents: Component[];
+  onNavigate: (componentId: string) => void;
 }
 
 export default function ComponentInstanceList({
   projectId,
   componentId,
   instances,
-  allComponents
+  allComponents,
+  onNavigate,
 }: ComponentInstanceListProps) {
   const addComponentInstance = useProjectStore(state => state.addComponentInstance);
   const removeComponentInstance = useProjectStore(state => state.removeComponentInstance);
-  const setActiveComponent = useProjectStore(state => state.setActiveComponent);
 
   const [isAdding, setIsAdding] = useState(false);
   const [selectedComponentId, setSelectedComponentId] = useState('');
@@ -103,7 +104,7 @@ export default function ComponentInstanceList({
                 key={instance.id}
                 component={component}
                 index={index}
-                onNavigate={() => setActiveComponent(component.id)}
+                onNavigate={() => onNavigate(component.id)}
                 onRemove={() => removeComponentInstance(projectId, componentId, instance.id)}
               />
             ))

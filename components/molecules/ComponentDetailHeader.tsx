@@ -2,16 +2,17 @@ import { Component } from '@/lib/types';
 import { getCategoryLabel, getCategoryColor } from '@/lib/categoryHelpers';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Trash2 } from 'lucide-react';
+import { ArrowLeft, Trash2 } from 'lucide-react';
 import ImageCarousel from '../ImageCarousel';
 
 interface ComponentDetailHeaderProps {
   component: Component;
+  onBack?: () => void;
   onEdit: () => void;
   onDelete: () => void;
 }
 
-export default function ComponentDetailHeader({ component, onEdit, onDelete }: ComponentDetailHeaderProps) {
+export default function ComponentDetailHeader({ component, onBack, onEdit, onDelete }: ComponentDetailHeaderProps) {
   // 🆕 Convertir ancienne structure en nouvelle si nécessaire
   const images = component.images || (component.imageBase64 ? [{
     id: 'legacy',
@@ -23,6 +24,11 @@ export default function ComponentDetailHeader({ component, onEdit, onDelete }: C
     <div className="space-y-4">
       {/* Titre + Badge catégorie + Bouton */}
       <div className="flex items-center gap-3">
+        {onBack && (
+          <Button variant="ghost" size="sm" onClick={onBack}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+        )}
         <h1 className="text-2xl font-bold flex-1">{component.name}</h1>
         <Badge className={getCategoryColor(component.category)}>
           {getCategoryLabel(component.category)}

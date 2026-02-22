@@ -23,14 +23,32 @@ export default function ComponentList({ projectId }: ComponentListProps) {
   const updateComponent = useProjectStore(state => state.updateComponent);
   const canDeleteComponent = useProjectStore(state => state.canDeleteComponent);
 
-  const [selectedComponentId, setSelectedComponentId] = useState<string | null>(null);
+  // Pile de navigation : [composantA, composantB, ...] — le dernier est l'actif
+  const [navHistory, setNavHistory] = useState<string[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDocumentModalOpen, setIsDocumentModalOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const activeProject = projects.find(p => p.id === projectId);
-
   if (!activeProject) return null;
+
+  const selectedComponentId = navHistory.length > 0 ? navHistory[navHistory.length - 1] : null;
+  const canGoBack = navHistory.length > 1;
+
+  // Sélection depuis la sidebar : réinitialise la pile
+  function selectFromSidebar(id: string | null) {
+    setNavHistory(id ? [id] : []);
+  }
+
+  // Navigation vers un composant lié : empile
+  function navigateTo(id: string) {
+    setNavHistory(prev => [...prev, id]);
+  }
+
+  // Retour arrière : dépile
+  function navigateBack() {
+    setNavHistory(prev => prev.slice(0, -1));
+  }
 
   const selectedItem = selectedComponentId
     ? activeProject.components.find(c => c.id === selectedComponentId)
@@ -41,7 +59,6 @@ export default function ComponentList({ projectId }: ComponentListProps) {
 
   function handleCreateComponent(name: string, description: string, category: ComponentCategory) {
     if (!activeProject) return;
-
     const newComponent: Component = {
       id: crypto.randomUUID(),
       name,
@@ -51,38 +68,28 @@ export default function ComponentList({ projectId }: ComponentListProps) {
       tasks: [],
       ...(category === 'document' && { content: '' })
     };
-
     addComponent(activeProject.id, newComponent);
     setIsModalOpen(false);
     setIsDocumentModalOpen(false);
-    setSelectedComponentId(newComponent.id);
+    setNavHistory([newComponent.id]);
   }
 
   function handleDeleteComponent(componentId: string) {
     if (!activeProject) return;
-
     if (!canDeleteComponent(activeProject.id, componentId)) {
       const usages = activeProject.components.filter(c =>
         c.instances.some(i => i.componentId === componentId)
       );
-      alert(`Impossible de supprimer ce composant, il est utilisé dans ${usages.length} composant(s) : ${usages.map(c => c.name).join(', ')}`);
+      alert(`Impossible de supprimer, utilisé dans : ${usages.map(c => c.name).join(', ')}`);
       return;
     }
-
-    if (selectedComponentId === componentId) {
-      setSelectedComponentId(null);
-    }
-
+    if (selectedComponentId === componentId) setNavHistory([]);
     deleteComponent(activeProject.id, componentId);
   }
 
   function handleUpdateComponent(componentId: string, updates: Partial<Component>) {
     if (!activeProject) return;
     updateComponent(activeProject.id, componentId, updates);
-  }
-
-  function handleShowAllComponents() {
-    setSelectedComponentId(null);
   }
 
   return (
@@ -95,7 +102,7 @@ export default function ComponentList({ projectId }: ComponentListProps) {
         onBack={() => closeProject()}
         onNewComponent={() => setIsModalOpen(true)}
         onNewDocument={() => setIsDocumentModalOpen(true)}
-        onShowAllComponents={handleShowAllComponents}
+        onShowAllComponents={() => setNavHistory([])}
       />
 
       <CreateComponentModal
@@ -103,7 +110,6 @@ export default function ComponentList({ projectId }: ComponentListProps) {
         onOpenChange={setIsModalOpen}
         onSubmit={handleCreateComponent}
       />
-
       <CreateComponentModal
         open={isDocumentModalOpen}
         onOpenChange={setIsDocumentModalOpen}
@@ -117,7 +123,7 @@ export default function ComponentList({ projectId }: ComponentListProps) {
             <ComponentSidebar
               components={activeProject.components}
               selectedComponentId={selectedComponentId}
-              onSelectComponent={setSelectedComponentId}
+              onSelectComponent={selectFromSidebar}
             />
           </div>
         )}
@@ -141,13 +147,15 @@ export default function ComponentList({ projectId }: ComponentListProps) {
                   allComponents={activeProject.components}
                   onUpdate={handleUpdateComponent}
                   onDelete={() => handleDeleteComponent(selectedItem.id)}
+                  onBack={canGoBack ? navigateBack : undefined}
+                  onNavigate={navigateTo}
                 />
               )}
             </div>
           ) : (
             <ProjectDashboard
               project={activeProject}
-              onSelectComponent={setSelectedComponentId}
+              onSelectComponent={(id) => setNavHistory([id])}
               onUpdateProject={(updates) => updateProject(activeProject.id, updates)}
             />
           )}
