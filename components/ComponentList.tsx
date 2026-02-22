@@ -4,10 +4,10 @@ import { useState } from 'react';
 import { useProjectStore } from '@/lib/projectStore';
 import { Component, ComponentCategory } from '@/lib/types';
 import ComponentSidebar from './ComponentSidebar';
-import ComponentGridView from './ComponentGridView';
 import ComponentDetailView from './ComponentDetailView';
 import DocumentDetailView from './DocumentDetailView';
 import ProjectHeader from './ProjectHeader';
+import ProjectDashboard from './ProjectDashboard';
 import CreateComponentModal from './modals/CreateComponentModal';
 
 interface ComponentListProps {
@@ -17,6 +17,7 @@ interface ComponentListProps {
 export default function ComponentList({ projectId }: ComponentListProps) {
   const projects = useProjectStore(state => state.projects);
   const closeProject = useProjectStore(state => state.closeProject);
+  const updateProject = useProjectStore(state => state.updateProject);
   const addComponent = useProjectStore(state => state.addComponent);
   const deleteComponent = useProjectStore(state => state.deleteComponent);
   const updateComponent = useProjectStore(state => state.updateComponent);
@@ -111,37 +112,30 @@ export default function ComponentList({ projectId }: ComponentListProps) {
           </div>
         )}
 
-        <div className="flex-1 overflow-y-auto p-8">
+        <div className="flex-1 overflow-y-auto">
           {selectedItem ? (
-            isDocument ? (
-              <DocumentDetailView
-                projectId={projectId}
-                document={selectedItem}
-                onUpdate={handleUpdateComponent}
-                // 🆕 onBack supprimé
-              />
-            ) : (
-              <ComponentDetailView
-                projectId={projectId}
-                component={selectedItem}
-                allComponents={activeProject.components}
-                onUpdate={handleUpdateComponent}
-                // 🆕 onBack supprimé
-              />
-            )
-          ) : (
-            <>
-              {activeProject.components.length === 0 ? (
-                <p className="text-muted-foreground">Aucun composant</p>
+            <div className="p-8">
+              {isDocument ? (
+                <DocumentDetailView
+                  projectId={projectId}
+                  document={selectedItem}
+                  onUpdate={handleUpdateComponent}
+                />
               ) : (
-                <ComponentGridView
-                  components={activeProject.components}
-                  canDeleteComponent={(id) => canDeleteComponent(activeProject.id, id)}
-                  onSelectComponent={setSelectedComponentId}
-                  onDeleteComponent={handleDeleteComponent}
+                <ComponentDetailView
+                  projectId={projectId}
+                  component={selectedItem}
+                  allComponents={activeProject.components}
+                  onUpdate={handleUpdateComponent}
                 />
               )}
-            </>
+            </div>
+          ) : (
+            <ProjectDashboard
+              project={activeProject}
+              onSelectComponent={setSelectedComponentId}
+              onUpdateProject={(updates) => updateProject(activeProject.id, updates)}
+            />
           )}
         </div>
       </div>

@@ -50,6 +50,7 @@ export interface Component {
 export interface Project {
   id: string;
   name: string;
+  description?: string;
   filename?: string; // slug utilisé pour le fichier, ex: "site-menuiserie"
   components: Component[];
   createdAt: string;
