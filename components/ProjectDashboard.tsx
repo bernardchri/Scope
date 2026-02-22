@@ -3,7 +3,9 @@
 import { useState } from 'react';
 import { Project, Component, ComponentCategory } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
-import { ChevronRight, Clock, CheckSquare } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { ChevronRight, Clock, CheckSquare, FileText } from 'lucide-react';
+import { exportProjectPDF } from '@/lib/pdfExport';
 
 interface ProjectDashboardProps {
   project: Project;
@@ -35,6 +37,16 @@ export default function ProjectDashboard({
 }: ProjectDashboardProps) {
   const [isEditingDesc, setIsEditingDesc] = useState(false);
   const [descDraft, setDescDraft] = useState(project.description ?? '');
+  const [isExporting, setIsExporting] = useState(false);
+
+  async function handleExportPDF() {
+    setIsExporting(true);
+    try {
+      await exportProjectPDF(project);
+    } finally {
+      setIsExporting(false);
+    }
+  }
 
   function saveDescription() {
     onUpdateProject({ description: descDraft.trim() || undefined });
@@ -114,6 +126,14 @@ export default function ProjectDashboard({
           </button>
         )}
       </section>
+
+      {/* Export PDF */}
+      <div className="flex justify-end -mt-4">
+        <Button variant="outline" size="sm" onClick={handleExportPDF} disabled={isExporting}>
+          <FileText className="w-4 h-4 mr-2" />
+          {isExporting ? 'Génération…' : 'Exporter en PDF'}
+        </Button>
+      </div>
 
       {/* Statistiques globales */}
       <section className="flex gap-6 border-y py-5">

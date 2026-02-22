@@ -94,6 +94,16 @@ fn delete_project_file(path: String) -> Result<(), String> {
 }
 
 #[tauri::command]
+fn write_pdf_file(path: String, base64_data: String) -> Result<(), String> {
+    use base64::{Engine as _, engine::general_purpose};
+    let bytes = general_purpose::STANDARD
+        .decode(base64_data)
+        .map_err(|e| format!("Erreur décodage base64: {}", e))?;
+    std::fs::write(&path, bytes)
+        .map_err(|e| format!("Erreur écriture PDF: {}", e))
+}
+
+#[tauri::command]
 fn rename_project_file(old_path: String, new_path: String) -> Result<(), String> {
     let old_buf = PathBuf::from(&old_path);
     let new_buf = PathBuf::from(&new_path);
@@ -119,7 +129,8 @@ pub fn run() {
             load_project_file,
             list_scope_files,
             delete_project_file,
-            rename_project_file
+            rename_project_file,
+            write_pdf_file
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

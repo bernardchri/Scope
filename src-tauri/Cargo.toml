@@ -27,3 +27,4 @@ tauri-plugin-fs = "2"
 tauri-plugin-dialog = "2"  # 🆕
 flate2 = "1.0"
 chrono = "0.4"
+base64 = "0.22"
