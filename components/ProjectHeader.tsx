@@ -2,27 +2,27 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { LayoutGrid, FileText } from 'lucide-react';
+import { LayoutGrid, FileText, HomeIcon } from 'lucide-react';
 
 interface ProjectHeaderProps {
   projectName: string;
   sidebarOpen: boolean;
-  showingAllComponents: boolean;
+  showingDashboard: boolean;
   onToggleSidebar: () => void;
   onNewComponent: () => void;
   onNewDocument: () => void;
-  onShowAllComponents: () => void;
+  onGoHome: () => void;
   onRenameProject: (name: string) => void;
 }
 
 export default function ProjectHeader({
   projectName,
   sidebarOpen,
-  showingAllComponents,
+  showingDashboard,
   onToggleSidebar,
   onNewComponent,
   onNewDocument,
-  onShowAllComponents,
+  onGoHome,
   onRenameProject,
 }: ProjectHeaderProps) {
   const [isEditing, setIsEditing] = useState(false);
@@ -51,7 +51,7 @@ export default function ProjectHeader({
 
   return (
     <div className="border-b bg-white shadow-sm">
-      <div className="flex items-center justify-between px-4 py-3">
+      <div className="relative flex items-center justify-between px-4 py-3">
         {/* Gauche : Toggle Sidebar */}
         <div className="flex items-center gap-3">
           <Button
@@ -62,6 +62,15 @@ export default function ProjectHeader({
           >
             {sidebarOpen ? '◀' : '▶'}
           </Button>
+          <Button
+            variant={showingDashboard ? 'secondary' : 'ghost'}
+            size="icon"
+            onClick={onGoHome}
+            title="Voir tous les composants"
+          >
+            <HomeIcon className="h-4 w-4" />
+          </Button>
+
         </div>
 
         {/* Centre : Nom du projet (éditable) */}
@@ -91,14 +100,6 @@ export default function ProjectHeader({
 
         {/* Droite : Dashboard + Nouveau document + Nouveau composant */}
         <div className="flex items-center gap-2">
-          <Button
-            variant={showingAllComponents ? 'secondary' : 'ghost'}
-            size="icon"
-            onClick={onShowAllComponents}
-            title="Voir tous les composants"
-          >
-            <LayoutGrid className="h-4 w-4" />
-          </Button>
 
           <Button variant="outline" size="sm" onClick={onNewDocument}>
             <FileText className="h-4 w-4 mr-2" />

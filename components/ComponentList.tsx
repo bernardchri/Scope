@@ -54,7 +54,7 @@ export default function ComponentList({ projectId }: ComponentListProps) {
     : null;
 
   const isDocument = selectedItem?.category === 'document';
-  const showingAllComponents = !selectedComponentId;
+  const showingDashboard = !selectedComponentId;
 
   function handleCreateComponent(name: string, description: string, category: ComponentCategory) {
     if (!activeProject) return;
@@ -96,11 +96,11 @@ export default function ComponentList({ projectId }: ComponentListProps) {
       <ProjectHeader
         projectName={activeProject.name}
         sidebarOpen={sidebarOpen}
-        showingAllComponents={showingAllComponents}
+        showingDashboard={showingDashboard}
         onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
         onNewComponent={() => setIsModalOpen(true)}
         onNewDocument={() => setIsDocumentModalOpen(true)}
-        onShowAllComponents={() => setNavHistory([])}
+        onGoHome={() => setNavHistory([])}
         onRenameProject={(name) => updateProject(activeProject.id, { name })}
       />
 
