@@ -12,7 +12,8 @@
 - [ ] Ajouter un numéro de version au projet (ex : v1.0) pour le PDF
 - [x] Taux horaire configurable pour calculer les coûts estimés (affiché HT dans le dashboard)
 - [x] Ajouter un champ plafond budget — alerte rouge + montant du dépassement si `totalCost > budgetCap`
-
+- [ ] Total HT 
+  
 ## Export PDF
 - [ ] Page de garde : nom projet, date, version, nom du créateur
 - [ ] Tableau récapitulatif : composants × estimation × coût (si taux horaire configuré)
@@ -38,7 +39,7 @@
 - [ ] Recherche / filtre de composants dans la sidebar
 - [ ] Dupliquer un composant existant
 - [x] Enlever dans le header "changer de projet"
-- [ ] Ajouter une entrée accueil dans la sidebar, tout en haut avec une icone correspondante
+- [x] Ajouter une entrée accueil dans la sidebar, tout en haut avec une icône — toggle sidebar déplacé également dans la sidebar
 
 ---
 
