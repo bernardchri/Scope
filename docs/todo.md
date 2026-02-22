@@ -1,11 +1,11 @@
 # Todo
 
 ## Bugs connus
-- [ ] Doublons d'ID de composants possibles si deux composants créés au même milliseconde (`component-${Date.now()}`) → passer à `crypto.randomUUID()`
+- [x] Doublons d'ID de composants possibles si deux composants créés au même milliseconde (`component-${Date.now()}`) → passer à `crypto.randomUUID()`
 
 ## Composants Document
-- [ ] Séparer les `Document` des autres catégories : un `Element` ne peut pas devenir un `Document` et inversement
-- [ ] Dans la sidebar, afficher les Documents dans une section séparée en haut
+- [x] Séparer les `Document` des autres catégories : un `Element` ne peut pas devenir un `Document` et inversement
+- [x] Dans la sidebar, afficher les Documents dans une section séparée en haut
 
 ## Informations globales du projet
 - [ ] Ajouter le nom du créateur / studio (ex : "Studio Bergall") — utilisé dans le PDF et l'export
@@ -15,7 +15,7 @@
 - [ ] Page de garde : nom projet, date, version, nom du créateur
 - [ ] Tableau récapitulatif : composants × estimation × coût (si taux horaire configuré)
 - [ ] Section "Hors périmètre" : lister les tâches marquées `v2`
-- [ ] Taux horaire configurable pour calculer les coûts estimés
+- [x] Taux horaire configurable pour calculer les coûts estimés (affiché HT dans le dashboard)
 
 ## Export Devis
 - [ ] Export PDF devis commercial : tableau composants × estimation × coût (taux horaire × heures)
@@ -31,11 +31,11 @@
 - [ ] Inclure l'image principale encodée ou référencée
 
 ## UX / Navigation
-- [ ] Pouvoir modifier le nom du projet (renommage inline + renommage du fichier .scope)
+- [x] Pouvoir modifier le nom du projet (renommage inline dans le header)
 - [ ] Pouvoir réordonner les composants (drag & drop dans la sidebar)
 - [ ] Recherche / filtre de composants dans la sidebar
 - [ ] Dupliquer un composant existant
-- [ ] Enlever dans le header "changer de projet"
+- [x] Enlever dans le header "changer de projet"
 - [ ] Ajouter une entrée accueil dans la sidebar, tout en haut avec une icone correspondante
 
 ---
