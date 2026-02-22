@@ -24,6 +24,12 @@ export const CATEGORY_COLORS: Record<ComponentCategory, string> = {
   content: 'bg-teal-100 text-teal-700'
 };
 
+// Catégories composants uniquement (sans 'document')
+export const COMPONENT_CATEGORIES: ComponentCategory[] = [
+  'template', 'navigation', 'section', 'composition',
+  'element', 'media', 'form', 'content',
+];
+
 export function getCategoryLabel(category: ComponentCategory): string {
   return CATEGORY_LABELS[category];
 }

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ComponentCategory, ComponentImage } from '@/lib/types';
-import { CATEGORY_LABELS } from '@/lib/categoryHelpers';
+import { CATEGORY_LABELS, COMPONENT_CATEGORIES } from '@/lib/categoryHelpers';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -75,18 +75,24 @@ export default function ComponentEditForm({
           rows={3}
         />
         
-        <Select value={category} onValueChange={(v) => setCategory(v as ComponentCategory)}>
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {Object.entries(CATEGORY_LABELS).map(([value, label]) => (
-              <SelectItem key={value} value={value}>
-                {label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        {initialCategory === 'document' ? (
+          <div className="text-sm text-muted-foreground px-1">
+            Type : {CATEGORY_LABELS['document']}
+          </div>
+        ) : (
+          <Select value={category} onValueChange={(v) => setCategory(v as ComponentCategory)}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {COMPONENT_CATEGORIES.map((cat) => (
+                <SelectItem key={cat} value={cat}>
+                  {CATEGORY_LABELS[cat]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
 
         {/* Estimation de temps */}
         <div className="flex items-center gap-3">

@@ -1,24 +1,26 @@
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, LayoutGrid } from 'lucide-react';
+import { ArrowLeft, LayoutGrid, FileText } from 'lucide-react';
 
 interface ProjectHeaderProps {
   projectName: string;
   sidebarOpen: boolean;
-  showingAllComponents: boolean; // 🆕
+  showingAllComponents: boolean;
   onToggleSidebar: () => void;
   onBack: () => void;
   onNewComponent: () => void;
-  onShowAllComponents: () => void; // 🆕
+  onNewDocument: () => void;
+  onShowAllComponents: () => void;
 }
 
 export default function ProjectHeader({
   projectName,
   sidebarOpen,
-  showingAllComponents, // 🆕
+  showingAllComponents,
   onToggleSidebar,
   onBack,
   onNewComponent,
-  onShowAllComponents // 🆕
+  onNewDocument,
+  onShowAllComponents,
 }: ProjectHeaderProps) {
   return (
     <div className="border-b bg-white shadow-sm">
@@ -29,11 +31,11 @@ export default function ProjectHeader({
             <ArrowLeft className="h-4 w-4 mr-2" />
             Changer de projet
           </Button>
-          
+
           <div className="h-6 w-px bg-gray-300" />
-          
-          <Button 
-            variant="ghost" 
+
+          <Button
+            variant="ghost"
             size="icon"
             onClick={onToggleSidebar}
             title={sidebarOpen ? 'Masquer la sidebar' : 'Afficher la sidebar'}
@@ -47,18 +49,23 @@ export default function ProjectHeader({
           {projectName}
         </h1>
 
-        {/* Droite : Tous les composants + Nouveau composant */}
+        {/* Droite : Dashboard + Nouveau document + Nouveau composant */}
         <div className="flex items-center gap-2">
-          <Button 
-            variant={showingAllComponents ? "secondary" : "ghost"}
+          <Button
+            variant={showingAllComponents ? 'secondary' : 'ghost'}
             size="icon"
             onClick={onShowAllComponents}
             title="Voir tous les composants"
           >
             <LayoutGrid className="h-4 w-4" />
           </Button>
-          
-          <Button onClick={onNewComponent}>
+
+          <Button variant="outline" size="sm" onClick={onNewDocument}>
+            <FileText className="h-4 w-4 mr-2" />
+            Document
+          </Button>
+
+          <Button size="sm" onClick={onNewComponent}>
             Nouveau composant
           </Button>
         </div>

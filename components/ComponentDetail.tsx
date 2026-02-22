@@ -19,6 +19,8 @@ export default function ComponentDetail({ projectId, componentId }: ComponentDet
   const projects = useProjectStore(state => state.projects);
   const setActiveComponent = useProjectStore(state => state.setActiveComponent);
   const updateComponent = useProjectStore(state => state.updateComponent);
+  const deleteComponent = useProjectStore(state => state.deleteComponent);
+  const canDeleteComponent = useProjectStore(state => state.canDeleteComponent);
 
   const [isEditing, setIsEditing] = useState(false);
 
@@ -66,6 +68,18 @@ export default function ComponentDetail({ projectId, componentId }: ComponentDet
         <ComponentDetailHeader
           component={activeComponent}
           onEdit={() => setIsEditing(true)}
+          onDelete={() => {
+            if (!confirm(`Supprimer "${activeComponent.name}" ?`)) return;
+            if (!canDeleteComponent(activeProject.id, activeComponent.id)) {
+              const usages = activeProject.components.filter(c =>
+                c.instances.some(i => i.componentId === activeComponent.id)
+              );
+              alert(`Impossible de supprimer, utilisé dans : ${usages.map(c => c.name).join(', ')}`);
+              return;
+            }
+            deleteComponent(activeProject.id, activeComponent.id);
+            setActiveComponent(null);
+          }}
         />
       )}
 

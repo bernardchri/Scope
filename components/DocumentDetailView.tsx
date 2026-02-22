@@ -8,17 +8,20 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { Trash2 } from 'lucide-react';
 
 interface DocumentDetailViewProps {
   projectId: string;
   document: Component;
   onUpdate: (documentId: string, updates: Partial<Component>) => void;
+  onDelete: () => void;
 }
 
 export default function DocumentDetailView({
   projectId,
   document,
   onUpdate,
+  onDelete,
 }: DocumentDetailViewProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [mode, setMode] = useState<'edit' | 'preview'>('preview');
@@ -71,9 +74,19 @@ export default function DocumentDetailView({
         </div>
 
         {!isEditing && (
-          <Button variant="outline" size="sm" onClick={startEditing}>
-            Modifier
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={startEditing}>
+              Modifier
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-destructive hover:text-destructive"
+              onClick={() => { if (confirm(`Supprimer "${document.name}" ?`)) onDelete(); }}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
         )}
       </div>
 

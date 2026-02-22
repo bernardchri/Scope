@@ -25,6 +25,7 @@ export default function ComponentList({ projectId }: ComponentListProps) {
 
   const [selectedComponentId, setSelectedComponentId] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isDocumentModalOpen, setIsDocumentModalOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const activeProject = projects.find(p => p.id === projectId);
@@ -36,7 +37,7 @@ export default function ComponentList({ projectId }: ComponentListProps) {
     : null;
 
   const isDocument = selectedItem?.category === 'document';
-  const showingAllComponents = !selectedComponentId; // 🆕
+  const showingAllComponents = !selectedComponentId;
 
   function handleCreateComponent(name: string, description: string, category: ComponentCategory) {
     if (!activeProject) return;
@@ -53,11 +54,13 @@ export default function ComponentList({ projectId }: ComponentListProps) {
 
     addComponent(activeProject.id, newComponent);
     setIsModalOpen(false);
+    setIsDocumentModalOpen(false);
+    setSelectedComponentId(newComponent.id);
   }
 
   function handleDeleteComponent(componentId: string) {
     if (!activeProject) return;
-    
+
     if (!canDeleteComponent(activeProject.id, componentId)) {
       const usages = activeProject.components.filter(c =>
         c.instances.some(i => i.componentId === componentId)
@@ -78,7 +81,6 @@ export default function ComponentList({ projectId }: ComponentListProps) {
     updateComponent(activeProject.id, componentId, updates);
   }
 
-  // 🆕 Retour à la vue "tous les composants"
   function handleShowAllComponents() {
     setSelectedComponentId(null);
   }
@@ -88,17 +90,25 @@ export default function ComponentList({ projectId }: ComponentListProps) {
       <ProjectHeader
         projectName={activeProject.name}
         sidebarOpen={sidebarOpen}
-        showingAllComponents={showingAllComponents} // 🆕
+        showingAllComponents={showingAllComponents}
         onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
         onBack={() => closeProject()}
         onNewComponent={() => setIsModalOpen(true)}
-        onShowAllComponents={handleShowAllComponents} // 🆕
+        onNewDocument={() => setIsDocumentModalOpen(true)}
+        onShowAllComponents={handleShowAllComponents}
       />
 
       <CreateComponentModal
         open={isModalOpen}
         onOpenChange={setIsModalOpen}
         onSubmit={handleCreateComponent}
+      />
+
+      <CreateComponentModal
+        open={isDocumentModalOpen}
+        onOpenChange={setIsDocumentModalOpen}
+        onSubmit={handleCreateComponent}
+        isDocument
       />
 
       <div className="flex flex-1 overflow-hidden">
@@ -117,16 +127,20 @@ export default function ComponentList({ projectId }: ComponentListProps) {
             <div className="p-8">
               {isDocument ? (
                 <DocumentDetailView
+                  key={selectedItem.id}
                   projectId={projectId}
                   document={selectedItem}
                   onUpdate={handleUpdateComponent}
+                  onDelete={() => handleDeleteComponent(selectedItem.id)}
                 />
               ) : (
                 <ComponentDetailView
+                  key={selectedItem.id}
                   projectId={projectId}
                   component={selectedItem}
                   allComponents={activeProject.components}
                   onUpdate={handleUpdateComponent}
+                  onDelete={() => handleDeleteComponent(selectedItem.id)}
                 />
               )}
             </div>

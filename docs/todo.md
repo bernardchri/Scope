@@ -5,7 +5,7 @@
 
 ## Composants Document
 - [ ] Séparer les `Document` des autres catégories : un `Element` ne peut pas devenir un `Document` et inversement
-- [ ] Dans la sidebar, afficher les Documents dans une section séparée en bas
+- [ ] Dans la sidebar, afficher les Documents dans une section séparée en haut
 
 ## Informations globales du projet
 - [ ] Ajouter le nom du créateur / studio (ex : "Studio Bergall") — utilisé dans le PDF et l'export
@@ -35,6 +35,8 @@
 - [ ] Pouvoir réordonner les composants (drag & drop dans la sidebar)
 - [ ] Recherche / filtre de composants dans la sidebar
 - [ ] Dupliquer un composant existant
+- [ ] Enlever dans le header "changer de projet"
+- [ ] Ajouter une entrée accueil dans la sidebar, tout en haut avec une icone correspondante
 
 ---
 

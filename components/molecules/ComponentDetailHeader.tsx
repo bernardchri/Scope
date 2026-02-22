@@ -2,14 +2,16 @@ import { Component } from '@/lib/types';
 import { getCategoryLabel, getCategoryColor } from '@/lib/categoryHelpers';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import ImageCarousel from '../ImageCarousel'; // 🆕
+import { Trash2 } from 'lucide-react';
+import ImageCarousel from '../ImageCarousel';
 
 interface ComponentDetailHeaderProps {
   component: Component;
   onEdit: () => void;
+  onDelete: () => void;
 }
 
-export default function ComponentDetailHeader({ component, onEdit }: ComponentDetailHeaderProps) {
+export default function ComponentDetailHeader({ component, onEdit, onDelete }: ComponentDetailHeaderProps) {
   // 🆕 Convertir ancienne structure en nouvelle si nécessaire
   const images = component.images || (component.imageBase64 ? [{
     id: 'legacy',
@@ -27,6 +29,14 @@ export default function ComponentDetailHeader({ component, onEdit }: ComponentDe
         </Badge>
         <Button variant="outline" size="sm" onClick={onEdit}>
           Modifier
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="text-destructive hover:text-destructive"
+          onClick={() => { if (confirm(`Supprimer "${component.name}" ?`)) onDelete(); }}
+        >
+          <Trash2 className="h-4 w-4" />
         </Button>
       </div>
 

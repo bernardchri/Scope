@@ -13,6 +13,7 @@ interface ComponentDetailViewProps {
   component: Component;
   allComponents: Component[];
   onUpdate: (componentId: string, updates: Partial<Component>) => void;
+  onDelete: () => void;
 }
 
 export default function ComponentDetailView({
@@ -20,6 +21,7 @@ export default function ComponentDetailView({
   component,
   allComponents,
   onUpdate,
+  onDelete,
 }: ComponentDetailViewProps) {
   const [isEditing, setIsEditing] = useState(false);
 
@@ -58,6 +60,7 @@ export default function ComponentDetailView({
         <ComponentDetailHeader
           component={component}
           onEdit={() => setIsEditing(true)}
+          onDelete={onDelete}
         />
       )}
 
