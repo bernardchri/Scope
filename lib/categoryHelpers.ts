@@ -30,6 +30,31 @@ export const COMPONENT_CATEGORIES: ComponentCategory[] = [
   'element', 'media', 'form', 'content',
 ];
 
+// Labels pour les sections de groupement (dashboard, PDF, exports) — pluriels, sans emoji
+export const CATEGORY_SECTION_LABELS: Record<ComponentCategory, string> = {
+  document:    'Documents',
+  template:    'Templates',
+  navigation:  'Navigation',
+  section:     'Sections',
+  composition: 'Compositions',
+  element:     'Éléments',
+  media:       'Médias',
+  form:        'Formulaires',
+  content:     'Contenus',
+};
+
+// Ordre d'affichage incluant les documents — documents en dernier (dashboard)
+export const COMPONENT_DISPLAY_ORDER: ComponentCategory[] = [
+  'template', 'navigation', 'section', 'composition',
+  'element', 'media', 'form', 'content', 'document',
+];
+
+// Ordre d'affichage pour le PDF — documents en premier
+export const PDF_DISPLAY_ORDER: ComponentCategory[] = [
+  'document', 'template', 'navigation', 'section', 'composition',
+  'element', 'media', 'form', 'content',
+];
+
 export function getCategoryLabel(category: ComponentCategory): string {
   return CATEGORY_LABELS[category];
 }

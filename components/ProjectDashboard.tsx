@@ -7,29 +7,13 @@ import { Button } from '@/components/ui/button';
 import { ChevronRight, Clock, CheckSquare, FileText, FileCode, Euro, TriangleAlert } from 'lucide-react';
 import { exportProjectPDF } from '@/lib/pdfExport';
 import { exportProjectMarkdown } from '@/lib/markdownExport';
+import { CATEGORY_SECTION_LABELS, COMPONENT_DISPLAY_ORDER } from '@/lib/categoryHelpers';
 
 interface ProjectDashboardProps {
   project: Project;
   onSelectComponent: (id: string) => void;
   onUpdateProject: (updates: Partial<Project>) => void;
 }
-
-const CATEGORY_LABELS: Record<ComponentCategory, string> = {
-  template:    'Templates',
-  navigation:  'Navigation',
-  section:     'Sections',
-  composition: 'Compositions',
-  element:     'Éléments',
-  media:       'Médias',
-  form:        'Formulaires',
-  content:     'Contenus',
-  document:    'Documents',
-};
-
-const CATEGORY_ORDER: ComponentCategory[] = [
-  'template', 'navigation', 'section', 'composition',
-  'element', 'media', 'form', 'content', 'document',
-];
 
 export default function ProjectDashboard({
   project,
@@ -94,7 +78,7 @@ export default function ProjectDashboard({
   );
 
   // Grouper par catégorie
-  const grouped = CATEGORY_ORDER.reduce<Record<string, Component[]>>(
+  const grouped = COMPONENT_DISPLAY_ORDER.reduce<Record<string, Component[]>>(
     (acc, cat) => {
       const items = project.components.filter(c => c.category === cat);
       if (items.length > 0) acc[cat] = items;
@@ -275,7 +259,7 @@ export default function ProjectDashboard({
           {Object.entries(grouped).map(([cat, components]) => (
             <div key={cat}>
               <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-2">
-                {CATEGORY_LABELS[cat as ComponentCategory]}
+                {CATEGORY_SECTION_LABELS[cat as ComponentCategory]}
               </h3>
               <div className="flex flex-col divide-y border rounded-lg overflow-hidden">
                 {components.map(component => {

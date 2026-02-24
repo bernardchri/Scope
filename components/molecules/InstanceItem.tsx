@@ -6,14 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { MapPin, Trash2 } from 'lucide-react';
-
-interface AvailablePin {
-  pinId: string;
-  imageId: string;
-  imageIndex: number;
-  imageCaption?: string;
-  number: number;
-}
+import { AvailablePin, formatPinSelectValue, parsePinSelectValue } from '@/lib/pinHelpers';
 
 interface InstanceItemProps {
   instance: ComponentInstance;
@@ -78,12 +71,13 @@ export default function InstanceItem({
             {showPinSelect && (
               <div className="mt-2">
                 <Select
-                  value={instance.pinRef ? `${instance.pinRef.imageId}::${instance.pinRef.pinId}` : 'none'}
+                  value={instance.pinRef ? formatPinSelectValue(instance.pinRef.imageId, instance.pinRef.pinId) : 'none'}
                   onValueChange={(v) => {
-                    if (v === 'none') {
+                    const parsed = parsePinSelectValue(v);
+                    if (!parsed) {
                       onUpdatePinRef(undefined);
                     } else {
-                      const [imageId, pinId] = v.split('::');
+                      const { imageId, pinId } = parsed;
                       const pin = availablePins.find(p => p.pinId === pinId);
                       if (pin) onUpdatePinRef({ imageId, pinId, pinNumber: pin.number });
                     }
@@ -96,7 +90,7 @@ export default function InstanceItem({
                   <SelectContent>
                     <SelectItem value="none">Aucun pin</SelectItem>
                     {availablePins.map(p => (
-                      <SelectItem key={p.pinId} value={`${p.imageId}::${p.pinId}`}>
+                      <SelectItem key={p.pinId} value={formatPinSelectValue(p.imageId, p.pinId)}>
                         {p.imageCaption ?? `Image ${p.imageIndex + 1}`} — Pin #{p.number}
                       </SelectItem>
                     ))}

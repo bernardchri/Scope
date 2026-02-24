@@ -2,7 +2,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { save } from '@tauri-apps/plugin-dialog';
 import { slugify } from './persistence';
 import { Project } from './types';
-import { renderImageWithPins } from './markdownExport';
+import { renderImageWithPins } from './imageHelpers';
 
 function toBase64(bytes: Uint8Array): string {
   let binary = '';

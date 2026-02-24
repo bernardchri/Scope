@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useProjectStore } from '@/lib/projectStore';
 import { Task, TaskCategory, ComponentImage } from '@/lib/types';
+import { computeAvailablePins } from '@/lib/pinHelpers';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -148,15 +149,7 @@ export default function TaskList({ projectId, componentId, tasks, images = [] }:
 
   const completedCount = localTasks.filter(t => t.completed).length;
 
-  const availablePins = images.flatMap((img, imageIndex) =>
-    (img.pins ?? []).map(pin => ({
-      pinId: pin.id,
-      imageId: img.id,
-      imageIndex,
-      imageCaption: img.caption,
-      number: pin.number,
-    }))
-  );
+  const availablePins = computeAvailablePins(images);
 
   return (
     <div className="space-y-4">

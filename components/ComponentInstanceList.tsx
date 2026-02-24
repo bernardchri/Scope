@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useProjectStore } from '@/lib/projectStore';
 import { Component, ComponentImage, ComponentInstance } from '@/lib/types';
 import { getCategoryLabel } from '@/lib/categoryHelpers';
+import { computeAvailablePins } from '@/lib/pinHelpers';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -30,15 +31,7 @@ export default function ComponentInstanceList({
   const removeComponentInstance = useProjectStore(state => state.removeComponentInstance);
   const updateComponentInstance = useProjectStore(state => state.updateComponentInstance);
 
-  const availablePins = images.flatMap((img, imageIndex) =>
-    (img.pins ?? []).map(pin => ({
-      pinId: pin.id,
-      imageId: img.id,
-      imageIndex,
-      imageCaption: img.caption,
-      number: pin.number,
-    }))
-  );
+  const availablePins = computeAvailablePins(images);
 
   const [isAdding, setIsAdding] = useState(false);
   const [selectedComponentId, setSelectedComponentId] = useState('');

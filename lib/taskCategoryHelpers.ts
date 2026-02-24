@@ -22,6 +22,17 @@ export function getTaskCategoryColor(category: TaskCategory): string {
   return TASK_CATEGORY_COLORS[category];
 }
 
+// Ordre standard des catégories de tâches
+export const TASK_CATEGORY_ORDER: TaskCategory[] = ['frontend', 'backend', 'seo', 'motion'];
+
+// Labels sans emoji ni couleur, pour les exports texte (markdown, etc.)
+export const TASK_CATEGORY_PLAIN_LABELS: Record<TaskCategory, string> = {
+  frontend: 'Front-end',
+  backend:  'Back-end',
+  seo:      'SEO',
+  motion:   'Motion',
+};
+
 // Helper pour calculer les stats par catégorie
 export interface CategoryStats {
   total: number;

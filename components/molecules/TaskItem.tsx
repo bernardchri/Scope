@@ -14,14 +14,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Trash2, Pencil, GripVertical, MapPin } from 'lucide-react';
 import { getTaskCategoryLabel, getTaskCategoryColor, TASK_CATEGORY_LABELS } from '@/lib/taskCategoryHelpers';
-
-interface AvailablePin {
-  pinId: string;
-  imageId: string;
-  imageIndex: number;
-  imageCaption?: string;
-  number: number;
-}
+import { AvailablePin, formatPinSelectValue, parsePinSelectValue } from '@/lib/pinHelpers';
 
 interface TaskItemProps {
   task: Task;
@@ -88,10 +81,11 @@ export default function TaskItem({
 
           {availablePins.length > 0 && onEditPinRefChange && (
             <Select
-              value={editPinRef ? `${editPinRef.imageId}::${editPinRef.pinId}` : 'none'}
+              value={editPinRef ? formatPinSelectValue(editPinRef.imageId, editPinRef.pinId) : 'none'}
               onValueChange={(v) => {
-                if (v === 'none') { onEditPinRefChange(undefined); return; }
-                const [imageId, pinId] = v.split('::');
+                const parsed = parsePinSelectValue(v);
+                if (!parsed) { onEditPinRefChange(undefined); return; }
+                const { imageId, pinId } = parsed;
                 const pin = availablePins.find(p => p.pinId === pinId);
                 if (pin) onEditPinRefChange({ imageId, pinId, pinNumber: pin.number });
               }}
@@ -102,7 +96,7 @@ export default function TaskItem({
               <SelectContent>
                 <SelectItem value="none">Aucun pin</SelectItem>
                 {availablePins.map(p => (
-                  <SelectItem key={p.pinId} value={`${p.imageId}::${p.pinId}`}>
+                  <SelectItem key={p.pinId} value={formatPinSelectValue(p.imageId, p.pinId)}>
                     {p.imageCaption ?? `Image ${p.imageIndex + 1}`} — Pin #{p.number}
                   </SelectItem>
                 ))}
