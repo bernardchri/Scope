@@ -153,6 +153,7 @@ export default function TaskList({ projectId, componentId, tasks, images = [] }:
       pinId: pin.id,
       imageId: img.id,
       imageIndex,
+      imageCaption: img.caption,
       number: pin.number,
     }))
   );

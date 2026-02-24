@@ -19,6 +19,7 @@ interface AvailablePin {
   pinId: string;
   imageId: string;
   imageIndex: number;
+  imageCaption?: string;
   number: number;
 }
 
@@ -102,7 +103,7 @@ export default function TaskItem({
                 <SelectItem value="none">Aucun pin</SelectItem>
                 {availablePins.map(p => (
                   <SelectItem key={p.pinId} value={`${p.imageId}::${p.pinId}`}>
-                    Image {p.imageIndex + 1} — Pin #{p.number}
+                    {p.imageCaption ?? `Image ${p.imageIndex + 1}`} — Pin #{p.number}
                   </SelectItem>
                 ))}
               </SelectContent>
