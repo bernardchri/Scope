@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { ComponentImage, ImagePin, Task } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { ChevronLeft, ChevronRight, Eye, EyeOff, Maximize2, ZoomIn, ZoomOut, X } from 'lucide-react';
 import {
   DndContext,
@@ -224,9 +224,9 @@ function ZoomModal({ image, tasks, onUpdatePins, onClose }: ZoomModalProps) {
 
       {/* ── Barre d'outils ─────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between px-3 py-2 border-b bg-background shrink-0">
-        <span className="text-sm text-muted-foreground truncate max-w-xs">
+        <DialogTitle className="text-sm text-muted-foreground truncate max-w-xs font-normal">
           {image.caption || 'Image'}
-        </span>
+        </DialogTitle>
         <div className="flex items-center gap-1 shrink-0">
           <Button variant="ghost" size="icon" className="h-7 w-7"
             onClick={() => applyZoom(Math.max(1, zoom - 0.5))}
