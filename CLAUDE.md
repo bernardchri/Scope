@@ -8,11 +8,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 npm run dev          # Next.js dev server (localhost:3000)
 npm run tauri        # Tauri dev mode
 npm run build        # Next.js static export → ./out
-npm run build:tauri  # Full Tauri production build (DMG may fail, .app is generated)
+npm run build:tauri  # Full Tauri production build local (macOS only)
 npm run lint
+
+# Regénérer les icônes depuis le SVG source
+npx tauri icon <path/to/icon.svg>
 ```
 
 No test suite.
+
+**Production builds** : via GitHub Actions (`.github/workflows/build.yml`), déclenché par un tag `v*` (`git tag vX.Y.Z && git push origin vX.Y.Z`). Produit `.dmg` (macOS arm64 + x64) et `.exe` NSIS (Windows x64).
 
 ## Architecture
 
@@ -46,7 +51,11 @@ Zustand store split into 4 slices: `projectSlice`, `componentSlice`, `taskSlice`
 
 Rust commands (`src-tauri/src/main.rs`): `save_project_file`, `load_project_file`, `list_scope_files`, `delete_project_file`, `rename_project_file`, `write_pdf_file`.
 
-Native macOS menu (`src-tauri/src/main.rs` `.setup()`): `SCOPE > Ouvrir un fichier… (Cmd+O)`, `SCOPE > Fermer le projet (Cmd+W)`, `Quitter`. Menu events emit Tauri events to the frontend.
+Native macOS menu (`src-tauri/src/main.rs` `.setup()`):
+- `SCOPE` : Ouvrir un fichier… (Cmd+O), Fermer le projet (Cmd+W), Quitter. Menu events emit Tauri events to the frontend.
+- `Édition` : Annuler, Rétablir, Couper, Copier, Coller, Tout sélectionner — via `PredefinedMenuItem`. Requis pour activer les raccourcis texte natifs (Cmd+A etc.) dans les champs de l'app.
+
+**Recent files** : au clic sur un fichier récent manquant, une modale avertit l'utilisateur et l'entrée est retirée de la liste (`removeRecentFile` dans `lib/persistence.ts`).
 
 Config in `config.dat` via `@tauri-apps/plugin-store` (separate from project data).
 
@@ -57,6 +66,7 @@ Config in `config.dat` via `@tauri-apps/plugin-store` (separate from project dat
 - `Task`: `{ id, name, completed, category: 'frontend'|'backend'|'seo'|'motion', pinRef? }` — `pinRef: { imageId, pinId, pinNumber }` links a task to an image pin
 - `ComponentImage`: `{ id, base64, caption?, isPrimary, pins? }` — supersedes legacy `imageBase64` field (migration in `lib/migrations.ts`)
 - `ImagePin`: `{ id, number, x, y }` — x/y are percentages (0–100) relative to the image container
+- `ComponentInstance`: `{ id, componentId, pinRef? }` — `pinRef: { imageId, pinId, pinNumber }` links an instance to an image pin
 
 ### Éléments (anciennement Tâches)
 
@@ -74,7 +84,11 @@ Le terme "Tâches" est remplacé par "Éléments" dans toute l'interface. Le cha
 
 Liaison pin ↔ élément : dans le formulaire d'édition d'un élément (`TaskItem`), un `Select` permet de choisir un pin parmi ceux disponibles sur toutes les images du composant. La référence est stockée dans `Task.pinRef`. Un badge `📍 #N` s'affiche en lecture si un pin est lié.
 
-`TaskList` reçoit une prop optionnelle `images?: ComponentImage[]` et calcule `availablePins` (liste plate de tous les pins de toutes les images) passée à chaque `TaskItem`.
+Liaison pin ↔ instance : dans `InstanceItem`, un bouton `MapPin` ouvre un `Select` inline pour choisir un pin. La référence est stockée dans `ComponentInstance.pinRef`. `ComponentInstanceList` reçoit `images?: ComponentImage[]` et calcule `availablePins` passée à chaque `InstanceItem`. Action `updateComponentInstance` dans `instanceSlice`.
+
+`TaskList` reçoit une prop optionnelle `images?: ComponentImage[]` et calcule `availablePins` (liste plate de tous les pins de toutes les images, avec `imageCaption`) passée à chaque `TaskItem`.
+
+**Drag & drop** : les composants sont réordonnables dans la sidebar par catégorie (`@dnd-kit`, action `reorderComponents` dans `componentSlice`). Les images sont réordonnables dans le thumbnail strip de `ImagePinViewer`.
 
 ### Navigation (`components/ComponentList.tsx`)
 
@@ -87,6 +101,10 @@ Category `'document'` is isolated: separate sidebar section (top), separate crea
 ### PDF export (`components/pdf/ProjectPDFDocument.tsx`)
 
 4 pages: overview → sommaire (with internal `#anchor` links) → component details (tasks + instances + markdown content for documents) → bon pour accord. Dynamic import via `lib/pdfExport.tsx` to avoid SSR issues. PDF bytes transferred to Rust as base64.
+
+**Pins dans le PDF** : avant génération, `preparePdfProject` (dans `lib/pdfExport.tsx`) pré-cuit les pins dans les images via Canvas (`renderImageWithPins`, exportée depuis `lib/markdownExport.ts` et partagée avec l'export Markdown). Les images passées au renderer n'ont plus de `pins[]` — pas d'overlay dans `ProjectPDFDocument`. Cela évite les décalages dus à `objectFit: contain`.
+
+**Ordre dans les exports** : `'document'` apparaît en premier dans le PDF et dans le STORIES.md.
 
 ### Styling
 
