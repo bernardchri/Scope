@@ -27,11 +27,12 @@
 - [ ] Réutilise l'infrastructure `@react-pdf/renderer` existante (nouveau document séparé du cahier des charges)
 
 ## Export Story-compiler (STORIES.md)
-- [ ] Export global `STORIES.md` (un seul fichier, tous les composants)
+- [x] Export global `STORIES.md` (un seul fichier, tous les composants)
+- [x] Format : `# Nom`, `<!-- estimate: Xh -->`, `## Description`, `## Tâches` avec checkboxes GFM
+- [x] Images exportées dans un dossier `stories-img/` et référencées en Markdown
+- [x] Documents : section séparée avec contenu Markdown complet
 - [ ] Export par composant (un fichier `.md` par composant, à placer dans le projet)
-- [ ] Format : `# Nom`, `<!-- estimate: Xh -->`, `## Description`, `## Tâches` avec checkboxes
 - [ ] Les tâches marquées v2 dans SCOPE → préfixe `v2:` dans le fichier exporté
-- [ ] Inclure l'image principale encodée ou référencée
 
 ## UX / Navigation
 - [x] Pouvoir modifier le nom du projet (renommage inline dans le header)
@@ -60,7 +61,7 @@
 | Nom créateur + version projet | Moyen | 3–4 | Requis pour PDF/devis |
 | Taux horaire configurable | Moyen | 2–3 | Prérequis devis |
 | Export Devis PDF | Moyen | 2–3 | Dépend taux horaire |
-| Export STORIES.md | Élevé | 4+ | Feature clé Story-compiler |
+| Export STORIES.md | Élevé | 4+ | ✅ Fait (global + images) |
 
 ### Améliorations secondaires
 | Tâche | Effort | Fichiers | Note |

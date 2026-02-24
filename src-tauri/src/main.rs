@@ -105,6 +105,7 @@ fn write_pdf_file(path: String, base64_data: String) -> Result<(), String> {
 }
 
 #[tauri::command]
+#[allow(dead_code)]
 fn write_binary_file(path: String, base64_data: String) -> Result<(), String> {
     use base64::{Engine as _, engine::general_purpose};
     let path_buf = std::path::PathBuf::from(&path);
