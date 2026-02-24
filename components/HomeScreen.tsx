@@ -5,6 +5,7 @@ import { open } from '@tauri-apps/plugin-dialog';
 import {
   getRecentFiles,
   addRecentFile,
+  removeRecentFile,
   openProjectFile,
   createNewProjectFile,
   RecentFile
@@ -13,6 +14,7 @@ import { createAutoBackup } from '@/lib/backup';
 import { useProjectStore, initPreviousProject } from '@/lib/projectStore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { FolderOpen, Plus, Clock, ChevronRight } from 'lucide-react';
 
 export default function HomeScreen() {
@@ -20,14 +22,22 @@ export default function HomeScreen() {
   const [recentFiles, setRecentFiles] = useState<RecentFile[]>([]);
   const [isCreating, setIsCreating] = useState(false);
   const [newProjectName, setNewProjectName] = useState('');
+  const [missingFile, setMissingFile] = useState<RecentFile | null>(null);
 
   useEffect(() => {
     getRecentFiles().then(setRecentFiles);
   }, []);
 
-  async function handleOpenPath(path: string) {
+  async function handleOpenPath(path: string, recentFile?: RecentFile) {
     const project = await openProjectFile(path);
-    if (!project) return;
+    if (!project) {
+      if (recentFile) {
+        await removeRecentFile(path);
+        setRecentFiles(await getRecentFiles());
+        setMissingFile(recentFile);
+      }
+      return;
+    }
 
     await createAutoBackup([project]);
     await addRecentFile(project.name, path);
@@ -63,6 +73,7 @@ export default function HomeScreen() {
   }
 
   return (
+    <>
     <div className="flex flex-col items-center justify-center min-h-screen gap-10 p-8">
 
       {/* Titre */}
@@ -82,7 +93,7 @@ export default function HomeScreen() {
             {recentFiles.map(file => (
               <button
                 key={file.path}
-                onClick={() => handleOpenPath(file.path)}
+                onClick={() => handleOpenPath(file.path, file)}
                 className="group flex items-center justify-between px-4 py-3 rounded-lg border bg-card hover:bg-accent transition-colors text-left"
               >
                 <div className="min-w-0">
@@ -134,5 +145,24 @@ export default function HomeScreen() {
       </div>
 
     </div>
+
+    <Dialog open={!!missingFile} onOpenChange={() => setMissingFile(null)}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Fichier introuvable</DialogTitle>
+          <DialogDescription>
+            Le fichier <span className="font-medium text-foreground">{missingFile?.name}</span> est introuvable à l'emplacement suivant :
+            <br />
+            <span className="text-xs text-muted-foreground break-all">{missingFile?.path}</span>
+            <br /><br />
+            Il a été retiré de la liste des fichiers récents.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button onClick={() => setMissingFile(null)}>OK</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }

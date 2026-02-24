@@ -35,8 +35,7 @@ export async function openProjectFile(path: string): Promise<Project | null> {
       return null;
     }
     return migrateProjectsToV2([project])[0];
-  } catch (e) {
-    console.error('Erreur ouverture fichier:', e);
+  } catch {
     return null;
   }
 }
@@ -83,6 +82,13 @@ export async function addRecentFile(name: string, path: string): Promise<void> {
     ...recent.filter(r => r.path !== path)
   ].slice(0, 3);
   await store.set('recentFiles', updated);
+  await store.save();
+}
+
+export async function removeRecentFile(path: string): Promise<void> {
+  const store = await getConfigStore();
+  const recent = (await store.get<RecentFile[]>('recentFiles')) || [];
+  await store.set('recentFiles', recent.filter(r => r.path !== path));
   await store.save();
 }
 
