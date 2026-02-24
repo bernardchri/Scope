@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useProjectStore } from '@/lib/projectStore';
-import { Component, ComponentInstance } from '@/lib/types';
+import { Component, ComponentImage, ComponentInstance } from '@/lib/types';
 import { getCategoryLabel } from '@/lib/categoryHelpers';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
@@ -14,6 +14,7 @@ interface ComponentInstanceListProps {
   componentId: string;
   instances: ComponentInstance[];
   allComponents: Component[];
+  images?: ComponentImage[];
   onNavigate: (componentId: string) => void;
 }
 
@@ -22,10 +23,22 @@ export default function ComponentInstanceList({
   componentId,
   instances,
   allComponents,
+  images = [],
   onNavigate,
 }: ComponentInstanceListProps) {
   const addComponentInstance = useProjectStore(state => state.addComponentInstance);
   const removeComponentInstance = useProjectStore(state => state.removeComponentInstance);
+  const updateComponentInstance = useProjectStore(state => state.updateComponentInstance);
+
+  const availablePins = images.flatMap((img, imageIndex) =>
+    (img.pins ?? []).map(pin => ({
+      pinId: pin.id,
+      imageId: img.id,
+      imageIndex,
+      imageCaption: img.caption,
+      number: pin.number,
+    }))
+  );
 
   const [isAdding, setIsAdding] = useState(false);
   const [selectedComponentId, setSelectedComponentId] = useState('');
@@ -102,10 +115,13 @@ export default function ComponentInstanceList({
             compInstances.map((instance, index) => (
               <InstanceItem
                 key={instance.id}
+                instance={instance}
                 component={component}
                 index={index}
+                availablePins={availablePins}
                 onNavigate={() => onNavigate(component.id)}
                 onRemove={() => removeComponentInstance(projectId, componentId, instance.id)}
+                onUpdatePinRef={(pinRef) => updateComponentInstance(projectId, componentId, instance.id, { pinRef })}
               />
             ))
           ))}

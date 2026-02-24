@@ -14,6 +14,7 @@ export type TaskCategory = 'frontend' | 'backend' | 'seo' | 'motion';
 export interface ComponentInstance {
   id: string;
   componentId: string;
+  pinRef?: { imageId: string; pinId: string; pinNumber: number };
 }
 
 export interface Task {

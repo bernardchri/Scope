@@ -102,6 +102,7 @@ export default function ComponentDetail({ projectId, componentId }: ComponentDet
         componentId={componentId}
         instances={activeComponent.instances}
         allComponents={activeProject.components}
+        images={activeComponent.images ?? []}
         onNavigate={(id) => setActiveComponent(id)}
       />
     </div>

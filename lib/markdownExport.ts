@@ -92,7 +92,7 @@ function imagesSection(refs: ImageRef[], fallbackAlt: string): string {
   return lines.join('\n');
 }
 
-function generateComponentBlock(component: Component, imageMap: ImageMap): string {
+function generateComponentBlock(component: Component, imageMap: ImageMap, allComponents: Component[] = []): string {
   const parts: string[] = [];
   parts.push(`# ${component.name}`);
 
@@ -132,8 +132,16 @@ function generateComponentBlock(component: Component, imageMap: ImageMap): strin
     pinsLegendLines.push(`**${imgLabel}**`);
     pins.forEach(pin => {
       const linkedTask = component.tasks.find(t => t.pinRef?.pinId === pin.id);
-      const taskLabel = linkedTask ? ` → ${linkedTask.name}` : '';
-      pinsLegendLines.push(`- Pin #${pin.number}${taskLabel}`);
+      const linkedInstance = component.instances.find(i => i.pinRef?.pinId === pin.id);
+      const linkedComponent = linkedInstance
+        ? allComponents.find(c => c.id === linkedInstance.componentId)
+        : undefined;
+      const label = linkedTask
+        ? ` → ${linkedTask.name}`
+        : linkedComponent
+          ? ` → composant : ${linkedComponent.name}`
+          : '';
+      pinsLegendLines.push(`- Pin #${pin.number}${label}`);
     });
   });
   if (pinsLegendLines.length > 0) {
@@ -201,7 +209,7 @@ export function generateStoriesMd(project: Project, imageMap: ImageMap = new Map
     if (group.length === 0) continue;
     sections.push(`<!-- ${CATEGORY_LABELS[category] ?? category} -->`);
     for (const comp of group) {
-      sections.push(generateComponentBlock(comp, imageMap));
+      sections.push(generateComponentBlock(comp, imageMap, project.components));
     }
   }
 

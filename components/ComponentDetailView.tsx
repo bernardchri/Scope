@@ -87,6 +87,7 @@ export default function ComponentDetailView({
         componentId={component.id}
         instances={component.instances}
         allComponents={allComponents}
+        images={component.images ?? []}
         onNavigate={onNavigate}
       />
     </div>

@@ -439,8 +439,11 @@ function ComponentDetailBlock({
   );
 
   const instanceComponents = component.instances
-    .map(inst => allComponents.find(c => c.id === inst.componentId))
-    .filter((c, i, arr): c is Component => !!c && arr.findIndex(x => x?.id === c.id) === i);
+    .map(inst => {
+      const comp = allComponents.find(c => c.id === inst.componentId);
+      return comp ? { instance: inst, comp } : null;
+    })
+    .filter((x): x is { instance: typeof component.instances[0]; comp: Component } => x !== null);
 
   return (
     <View id={componentAnchorId(component)} style={s.componentDetailBlock}>
@@ -535,9 +538,21 @@ function ComponentDetailBlock({
       {instanceComponents.length > 0 && (
         <View style={s.instancesSection}>
           <Text style={s.instancesSectionLabel}>Composants utilisés</Text>
-          {instanceComponents.map(inst => (
-            <Link key={inst.id} src={`#${componentAnchorId(inst)}`}>
-              <Text style={s.instanceName}>→ {inst.name}</Text>
+          {instanceComponents.map(({ instance, comp }) => (
+            <Link key={instance.id} src={`#${componentAnchorId(comp)}`}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 3 }}>
+                <Text style={s.instanceName}>→ {comp.name}</Text>
+                {instance.pinRef && (
+                  <View style={{
+                    width: 13, height: 13, borderRadius: 6.5,
+                    backgroundColor: '#dbeafe', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    <Text style={{ fontSize: 6, color: '#1d4ed8', fontFamily: 'Helvetica-Bold' }}>
+                      {instance.pinRef.pinNumber}
+                    </Text>
+                  </View>
+                )}
+              </View>
             </Link>
           ))}
         </View>
