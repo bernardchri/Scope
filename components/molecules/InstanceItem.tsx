@@ -33,7 +33,7 @@ export default function InstanceItem({ component, index, onNavigate, onRemove }:
               </Badge>
             </div>
             <p className="text-sm text-muted-foreground">
-              {component.tasks.length} tâche(s)
+              {component.tasks.length} élément{component.tasks.length > 1 ? 's' : ''}
             </p>
             {component.description && (
               <p className="text-xs text-muted-foreground italic mt-1">

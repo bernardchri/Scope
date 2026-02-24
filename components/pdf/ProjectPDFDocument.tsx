@@ -457,7 +457,7 @@ function ComponentDetailBlock({
       {/* Liste des tâches groupées par catégorie */}
       {component.tasks.length > 0 && (
         <View style={s.taskSection}>
-          <Text style={s.taskSectionLabel}>Tâches</Text>
+          <Text style={s.taskSectionLabel}>Éléments</Text>
           {TASK_CATEGORY_ORDER.map(cat => {
             const tasks = tasksByCategory[cat];
             if (!tasks) return null;
@@ -554,8 +554,8 @@ export function ProjectPDFDocument({ project }: Props) {
             <Text style={s.statDesc}>composants</Text>
           </View>
           <View style={s.statBox}>
-            <Text style={s.statNumber}>{doneTasks}/{totalTasks}</Text>
-            <Text style={s.statDesc}>tâches complétées</Text>
+            <Text style={s.statNumber}>{totalTasks}</Text>
+            <Text style={s.statDesc}>éléments</Text>
           </View>
         </View>
 

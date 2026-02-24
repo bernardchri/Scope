@@ -245,8 +245,8 @@ export default function ProjectDashboard({
         <div className="w-px bg-border" />
         <div className="flex items-center gap-2 text-sm">
           <CheckSquare className="w-4 h-4 text-muted-foreground" />
-          <span className="font-semibold text-lg">{doneTasks}/{totalTasks}</span>
-          <span className="text-muted-foreground">tâches complétées</span>
+          <span className="font-semibold text-lg">{totalTasks}</span>
+          <span className="text-muted-foreground">élément{totalTasks > 1 ? 's' : ''}</span>
         </div>
         <div className="w-px bg-border" />
         <div className="flex items-center gap-2 text-sm">
@@ -302,11 +302,8 @@ export default function ProjectDashboard({
                           <span className="text-xs text-muted-foreground">{hours}h</span>
                         )}
                         {total > 0 && (
-                          <Badge
-                            variant="secondary"
-                            className={`text-xs ${done === total ? 'bg-green-100 text-green-700' : ''}`}
-                          >
-                            {done}/{total}
+                          <Badge variant="secondary" className="text-xs">
+                            {total}
                           </Badge>
                         )}
                         <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />

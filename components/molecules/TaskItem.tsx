@@ -5,7 +5,6 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import {
   DropdownMenu,
@@ -24,7 +23,6 @@ interface TaskItemProps {
   dragHandleProps?: any; // 🆕
   onEditNameChange: (name: string) => void;
   onEditCategoryChange: (category: TaskCategory) => void;
-  onToggle: () => void;
   onStartEdit: () => void;
   onSaveEdit: () => void;
   onCancelEdit: () => void;
@@ -39,7 +37,6 @@ export default function TaskItem({
   dragHandleProps = {}, // 🆕
   onEditNameChange,
   onEditCategoryChange,
-  onToggle,
   onStartEdit,
   onSaveEdit,
   onCancelEdit,
@@ -96,12 +93,6 @@ export default function TaskItem({
             <GripVertical className="h-5 w-5 text-muted-foreground" />
           </div>
 
-          {/* Checkbox */}
-          <Checkbox
-            checked={task.completed}
-            onCheckedChange={onToggle}
-          />
-          
           {/* Badge catégorie */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -121,9 +112,9 @@ export default function TaskItem({
             </DropdownMenuContent>
           </DropdownMenu>
 
-          {/* Nom de la tâche */}
-          <span 
-            className={`flex-1 ${task.completed ? 'line-through text-muted-foreground' : ''}`}
+          {/* Nom de l'élément */}
+          <span
+            className="flex-1"
             onDoubleClick={onStartEdit}
           >
             {task.name}

@@ -1,7 +1,15 @@
 import { invoke } from '@tauri-apps/api/core';
 import { save } from '@tauri-apps/plugin-dialog';
-import { Project, Component } from './types';
+import { Project, Component, TaskCategory } from './types';
 import { COMPONENT_CATEGORIES } from './categoryHelpers';
+
+const TASK_CATEGORY_LABELS: Record<TaskCategory, string> = {
+  frontend: 'Front-end',
+  backend:  'Back-end',
+  seo:      'SEO',
+  motion:   'Motion',
+};
+const TASK_CATEGORY_ORDER: TaskCategory[] = ['frontend', 'backend', 'seo', 'motion'];
 import { slugify } from './persistence';
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -54,8 +62,11 @@ function generateComponentBlock(component: Component, imageMap: ImageMap): strin
 
   if (component.tasks.length > 0) {
     const taskLines = ['## Tâches', ''];
-    for (const task of component.tasks) {
-      taskLines.push(`- [${task.completed ? 'x' : ' '}] ${task.name}`);
+    for (const cat of TASK_CATEGORY_ORDER) {
+      const catTasks = component.tasks.filter(t => t.category === cat);
+      for (const task of catTasks) {
+        taskLines.push(`- [ ] (${TASK_CATEGORY_LABELS[cat]}) ${task.name}`);
+      }
     }
     parts.push(taskLines.join('\n'));
   }

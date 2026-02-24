@@ -148,16 +148,16 @@ export default function TaskList({ projectId, componentId, tasks }: TaskListProp
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h2 className="text-xl font-semibold">
-          Tâches {localTasks.length > 0 && (
+          Éléments {localTasks.length > 0 && (
             <span className="text-muted-foreground text-sm ml-2">
-              {completedCount}/{localTasks.length}
+              {localTasks.length}
             </span>
           )}
         </h2>
       </div>
 
       {localTasks.length === 0 ? (
-        <p className="text-muted-foreground text-sm">Aucune tâche pour le moment</p>
+        <p className="text-muted-foreground text-sm">Aucun élément pour le moment</p>
       ) : (
         <DndContext
           sensors={sensors}
@@ -178,7 +178,6 @@ export default function TaskList({ projectId, componentId, tasks }: TaskListProp
                   editCategory={editTaskCategory}
                   onEditNameChange={setEditTaskName}
                   onEditCategoryChange={setEditTaskCategory}
-                  onToggle={() => toggleTask(projectId, componentId, task.id)}
                   onStartEdit={() => startEditing(task)}
                   onSaveEdit={handleSaveEdit}
                   onCancelEdit={() => setEditingTaskId(null)}
@@ -197,7 +196,7 @@ export default function TaskList({ projectId, componentId, tasks }: TaskListProp
           ref={inputRef}
           value={newTaskName}
           onChange={(e) => setNewTaskName(e.target.value)}
-          placeholder="+ Ajouter une tâche (Enter)..."
+          placeholder="+ Ajouter un élément (Enter)..."
           className="w-full"
         />
         
