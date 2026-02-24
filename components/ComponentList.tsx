@@ -22,6 +22,7 @@ export default function ComponentList({ projectId }: ComponentListProps) {
   const addComponent = useProjectStore(state => state.addComponent);
   const deleteComponent = useProjectStore(state => state.deleteComponent);
   const updateComponent = useProjectStore(state => state.updateComponent);
+  const reorderComponents = useProjectStore(state => state.reorderComponents);
   const canDeleteComponent = useProjectStore(state => state.canDeleteComponent);
 
   // Pile de navigation : [composantA, composantB, ...] — le dernier est l'actif
@@ -122,6 +123,7 @@ export default function ComponentList({ projectId }: ComponentListProps) {
               selectedComponentId={selectedComponentId}
               showingDashboard={showingDashboard}
               onSelectComponent={selectFromSidebar}
+              onReorderComponents={(ids) => reorderComponents(activeProject.id, ids)}
               onGoHome={() => setNavHistory([])}
               onToggleSidebar={() => setSidebarOpen(false)}
             />

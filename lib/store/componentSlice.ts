@@ -2,11 +2,12 @@ import { Component } from '../types';
 
 export interface ComponentSlice {
   activeComponentId: string | null;
-  
+
   setActiveComponent: (componentId: string | null) => void;
   addComponent: (projectId: string, component: Component) => void;
   deleteComponent: (projectId: string, componentId: string) => void;
-  updateComponent: (projectId: string, componentId: string, updates: Partial<Component>) => void; // 🆕
+  updateComponent: (projectId: string, componentId: string, updates: Partial<Component>) => void;
+  reorderComponents: (projectId: string, orderedIds: string[]) => void;
   canDeleteComponent: (projectId: string, componentId: string) => boolean;
 }
 
@@ -49,6 +50,18 @@ export const createComponentSlice = (set: any, get: any) => ({
             }
           : p
       )
+    }));
+  },
+
+  reorderComponents: (projectId: string, orderedIds: string[]) => {
+    set((state: any) => ({
+      projects: state.projects.map((p: any) => {
+        if (p.id !== projectId) return p;
+        const ordered = orderedIds
+          .map((id: string) => p.components.find((c: any) => c.id === id))
+          .filter(Boolean);
+        return { ...p, components: ordered };
+      })
     }));
   },
 

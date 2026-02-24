@@ -187,6 +187,14 @@ export function generateStoriesMd(project: Project, imageMap: ImageMap = new Map
   headerParts.push('---');
   sections.push(headerParts.join('\n\n'));
 
+  // Documents en premier
+  if (documents.length > 0) {
+    sections.push('<!-- Documents -->');
+    for (const doc of documents) {
+      sections.push(generateDocumentBlock(doc, imageMap));
+    }
+  }
+
   // UI components grouped by category
   for (const category of CATEGORY_ORDER) {
     const group = uiComponents.filter(c => c.category === category);
@@ -194,14 +202,6 @@ export function generateStoriesMd(project: Project, imageMap: ImageMap = new Map
     sections.push(`<!-- ${CATEGORY_LABELS[category] ?? category} -->`);
     for (const comp of group) {
       sections.push(generateComponentBlock(comp, imageMap));
-    }
-  }
-
-  // Documents
-  if (documents.length > 0) {
-    sections.push('<!-- Documents -->');
-    for (const doc of documents) {
-      sections.push(generateDocumentBlock(doc, imageMap));
     }
   }
 

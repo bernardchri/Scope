@@ -25,8 +25,8 @@ export const CATEGORY_LABELS: Record<ComponentCategory, string> = {
 };
 
 const CATEGORY_ORDER: ComponentCategory[] = [
-  'template', 'navigation', 'section', 'composition',
-  'element', 'media', 'form', 'content', 'document',
+  'document', 'template', 'navigation', 'section', 'composition',
+  'element', 'media', 'form', 'content',
 ];
 
 const TASK_CATEGORY_LABELS: Record<TaskCategory, string> = {
