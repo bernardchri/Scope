@@ -42,12 +42,12 @@ function componentAnchorId(component: Component): string {
   return `comp-${component.id}`;
 }
 
-function getPrimaryImage(component: Component): { src: string; pins: NonNullable<typeof component.images>[0]['pins'] } | null {
-  const images = component.images ?? [];
-  const primary = images.find(i => i.isPrimary) ?? images[0];
-  if (!primary) return null;
-  const src = primary.base64.startsWith('data:') ? primary.base64 : `data:image/jpeg;base64,${primary.base64}`;
-  return { src, pins: primary.pins };
+// Largeur de contenu A4 : 595.28pt − 2 × 56pt de padding
+const CONTENT_WIDTH = 483;
+const IMG_MAX_HEIGHT = 320;
+
+function normalizeBase64(base64: string): string {
+  return base64.startsWith('data:') ? base64 : `data:image/jpeg;base64,${base64}`;
 }
 
 function formatDate(iso: string) {
@@ -213,13 +213,7 @@ const s = StyleSheet.create({
     borderBottomStyle: 'solid',
   },
   componentDetailHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
-  componentDetailContent: {
-    flex: 1,
-    paddingRight: 16,
+    marginBottom: 10,
   },
   componentDetailName: {
     fontSize: 13,
@@ -237,15 +231,24 @@ const s = StyleSheet.create({
     fontSize: 9,
     color: '#aaa',
   },
-  componentDetailImage: {
-    width: 150,
-    height: 100,
+  componentImageBlock: {
+    marginBottom: 10,
+  },
+  componentImage: {
+    width: CONTENT_WIDTH,
+    maxHeight: IMG_MAX_HEIGHT,
     objectFit: 'contain',
     borderWidth: 1,
     borderColor: '#ebebeb',
     borderStyle: 'solid',
     borderRadius: 2,
-    flexShrink: 0,
+  },
+  imageCaption: {
+    fontSize: 8,
+    color: '#aaa',
+    textAlign: 'center',
+    marginTop: 4,
+    fontStyle: 'italic',
   },
 
   // Tâches
@@ -422,9 +425,10 @@ function ComponentDetailBlock({
   component: Component;
   allComponents: Component[];
 }) {
-  const primaryImage = getPrimaryImage(component);
-  const imageSrc = primaryImage?.src ?? null;
-  const imagePins = primaryImage?.pins ?? [];
+  const images = (component.images ?? []).map(img => ({
+    ...img,
+    src: normalizeBase64(img.base64),
+  }));
 
   const tasksByCategory = TASK_CATEGORY_ORDER.reduce<Partial<Record<TaskCategory, typeof component.tasks>>>(
     (acc, cat) => {
@@ -441,27 +445,29 @@ function ComponentDetailBlock({
   return (
     <View id={componentAnchorId(component)} style={s.componentDetailBlock}>
 
-      {/* En-tête : nom + image côte à côte */}
+      {/* En-tête : nom + desc + heures (pleine largeur) */}
       <View style={s.componentDetailHeader} wrap={false}>
-        <View style={s.componentDetailContent}>
-          <Text style={s.componentDetailName}>{component.name}</Text>
-          {component.description && (
-            <Text style={s.componentDetailDesc}>{component.description}</Text>
-          )}
-          {component.estimatedHours != null && component.estimatedHours > 0 && (
-            <Text style={s.componentDetailHours}>⏱ {component.estimatedHours}h estimées</Text>
-          )}
-        </View>
-        {imageSrc && (
-          <View style={{ position: 'relative', width: 150, height: 100, flexShrink: 0 }}>
-            <Image src={imageSrc} style={s.componentDetailImage} />
-            {imagePins?.map(pin => (
+        <Text style={s.componentDetailName}>{component.name}</Text>
+        {component.description && (
+          <Text style={s.componentDetailDesc}>{component.description}</Text>
+        )}
+        {component.estimatedHours != null && component.estimatedHours > 0 && (
+          <Text style={s.componentDetailHours}>⏱ {component.estimatedHours}h estimées</Text>
+        )}
+      </View>
+
+      {/* Toutes les images, pleine largeur */}
+      {images.map((img) => (
+        <View key={img.id} style={s.componentImageBlock} wrap={false}>
+          <View style={{ position: 'relative', width: CONTENT_WIDTH, maxHeight: IMG_MAX_HEIGHT }}>
+            <Image src={img.src} style={s.componentImage} />
+            {img.pins?.map(pin => (
               <View
                 key={pin.id}
                 style={{
                   position: 'absolute',
-                  left: (pin.x / 100) * 150 - 7,
-                  top: (pin.y / 100) * 100 - 7,
+                  left: (pin.x / 100) * CONTENT_WIDTH - 7,
+                  top: (pin.y / 100) * IMG_MAX_HEIGHT - 7,
                   width: 14,
                   height: 14,
                   borderRadius: 7,
@@ -476,8 +482,11 @@ function ComponentDetailBlock({
               </View>
             ))}
           </View>
-        )}
-      </View>
+          {img.caption && (
+            <Text style={s.imageCaption}>{img.caption}</Text>
+          )}
+        </View>
+      ))}
 
       {/* Liste des tâches groupées par catégorie */}
       {component.tasks.length > 0 && (
