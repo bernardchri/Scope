@@ -40,7 +40,7 @@
 
 ## UX / Navigation
 - [x] Pouvoir modifier le nom du projet (renommage inline dans le header)
-- [ ] Pouvoir réordonner les composants (drag & drop dans la sidebar). Ce qui a un impact sur la sortie en markdown et pdf.
+- [x] Pouvoir réordonner les composants (drag & drop dans la sidebar). Ce qui a un impact sur la sortie en markdown et pdf.
 - [ ] Recherche / filtre de composants dans la sidebar
 - [ ] Possiblité de changer l'ordre des images en drag and drop.
 - [ ] Dupliquer un composant existant
