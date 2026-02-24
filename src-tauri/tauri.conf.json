@@ -27,6 +27,14 @@
   "bundle": {
     "active": true,
     "targets": "all",
+    "windows": {
+      "nsis": {
+        "installerIcon": "icons/icon.ico",
+        "headerImage": "icons/128x128.png",
+        "sidebarImage": "icons/128x128@2x.png",
+        "installMode": "currentUser"
+      }
+    },
     "macOS": {
       "dmg": {
         "appPosition": {
