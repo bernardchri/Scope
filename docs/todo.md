@@ -15,6 +15,8 @@
 - [ ] Total HT 
   
 ## Export PDF
+- [ ] Toutes les images sont rendues dans le pdf 
+- [ ] Les images prennent la largeur de la page
 - [ ] Page de garde : nom projet, date, version, nom du créateur
 - [ ] Tableau récapitulatif : composants × estimation × coût (si taux horaire configuré)
 - [ ] Section "Hors périmètre" : lister les tâches marquées `v2`
@@ -26,7 +28,9 @@
 - [ ] Conditions : délais, acompte, hors périmètre
 - [ ] Réutilise l'infrastructure `@react-pdf/renderer` existante (nouveau document séparé du cahier des charges)
 
+
 ## Export Story-compiler (STORIES.md)
+- [ ] Exporter en début de projet le nombre d'éléments, les composants, les heures estimés,
 - [x] Export global `STORIES.md` (un seul fichier, tous les composants)
 - [x] Format : `# Nom`, `<!-- estimate: Xh -->`, `## Description`, `## Tâches` avec checkboxes GFM
 - [x] Images exportées dans un dossier `stories-img/` et référencées en Markdown
@@ -36,11 +40,13 @@
 
 ## UX / Navigation
 - [x] Pouvoir modifier le nom du projet (renommage inline dans le header)
-- [ ] Pouvoir réordonner les composants (drag & drop dans la sidebar)
+- [ ] Pouvoir réordonner les composants (drag & drop dans la sidebar). Ce qui a un impact sur la sortie en markdown et pdf.
 - [ ] Recherche / filtre de composants dans la sidebar
+- [ ] Possiblité de changer l'ordre des images en drag and drop.
 - [ ] Dupliquer un composant existant
 - [x] Enlever dans le header "changer de projet"
 - [x] Ajouter une entrée accueil dans la sidebar, tout en haut avec une icône — toggle sidebar déplacé également dans la sidebar
+- [ ] Ajout des références aux pins dans les composants utilisés
 
 ---
 
