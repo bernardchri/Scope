@@ -159,7 +159,17 @@ pub fn run() {
                 &PredefinedMenuItem::separator(app)?,
                 &PredefinedMenuItem::quit(app, Some("Quitter"))?,
             ])?;
-            let menu = Menu::with_items(app, &[&scope_menu])?;
+            let edit_menu = Submenu::with_items(app, "Édition", true, &[
+                &PredefinedMenuItem::undo(app, Some("Annuler"))?,
+                &PredefinedMenuItem::redo(app, Some("Rétablir"))?,
+                &PredefinedMenuItem::separator(app)?,
+                &PredefinedMenuItem::cut(app, Some("Couper"))?,
+                &PredefinedMenuItem::copy(app, Some("Copier"))?,
+                &PredefinedMenuItem::paste(app, Some("Coller"))?,
+                &PredefinedMenuItem::separator(app)?,
+                &PredefinedMenuItem::select_all(app, Some("Tout sélectionner"))?,
+            ])?;
+            let menu = Menu::with_items(app, &[&scope_menu, &edit_menu])?;
             app.set_menu(menu)?;
 
             let app_handle = app.handle().clone();
