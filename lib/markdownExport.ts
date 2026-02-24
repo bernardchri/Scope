@@ -36,7 +36,7 @@ function getImageExtension(base64: string): string {
 }
 
 /** Dessine les pins sur l'image via Canvas et retourne un data URL PNG. */
-async function renderImageWithPins(base64: string, pins: ImagePin[]): Promise<string> {
+export async function renderImageWithPins(base64: string, pins: ImagePin[]): Promise<string> {
   return new Promise((resolve) => {
     const img = new window.Image();
     img.onload = () => {

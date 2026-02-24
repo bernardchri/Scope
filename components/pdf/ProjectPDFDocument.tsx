@@ -459,32 +459,10 @@ function ComponentDetailBlock({
         )}
       </View>
 
-      {/* Toutes les images, pleine largeur */}
+      {/* Toutes les images, pleine largeur (pins pré-cuits dans le pixel par pdfExport) */}
       {images.map((img) => (
         <View key={img.id} style={s.componentImageBlock} wrap={false}>
-          <View style={{ position: 'relative', width: CONTENT_WIDTH, maxHeight: IMG_MAX_HEIGHT }}>
-            <Image src={img.src} style={s.componentImage} />
-            {img.pins?.map(pin => (
-              <View
-                key={pin.id}
-                style={{
-                  position: 'absolute',
-                  left: (pin.x / 100) * CONTENT_WIDTH - 7,
-                  top: (pin.y / 100) * IMG_MAX_HEIGHT - 7,
-                  width: 14,
-                  height: 14,
-                  borderRadius: 7,
-                  backgroundColor: '#3b82f6',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <Text style={{ fontSize: 6, color: 'white', fontFamily: 'Helvetica-Bold' }}>
-                  {pin.number}
-                </Text>
-              </View>
-            ))}
-          </View>
+          <Image src={img.src} style={s.componentImage} />
           {img.caption && (
             <Text style={s.imageCaption}>{img.caption}</Text>
           )}

@@ -2,6 +2,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { save } from '@tauri-apps/plugin-dialog';
 import { slugify } from './persistence';
 import { Project } from './types';
+import { renderImageWithPins } from './markdownExport';
 
 function toBase64(bytes: Uint8Array): string {
   let binary = '';
@@ -12,6 +13,30 @@ function toBase64(bytes: Uint8Array): string {
   return btoa(binary);
 }
 
+/**
+ * Pré-cuit les pins dans les images via Canvas avant la génération PDF.
+ * Les coordonnées relatives (%) sont ainsi intégrées directement dans le pixel
+ * de l'image, ce qui évite tout problème de ratio avec objectFit: contain.
+ */
+async function preparePdfProject(project: Project): Promise<Project> {
+  const components = await Promise.all(
+    project.components.map(async (comp) => {
+      const compImages = comp.images ?? [];
+      if (compImages.length === 0) return comp;
+      const images = await Promise.all(
+        compImages.map(async (img) => {
+          const pins = img.pins ?? [];
+          if (pins.length === 0) return img;
+          const bakedBase64 = await renderImageWithPins(img.base64, pins);
+          return { ...img, base64: bakedBase64, pins: [] };
+        })
+      );
+      return { ...comp, images };
+    })
+  );
+  return { ...project, components };
+}
+
 export async function exportProjectPDF(project: Project): Promise<void> {
   const filePath = await save({
     defaultPath: `${slugify(project.name)}-cahier-des-charges.pdf`,
@@ -19,11 +44,13 @@ export async function exportProjectPDF(project: Project): Promise<void> {
   });
   if (!filePath) return;
 
+  const preparedProject = await preparePdfProject(project);
+
   // Import dynamique pour éviter les problèmes SSR avec @react-pdf/renderer
   const { pdf } = await import('@react-pdf/renderer');
   const { ProjectPDFDocument } = await import('@/components/pdf/ProjectPDFDocument');
 
-  const element = <ProjectPDFDocument project={project} />;
+  const element = <ProjectPDFDocument project={preparedProject} />;
   const blob = await pdf(element).toBlob();
 
   const bytes = new Uint8Array(await blob.arrayBuffer());
