@@ -1,19 +1,21 @@
-import { Component } from '@/lib/types';
+import { Component, ComponentImage, Task } from '@/lib/types';
 import { getCategoryLabel, getCategoryColor } from '@/lib/categoryHelpers';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Trash2 } from 'lucide-react';
-import ImageCarousel from '../ImageCarousel';
+import ImagePinViewer from '../ImagePinViewer';
 
 interface ComponentDetailHeaderProps {
   component: Component;
+  tasks: Task[];
+  onUpdateImages: (images: ComponentImage[]) => void;
   onBack?: () => void;
   onEdit: () => void;
   onDelete: () => void;
 }
 
-export default function ComponentDetailHeader({ component, onBack, onEdit, onDelete }: ComponentDetailHeaderProps) {
-  // 🆕 Convertir ancienne structure en nouvelle si nécessaire
+export default function ComponentDetailHeader({ component, tasks, onUpdateImages, onBack, onEdit, onDelete }: ComponentDetailHeaderProps) {
+  // Convertir ancienne structure en nouvelle si nécessaire
   const images = component.images || (component.imageBase64 ? [{
     id: 'legacy',
     base64: component.imageBase64,
@@ -60,8 +62,7 @@ export default function ComponentDetailHeader({ component, onBack, onEdit, onDel
         </p>
       )}
 
-      {/* 🆕 Carrousel d'images */}
-      <ImageCarousel images={images} />
+      <ImagePinViewer images={images} tasks={tasks} onUpdateImages={onUpdateImages} />
     </div>
   );
 }

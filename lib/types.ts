@@ -21,6 +21,14 @@ export interface Task {
   name: string;
   completed: boolean;
   category: TaskCategory;
+  pinRef?: { imageId: string; pinId: string; pinNumber: number };
+}
+
+export interface ImagePin {
+  id: string;
+  number: number;
+  x: number; // % 0-100
+  y: number; // % 0-100
 }
 
 // 🆕 Nouvelle interface pour les images
@@ -29,6 +37,7 @@ export interface ComponentImage {
   base64: string;
   caption?: string;
   isPrimary: boolean; // Une seule image peut être principale
+  pins?: ImagePin[];
 }
 
 export interface Component {

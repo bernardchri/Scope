@@ -12,17 +12,27 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Trash2, Pencil, GripVertical } from 'lucide-react';
+import { Trash2, Pencil, GripVertical, MapPin } from 'lucide-react';
 import { getTaskCategoryLabel, getTaskCategoryColor, TASK_CATEGORY_LABELS } from '@/lib/taskCategoryHelpers';
+
+interface AvailablePin {
+  pinId: string;
+  imageId: string;
+  imageIndex: number;
+  number: number;
+}
 
 interface TaskItemProps {
   task: Task;
   isEditing: boolean;
   editName: string;
   editCategory: TaskCategory;
-  dragHandleProps?: any; // 🆕
+  editPinRef?: Task['pinRef'];
+  availablePins?: AvailablePin[];
+  dragHandleProps?: any;
   onEditNameChange: (name: string) => void;
   onEditCategoryChange: (category: TaskCategory) => void;
+  onEditPinRefChange?: (pinRef: Task['pinRef']) => void;
   onStartEdit: () => void;
   onSaveEdit: () => void;
   onCancelEdit: () => void;
@@ -34,9 +44,12 @@ export default function TaskItem({
   isEditing,
   editName,
   editCategory,
-  dragHandleProps = {}, // 🆕
+  editPinRef,
+  availablePins = [],
+  dragHandleProps = {},
   onEditNameChange,
   onEditCategoryChange,
+  onEditPinRefChange,
   onStartEdit,
   onSaveEdit,
   onCancelEdit,
@@ -71,6 +84,30 @@ export default function TaskItem({
               ))}
             </SelectContent>
           </Select>
+
+          {availablePins.length > 0 && onEditPinRefChange && (
+            <Select
+              value={editPinRef ? `${editPinRef.imageId}::${editPinRef.pinId}` : 'none'}
+              onValueChange={(v) => {
+                if (v === 'none') { onEditPinRefChange(undefined); return; }
+                const [imageId, pinId] = v.split('::');
+                const pin = availablePins.find(p => p.pinId === pinId);
+                if (pin) onEditPinRefChange({ imageId, pinId, pinNumber: pin.number });
+              }}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Aucun pin associé" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Aucun pin</SelectItem>
+                {availablePins.map(p => (
+                  <SelectItem key={p.pinId} value={`${p.imageId}::${p.pinId}`}>
+                    Image {p.imageIndex + 1} — Pin #{p.number}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
 
           <div className="flex gap-2">
             <Button onClick={onSaveEdit}>Enregistrer</Button>
@@ -119,6 +156,14 @@ export default function TaskItem({
           >
             {task.name}
           </span>
+
+          {/* Badge pin associé */}
+          {task.pinRef && (
+            <span className="flex items-center gap-1 text-xs text-muted-foreground shrink-0">
+              <MapPin className="h-3 w-3" />
+              #{task.pinRef.pinNumber}
+            </span>
+          )}
           
           {/* Icônes au hover */}
           <div className="flex gap-1 transition-opacity">

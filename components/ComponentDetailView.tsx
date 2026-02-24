@@ -63,6 +63,8 @@ export default function ComponentDetailView({
       ) : (
         <ComponentDetailHeader
           component={component}
+          tasks={component.tasks}
+          onUpdateImages={(images) => onUpdate(component.id, { images })}
           onBack={onBack}
           onEdit={() => setIsEditing(true)}
           onDelete={onDelete}
@@ -75,6 +77,7 @@ export default function ComponentDetailView({
         projectId={projectId}
         componentId={component.id}
         tasks={component.tasks}
+        images={component.images ?? []}
       />
 
       <Separator />

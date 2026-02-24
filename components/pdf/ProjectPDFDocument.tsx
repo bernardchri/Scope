@@ -42,11 +42,12 @@ function componentAnchorId(component: Component): string {
   return `comp-${component.id}`;
 }
 
-function getPrimaryImage(component: Component): string | null {
+function getPrimaryImage(component: Component): { src: string; pins: NonNullable<typeof component.images>[0]['pins'] } | null {
   const images = component.images ?? [];
   const primary = images.find(i => i.isPrimary) ?? images[0];
   if (!primary) return null;
-  return primary.base64.startsWith('data:') ? primary.base64 : `data:image/jpeg;base64,${primary.base64}`;
+  const src = primary.base64.startsWith('data:') ? primary.base64 : `data:image/jpeg;base64,${primary.base64}`;
+  return { src, pins: primary.pins };
 }
 
 function formatDate(iso: string) {
@@ -421,7 +422,9 @@ function ComponentDetailBlock({
   component: Component;
   allComponents: Component[];
 }) {
-  const imageSrc = getPrimaryImage(component);
+  const primaryImage = getPrimaryImage(component);
+  const imageSrc = primaryImage?.src ?? null;
+  const imagePins = primaryImage?.pins ?? [];
 
   const tasksByCategory = TASK_CATEGORY_ORDER.reduce<Partial<Record<TaskCategory, typeof component.tasks>>>(
     (acc, cat) => {
@@ -450,7 +453,29 @@ function ComponentDetailBlock({
           )}
         </View>
         {imageSrc && (
-          <Image src={imageSrc} style={s.componentDetailImage} />
+          <View style={{ position: 'relative', width: 150, height: 100, flexShrink: 0 }}>
+            <Image src={imageSrc} style={s.componentDetailImage} />
+            {imagePins?.map(pin => (
+              <View
+                key={pin.id}
+                style={{
+                  position: 'absolute',
+                  left: (pin.x / 100) * 150 - 7,
+                  top: (pin.y / 100) * 100 - 7,
+                  width: 14,
+                  height: 14,
+                  borderRadius: 7,
+                  backgroundColor: '#3b82f6',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Text style={{ fontSize: 6, color: 'white', fontFamily: 'Helvetica-Bold' }}>
+                  {pin.number}
+                </Text>
+              </View>
+            ))}
+          </View>
         )}
       </View>
 
@@ -470,6 +495,17 @@ function ComponentDetailBlock({
                     <Text style={task.completed ? s.taskNameDone : s.taskName}>
                       {task.name}
                     </Text>
+                    {task.pinRef && (
+                      <View style={{
+                        width: 13, height: 13, borderRadius: 6.5,
+                        backgroundColor: '#dbeafe', alignItems: 'center', justifyContent: 'center',
+                        marginLeft: 3,
+                      }}>
+                        <Text style={{ fontSize: 6, color: '#1d4ed8', fontFamily: 'Helvetica-Bold' }}>
+                          {task.pinRef.pinNumber}
+                        </Text>
+                      </View>
+                    )}
                   </View>
                 ))}
               </View>

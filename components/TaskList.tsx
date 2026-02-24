@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useProjectStore } from '@/lib/projectStore';
-import { Task, TaskCategory } from '@/lib/types';
+import { Task, TaskCategory, ComponentImage } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -30,6 +30,7 @@ interface TaskListProps {
   projectId: string;
   componentId: string;
   tasks: Task[];
+  images?: ComponentImage[];
 }
 
 // Wrapper sortable pour chaque TaskItem
@@ -62,7 +63,7 @@ function SortableTaskItem(props: any) {
   );
 }
 
-export default function TaskList({ projectId, componentId, tasks }: TaskListProps) {
+export default function TaskList({ projectId, componentId, tasks, images = [] }: TaskListProps) {
   const addTask = useProjectStore(state => state.addTask);
   const deleteTask = useProjectStore(state => state.deleteTask);
   const toggleTask = useProjectStore(state => state.toggleTask);
@@ -76,6 +77,7 @@ export default function TaskList({ projectId, componentId, tasks }: TaskListProp
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [editTaskName, setEditTaskName] = useState('');
   const [editTaskCategory, setEditTaskCategory] = useState<TaskCategory>('frontend');
+  const [editPinRef, setEditPinRef] = useState<Task['pinRef']>(undefined);
 
   const [localTasks, setLocalTasks] = useState(tasks);
 
@@ -116,6 +118,7 @@ export default function TaskList({ projectId, componentId, tasks }: TaskListProp
     setEditingTaskId(task.id);
     setEditTaskName(task.name);
     setEditTaskCategory(task.category);
+    setEditPinRef(task.pinRef);
   }
 
   function handleSaveEdit() {
@@ -123,7 +126,8 @@ export default function TaskList({ projectId, componentId, tasks }: TaskListProp
 
     updateTask(projectId, componentId, editingTaskId, {
       name: editTaskName,
-      category: editTaskCategory
+      category: editTaskCategory,
+      pinRef: editPinRef,
     });
 
     setEditingTaskId(null);
@@ -143,6 +147,15 @@ export default function TaskList({ projectId, componentId, tasks }: TaskListProp
   }
 
   const completedCount = localTasks.filter(t => t.completed).length;
+
+  const availablePins = images.flatMap((img, imageIndex) =>
+    (img.pins ?? []).map(pin => ({
+      pinId: pin.id,
+      imageId: img.id,
+      imageIndex,
+      number: pin.number,
+    }))
+  );
 
   return (
     <div className="space-y-4">
@@ -176,8 +189,11 @@ export default function TaskList({ projectId, componentId, tasks }: TaskListProp
                   isEditing={editingTaskId === task.id}
                   editName={editTaskName}
                   editCategory={editTaskCategory}
+                  editPinRef={editPinRef}
+                  availablePins={availablePins}
                   onEditNameChange={setEditTaskName}
                   onEditCategoryChange={setEditTaskCategory}
+                  onEditPinRefChange={setEditPinRef}
                   onStartEdit={() => startEditing(task)}
                   onSaveEdit={handleSaveEdit}
                   onCancelEdit={() => setEditingTaskId(null)}

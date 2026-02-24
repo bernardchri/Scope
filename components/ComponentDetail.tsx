@@ -67,6 +67,8 @@ export default function ComponentDetail({ projectId, componentId }: ComponentDet
       ) : (
         <ComponentDetailHeader
           component={activeComponent}
+          tasks={activeComponent.tasks}
+          onUpdateImages={(images) => updateComponent(activeProject.id, activeComponent.id, { images })}
           onBack={() => setActiveComponent(null)}
           onEdit={() => setIsEditing(true)}
           onDelete={() => {
@@ -90,6 +92,7 @@ export default function ComponentDetail({ projectId, componentId }: ComponentDet
         projectId={projectId}
         componentId={componentId}
         tasks={activeComponent.tasks}
+        images={activeComponent.images ?? []}
       />
 
       <Separator />

@@ -1,6 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import { save } from '@tauri-apps/plugin-dialog';
-import { Project, Component, TaskCategory } from './types';
+import { Project, Component, TaskCategory, ImagePin } from './types';
 import { COMPONENT_CATEGORIES } from './categoryHelpers';
 
 const TASK_CATEGORY_LABELS: Record<TaskCategory, string> = {
@@ -25,7 +25,7 @@ const CATEGORY_LABELS: Record<string, string> = {
 
 const CATEGORY_ORDER = COMPONENT_CATEGORIES;
 
-type ImageRef = { filename: string; caption?: string };
+type ImageRef = { filename: string; caption?: string; imageIndex: number };
 type ImageMap = Map<string, ImageRef[]>;
 
 function getImageExtension(base64: string): string {
@@ -33,6 +33,55 @@ function getImageExtension(base64: string): string {
   if (base64.startsWith('data:image/gif')) return 'gif';
   if (base64.startsWith('data:image/webp')) return 'webp';
   return 'jpg';
+}
+
+/** Dessine les pins sur l'image via Canvas et retourne un data URL PNG. */
+async function renderImageWithPins(base64: string, pins: ImagePin[]): Promise<string> {
+  return new Promise((resolve) => {
+    const img = new window.Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) { resolve(base64); return; }
+
+      ctx.drawImage(img, 0, 0);
+
+      const radius = Math.max(12, Math.min(24, img.naturalWidth * 0.025));
+      const fontSize = Math.round(radius * 0.9);
+
+      for (const pin of pins) {
+        const cx = (pin.x / 100) * img.naturalWidth;
+        const cy = (pin.y / 100) * img.naturalHeight;
+
+        ctx.shadowColor = 'rgba(0,0,0,0.35)';
+        ctx.shadowBlur = 4;
+        ctx.shadowOffsetX = 1;
+        ctx.shadowOffsetY = 1;
+
+        ctx.beginPath();
+        ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+        ctx.fillStyle = '#3b82f6';
+        ctx.fill();
+
+        ctx.shadowColor = 'transparent';
+        ctx.strokeStyle = 'white';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        ctx.fillStyle = 'white';
+        ctx.font = `bold ${fontSize}px system-ui, -apple-system, sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(String(pin.number), cx, cy);
+      }
+
+      resolve(canvas.toDataURL('image/png'));
+    };
+    img.onerror = () => resolve(base64);
+    img.src = base64;
+  });
 }
 
 function imagesSection(refs: ImageRef[], fallbackAlt: string): string {
@@ -55,9 +104,9 @@ function generateComponentBlock(component: Component, imageMap: ImageMap): strin
     parts.push(`## Description\n\n${component.description}`);
   }
 
-  const images = imageMap.get(component.id);
-  if (images && images.length > 0) {
-    parts.push(imagesSection(images, component.name));
+  const imageRefs = imageMap.get(component.id) ?? [];
+  if (imageRefs.length > 0) {
+    parts.push(imagesSection(imageRefs, component.name));
   }
 
   if (component.tasks.length > 0) {
@@ -65,10 +114,30 @@ function generateComponentBlock(component: Component, imageMap: ImageMap): strin
     for (const cat of TASK_CATEGORY_ORDER) {
       const catTasks = component.tasks.filter(t => t.category === cat);
       for (const task of catTasks) {
-        taskLines.push(`- [ ] (${TASK_CATEGORY_LABELS[cat]}) ${task.name}`);
+        const pinSuffix = task.pinRef ? ` [Pin #${task.pinRef.pinNumber}]` : '';
+        taskLines.push(`- [ ] (${TASK_CATEGORY_LABELS[cat]}) ${task.name}${pinSuffix}`);
       }
     }
     parts.push(taskLines.join('\n'));
+  }
+
+  // Légende des pins (une section par image qui a des pins)
+  const compImages = component.images ?? [];
+  const pinsLegendLines: string[] = [];
+  compImages.forEach((img, i) => {
+    const pins = img.pins ?? [];
+    if (pins.length === 0) return;
+    const ref = imageRefs[i];
+    const imgLabel = ref ? `Image ${i + 1} — ${ref.filename}` : `Image ${i + 1}`;
+    pinsLegendLines.push(`**${imgLabel}**`);
+    pins.forEach(pin => {
+      const linkedTask = component.tasks.find(t => t.pinRef?.pinId === pin.id);
+      const taskLabel = linkedTask ? ` → ${linkedTask.name}` : '';
+      pinsLegendLines.push(`- Pin #${pin.number}${taskLabel}`);
+    });
+  });
+  if (pinsLegendLines.length > 0) {
+    parts.push(`## Légende des pins\n\n${pinsLegendLines.join('\n')}`);
   }
 
   parts.push('---');
@@ -151,11 +220,15 @@ async function collectImages(project: Project, dir: string): Promise<ImageMap> {
 
     for (let i = 0; i < compImages.length; i++) {
       const img = compImages[i];
-      const ext = getImageExtension(img.base64);
+      const hasPins = (img.pins ?? []).length > 0;
+      const base64ToWrite = hasPins
+        ? await renderImageWithPins(img.base64, img.pins!)
+        : img.base64;
+      const ext = hasPins ? 'png' : getImageExtension(img.base64);
       const filename = `${compSlug}-${i}.${ext}`;
       const imgPath = `${dir}/stories-img/${filename}`;
-      await invoke('write_binary_file', { path: imgPath, base64Data: img.base64 });
-      refs.push({ filename, caption: img.caption });
+      await invoke('write_binary_file', { path: imgPath, base64Data: base64ToWrite });
+      refs.push({ filename, caption: img.caption, imageIndex: i });
     }
 
     imageMap.set(comp.id, refs);

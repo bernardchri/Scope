@@ -54,8 +54,27 @@ Config in `config.dat` via `@tauri-apps/plugin-store` (separate from project dat
 
 - `Project`: `{ id, name, description?, filename?, hourlyRate?, budgetCap?, components[], createdAt }`
 - `Component`: `{ category, tasks[], instances[], images[], content?, estimatedHours? }` — category `'document'` is separate from other categories
-- `Task`: `{ category: 'frontend'|'backend'|'seo'|'motion' }`
-- `ComponentImage`: `{ base64, isPrimary }` — supersedes legacy `imageBase64` field (migration in `lib/migrations.ts`)
+- `Task`: `{ id, name, completed, category: 'frontend'|'backend'|'seo'|'motion', pinRef? }` — `pinRef: { imageId, pinId, pinNumber }` links a task to an image pin
+- `ComponentImage`: `{ id, base64, caption?, isPrimary, pins? }` — supersedes legacy `imageBase64` field (migration in `lib/migrations.ts`)
+- `ImagePin`: `{ id, number, x, y }` — x/y are percentages (0–100) relative to the image container
+
+### Éléments (anciennement Tâches)
+
+Le terme "Tâches" est remplacé par "Éléments" dans toute l'interface. Le champ `completed` et l'action `toggleTask` existent toujours dans le store mais les checkboxes sont masquées. Le terme "Tâches" est conservé dans l'export STORIES.md.
+
+### Pins sur images (`components/ImagePinViewer.tsx`)
+
+`ImagePinViewer` remplace `ImageCarousel` dans `ComponentDetailHeader`. Il gère l'overlay de pins sur chaque image du carousel :
+- Clic sur l'image → crée un pin et le glisse immédiatement
+- Clic sur un pin existant → sélection (rouge)
+- Drag sur un pin → repositionnement (pointer events natifs, coordonnées en %)
+- Touche `Delete` avec un pin sélectionné → suppression
+- Bouton œil → affiche/masque tous les pins
+- Les pins sont sauvegardés dans `ComponentImage.pins[]` via `onUpdateImages` → `updateComponent`
+
+Liaison pin ↔ élément : dans le formulaire d'édition d'un élément (`TaskItem`), un `Select` permet de choisir un pin parmi ceux disponibles sur toutes les images du composant. La référence est stockée dans `Task.pinRef`. Un badge `📍 #N` s'affiche en lecture si un pin est lié.
+
+`TaskList` reçoit une prop optionnelle `images?: ComponentImage[]` et calcule `availablePins` (liste plate de tous les pins de toutes les images) passée à chaque `TaskItem`.
 
 ### Navigation (`components/ComponentList.tsx`)
 
