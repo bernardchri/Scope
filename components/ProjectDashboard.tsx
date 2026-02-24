@@ -4,8 +4,9 @@ import { useState } from 'react';
 import { Project, Component, ComponentCategory } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ChevronRight, Clock, CheckSquare, FileText, Euro, TriangleAlert } from 'lucide-react';
+import { ChevronRight, Clock, CheckSquare, FileText, FileCode, Euro, TriangleAlert } from 'lucide-react';
 import { exportProjectPDF } from '@/lib/pdfExport';
+import { exportProjectMarkdown } from '@/lib/markdownExport';
 
 interface ProjectDashboardProps {
   project: Project;
@@ -42,6 +43,7 @@ export default function ProjectDashboard({
   const [isEditingCap, setIsEditingCap] = useState(false);
   const [capDraft, setCapDraft] = useState(project.budgetCap?.toString() ?? '');
   const [isExporting, setIsExporting] = useState(false);
+  const [isExportingMd, setIsExportingMd] = useState(false);
 
   async function handleExportPDF() {
     setIsExporting(true);
@@ -49,6 +51,15 @@ export default function ProjectDashboard({
       await exportProjectPDF(project);
     } finally {
       setIsExporting(false);
+    }
+  }
+
+  async function handleExportMarkdown() {
+    setIsExportingMd(true);
+    try {
+      await exportProjectMarkdown(project);
+    } finally {
+      setIsExportingMd(false);
     }
   }
 
@@ -309,8 +320,12 @@ export default function ProjectDashboard({
         </section>
       )}
 
-         {/* Export PDF */}
-      <div className="flex justify-end -mt-4">
+         {/* Exports */}
+      <div className="flex justify-end gap-2 -mt-4">
+        <Button variant="outline" size="sm" onClick={handleExportMarkdown} disabled={isExportingMd}>
+          <FileCode className="w-4 h-4 mr-2" />
+          {isExportingMd ? 'Génération…' : 'Exporter STORIES.md'}
+        </Button>
         <Button variant="outline" size="sm" onClick={handleExportPDF} disabled={isExporting}>
           <FileText className="w-4 h-4 mr-2" />
           {isExporting ? 'Génération…' : 'Exporter en PDF'}

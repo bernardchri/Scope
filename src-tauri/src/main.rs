@@ -105,6 +105,32 @@ fn write_pdf_file(path: String, base64_data: String) -> Result<(), String> {
 }
 
 #[tauri::command]
+fn write_binary_file(path: String, base64_data: String) -> Result<(), String> {
+    use base64::{Engine as _, engine::general_purpose};
+    let path_buf = std::path::PathBuf::from(&path);
+    if let Some(parent) = path_buf.parent() {
+        std::fs::create_dir_all(parent)
+            .map_err(|e| format!("Impossible de créer le dossier: {}", e))?;
+    }
+    let raw: &str = if let Some(pos) = base64_data.find(',') {
+        &base64_data[pos + 1..]
+    } else {
+        &base64_data
+    };
+    let bytes = general_purpose::STANDARD
+        .decode(raw)
+        .map_err(|e| format!("Erreur décodage base64: {}", e))?;
+    std::fs::write(&path_buf, bytes)
+        .map_err(|e| format!("Erreur écriture fichier: {}", e))
+}
+
+#[tauri::command]
+fn write_text_file(path: String, content: String) -> Result<(), String> {
+    std::fs::write(&path, content.as_bytes())
+        .map_err(|e| format!("Erreur écriture fichier: {}", e))
+}
+
+#[tauri::command]
 fn rename_project_file(old_path: String, new_path: String) -> Result<(), String> {
     let old_buf = PathBuf::from(&old_path);
     let new_buf = PathBuf::from(&new_path);
@@ -168,7 +194,9 @@ pub fn run() {
             list_scope_files,
             delete_project_file,
             rename_project_file,
-            write_pdf_file
+            write_pdf_file,
+            write_binary_file,
+            write_text_file
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
