@@ -1,9 +1,79 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { ComponentImage, ImagePin, Task } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight, Eye, EyeOff } from 'lucide-react';
+import {
+  DndContext,
+  DragEndEvent,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  arrayMove,
+  horizontalListSortingStrategy,
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+
+// ─── Thumbnail sortable ───────────────────────────────────────────────────────
+
+interface SortableThumbnailProps {
+  image: ComponentImage;
+  index: number;
+  isActive: boolean;
+  onClick: () => void;
+}
+
+function SortableThumbnail({ image, index, isActive, onClick }: SortableThumbnailProps) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: image.id,
+  });
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.4 : 1,
+        flexShrink: 0,
+      }}
+      {...attributes}
+      {...listeners}
+    >
+      <button
+        onClick={onClick}
+        className={`relative w-20 h-20 rounded border-2 overflow-hidden cursor-grab active:cursor-grabbing ${
+          isActive
+            ? 'border-primary ring-2 ring-primary/30'
+            : 'border-border hover:border-muted-foreground'
+        }`}
+      >
+        <img
+          src={image.base64}
+          alt={image.caption || `Miniature ${index + 1}`}
+          className="w-full h-full object-cover pointer-events-none"
+          draggable={false}
+        />
+        {image.isPrimary && (
+          <div className="absolute top-0 left-0 bg-primary text-primary-foreground text-[10px] px-1">
+            ★
+          </div>
+        )}
+        {image.pins && image.pins.length > 0 && (
+          <div className="absolute bottom-0 right-0 bg-black/60 text-white text-[10px] px-1 rounded-tl">
+            {image.pins.length} 📍
+          </div>
+        )}
+      </button>
+    </div>
+  );
+}
 
 interface ImagePinViewerProps {
   images: ComponentImage[];
@@ -12,6 +82,10 @@ interface ImagePinViewerProps {
 }
 
 export default function ImagePinViewer({ images, tasks, onUpdateImages }: ImagePinViewerProps) {
+  const thumbnailSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+  );
+
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showPins, setShowPins] = useState(true);
   const [selectedPinId, setSelectedPinId] = useState<string | null>(null);
@@ -139,6 +213,22 @@ export default function ImagePinViewer({ images, tasks, onUpdateImages }: ImageP
     setSelectedPinId(prev => prev === pinId ? null : pinId);
   }
 
+  // --- Thumbnail reorder ---
+  function handleThumbnailDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = localImages.findIndex(img => img.id === active.id);
+    const newIndex = localImages.findIndex(img => img.id === over.id);
+    const reordered = arrayMove(localImages, oldIndex, newIndex);
+    // Suivre l'image active après réordonnancement
+    const activeImageId = localImages[currentIndex]?.id;
+    setLocalImages(reordered);
+    if (activeImageId) {
+      setCurrentIndex(reordered.findIndex(img => img.id === activeImageId));
+    }
+    onUpdateImages(reordered);
+  }
+
   // --- Carousel navigation ---
   function goToPrevious() {
     setCurrentIndex(prev => (prev === 0 ? localImages.length - 1 : prev - 1));
@@ -262,37 +352,30 @@ export default function ImagePinViewer({ images, tasks, onUpdateImages }: ImageP
         </p>
       )}
 
-      {/* Thumbnails */}
+      {/* Thumbnails avec drag & drop */}
       {localImages.length > 1 && (
-        <div className="flex gap-2 overflow-x-auto pb-2">
-          {localImages.map((image, index) => (
-            <button
-              key={image.id}
-              onClick={() => { setCurrentIndex(index); setSelectedPinId(null); }}
-              className={`relative flex-shrink-0 w-20 h-20 rounded border-2 overflow-hidden ${
-                index === currentIndex
-                  ? 'border-primary ring-2 ring-primary/30'
-                  : 'border-border hover:border-muted-foreground'
-              }`}
-            >
-              <img
-                src={image.base64}
-                alt={image.caption || `Miniature ${index + 1}`}
-                className="w-full h-full object-cover"
-              />
-              {image.isPrimary && (
-                <div className="absolute top-0 left-0 bg-primary text-primary-foreground text-[10px] px-1">
-                  ★
-                </div>
-              )}
-              {image.pins && image.pins.length > 0 && (
-                <div className="absolute bottom-0 right-0 bg-black/60 text-white text-[10px] px-1 rounded-tl">
-                  {image.pins.length} 📍
-                </div>
-              )}
-            </button>
-          ))}
-        </div>
+        <DndContext
+          sensors={thumbnailSensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleThumbnailDragEnd}
+        >
+          <SortableContext
+            items={localImages.map(img => img.id)}
+            strategy={horizontalListSortingStrategy}
+          >
+            <div className="flex gap-2 overflow-x-auto pb-2">
+              {localImages.map((image, index) => (
+                <SortableThumbnail
+                  key={image.id}
+                  image={image}
+                  index={index}
+                  isActive={index === currentIndex}
+                  onClick={() => { setCurrentIndex(index); setSelectedPinId(null); }}
+                />
+              ))}
+            </div>
+          </SortableContext>
+        </DndContext>
       )}
     </div>
   );
