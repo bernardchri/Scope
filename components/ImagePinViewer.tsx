@@ -81,6 +81,8 @@ export default function ImagePinViewer({ images, tasks, onUpdateImages }: ImageP
     // Only react to primary button on the container itself (not bubbled from a pin)
     if (e.button !== 0) return;
     if (!imageContainerRef.current) return;
+    // Don't create a pin when clicking on a button (nav, eye toggle, etc.)
+    if ((e.target as HTMLElement).closest('button')) return;
 
     const rect = imageContainerRef.current.getBoundingClientRect();
     const x = ((e.clientX - rect.left) / rect.width) * 100;
