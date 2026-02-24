@@ -504,52 +504,63 @@ export default function ImagePinViewer({ images, tasks, onUpdateImages }: ImageP
   return (
     <div className="space-y-4">
       {/* ── Image principale avec overlay pins ─────────────────────────────── */}
-      <div
-        ref={imageContainerRef}
-        className="relative w-full bg-muted rounded-lg overflow-hidden select-none"
-        style={{ cursor: draggingPinId ? 'grabbing' : showPins ? 'crosshair' : 'default' }}
-        onPointerDown={showPins ? handleContainerPointerDown : undefined}
-        onPointerMove={showPins ? handleContainerPointerMove : undefined}
-        onPointerUp={showPins ? handleContainerPointerUp : undefined}
-      >
-        <img
-          src={currentImage.base64}
-          alt={currentImage.caption || `Image ${currentIndex + 1}`}
-          className="w-full max-h-96 object-contain pointer-events-none"
-          draggable={false}
-        />
+      {/*
+        Outer : limite visuelle à 384px et sert de référence pour les contrôles
+                en position absolue (carousel, boutons, hints).
+        Inner : taille naturelle de l'image (w-full block, pas d'object-contain)
+                → coordonnées % identiques à la modal zoom → pas de décalage.
+      */}
+      <div className="relative w-full max-h-96 overflow-hidden bg-muted rounded-lg select-none">
+        {/* Inner — système de coordonnées des pins */}
+        <div
+          ref={imageContainerRef}
+          className="relative w-full"
+          style={{ cursor: draggingPinId ? 'grabbing' : showPins ? 'crosshair' : 'default' }}
+          onPointerDown={showPins ? handleContainerPointerDown : undefined}
+          onPointerMove={showPins ? handleContainerPointerMove : undefined}
+          onPointerUp={showPins ? handleContainerPointerUp : undefined}
+        >
+          <img
+            src={currentImage.base64}
+            alt={currentImage.caption || `Image ${currentIndex + 1}`}
+            className="w-full block pointer-events-none"
+            draggable={false}
+          />
 
-        {/* Pins overlay */}
-        {showPins && currentPins.map(pin => {
-          const linkedTask = tasks.find(t => t.pinRef?.pinId === pin.id);
-          const isSelected = pin.id === selectedPinId;
-          return (
-            <div
-              key={pin.id}
-              style={{
-                position: 'absolute',
-                left: `${pin.x}%`,
-                top: `${pin.y}%`,
-                transform: 'translate(-50%, -50%)',
-                cursor: draggingPinId === pin.id ? 'grabbing' : 'grab',
-              }}
-              onPointerDown={(e) => handlePinPointerDown(e, pin.id)}
-              onClick={(e) => handlePinClick(e, pin.id)}
-              title={linkedTask ? `Pin #${pin.number} — ${linkedTask.name}` : `Pin #${pin.number}`}
-              className={`
-                w-7 h-7 rounded-full flex items-center justify-center
-                text-xs font-bold shadow-md z-10
-                transition-colors
-                ${isSelected
-                  ? 'bg-destructive text-destructive-foreground ring-2 ring-white'
-                  : 'bg-primary text-primary-foreground hover:bg-primary/80'
-                }
-              `}
-            >
-              {pin.number}
-            </div>
-          );
-        })}
+          {/* Pins overlay — % de l'image réelle, aligné avec la modal zoom */}
+          {showPins && currentPins.map(pin => {
+            const linkedTask = tasks.find(t => t.pinRef?.pinId === pin.id);
+            const isSelected = pin.id === selectedPinId;
+            return (
+              <div
+                key={pin.id}
+                style={{
+                  position: 'absolute',
+                  left: `${pin.x}%`,
+                  top: `${pin.y}%`,
+                  transform: 'translate(-50%, -50%)',
+                  cursor: draggingPinId === pin.id ? 'grabbing' : 'grab',
+                }}
+                onPointerDown={(e) => handlePinPointerDown(e, pin.id)}
+                onClick={(e) => handlePinClick(e, pin.id)}
+                title={linkedTask ? `Pin #${pin.number} — ${linkedTask.name}` : `Pin #${pin.number}`}
+                className={`
+                  w-7 h-7 rounded-full flex items-center justify-center
+                  text-xs font-bold shadow-md z-10
+                  transition-colors
+                  ${isSelected
+                    ? 'bg-destructive text-destructive-foreground ring-2 ring-white'
+                    : 'bg-primary text-primary-foreground hover:bg-primary/80'
+                  }
+                `}
+              >
+                {pin.number}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Contrôles absolus — positionnés dans la zone visible (outer max-h-96) */}
 
         {/* Carousel prev/next */}
         {localImages.length > 1 && (
@@ -582,7 +593,6 @@ export default function ImagePinViewer({ images, tasks, onUpdateImages }: ImageP
 
         {/* Contrôles coin haut-droit */}
         <div className="absolute top-2 right-2 flex gap-1">
-          {/* Bouton plein écran / zoom */}
           <Button
             variant="secondary"
             size="icon"
@@ -592,7 +602,6 @@ export default function ImagePinViewer({ images, tasks, onUpdateImages }: ImageP
           >
             <Maximize2 className="h-4 w-4" />
           </Button>
-          {/* Eye toggle */}
           <Button
             variant="secondary"
             size="icon"
