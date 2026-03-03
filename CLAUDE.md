@@ -19,6 +19,8 @@ No test suite.
 
 **Production builds** : via GitHub Actions (`.github/workflows/build.yml`), déclenché par un tag `v*` (`git tag vX.Y.Z && git push origin vX.Y.Z`). Produit `.dmg` (macOS arm64 + x64) et `.exe` NSIS (Windows x64).
 
+**Branche principale** : `main`. Licence MIT.
+
 ## Architecture
 
 Tauri v2 desktop app wrapping a Next.js 15 static export. No backend/API. All data on local filesystem via Rust commands.

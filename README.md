@@ -4,6 +4,10 @@
 
 SCOPE est une application desktop open source qui aide les développeurs et les agences à structurer, chiffrer et documenter leurs projets web avant de commencer à coder. Le tout en local, sans serveur, sans abonnement.
 
+![Capture SCOPE](/public/scope-capture.webp)
+
+![Capture SCOPE 2](/public/scope-capture-2.webp)
+
 ---
 
 ## Pourquoi SCOPE ?
@@ -17,6 +21,9 @@ Sans outil dédié, cette phase de cadrage se passe dans des Google Docs approxi
 3. **Estimer** le temps par composant et par catégorie (Front, Back, SEO, Motion)
 4. **Exporter** un cahier des charges PDF professionnel, prêt à faire signer
 5. **Transmettre** un fichier `STORIES.md` à l'équipe de dev pour démarrer sans ambiguïté
+6. **Suivre** la production et l'avancée du projet avec [Story-compiler](https://github.com/bernardchri/Story-compiler)
+
+![Qu'est-ce que SCOPE ?](/public/presentation-scope.webp)
 
 ---
 
@@ -24,7 +31,7 @@ Sans outil dédié, cette phase de cadrage se passe dans des Google Docs approxi
 
 - **Projets locaux** — stockés en fichiers `.scope` (JSON), aucune donnée en ligne
 - **Composants organisés par catégorie** — Templates, Navigation, Sections, Formulaires, Médias, Documents…
-- **Mockups annotés** — ajoutez des images, posez des pins numérotés, liez chaque pin à une tâche ou un composant
+- **Mockups annotés** — ajoutez des images, posez des pins numérotés, liez chaque pin à un élément ou un composant
 - **Estimations** — temps par composant, total automatique, taux horaire, budget plafond
 - **Export PDF** — cahier des charges A4 avec sommaire, détail des composants, zone de signature
 - **Export STORIES.md** — pont vers [Story-compiler](https://github.com/bernardchri/Story-compiler) pour le suivi de développement
@@ -62,7 +69,7 @@ Story-compiler protège contre la **désorganisation** côté dev.
 | Frontend | Next.js 15 + TypeScript (export statique) |
 | UI | shadcn/ui + Tailwind CSS 4 |
 | State | Zustand |
-| Storage | Fichiers `.scope` locaux via tauri-plugin-store |
+| Storage | Fichiers `.scope` locaux via Tauri |
 
 Aucun serveur. Aucun compte. Aucune télémétrie.
 
@@ -89,12 +96,7 @@ npm run tauri        # mode développement
 npm run build:tauri  # build production (macOS uniquement en local)
 ```
 
-Les builds multiplateformes (macOS arm64, macOS x64, Windows x64) sont produits automatiquement via GitHub Actions au tag d'une release :
-
-```bash
-git tag v1.0.0
-git push origin v1.0.0
-```
+Les builds multiplateformes (macOS arm64, macOS x64, Windows x64) sont produits automatiquement via GitHub Actions lors du tag d'une release.
 
 ---
 
@@ -110,7 +112,7 @@ Les contributions sont les bienvenues. Quelques pistes si vous voulez participer
 
 - Signaler un bug ou proposer une fonctionnalité via les [Issues](https://github.com/bernardchri/Scope/issues)
 - Soumettre une Pull Request (voir [`CLAUDE.md`](./CLAUDE.md) pour l'architecture du projet)
-- Améliorer la documentation
+- Consulter la [roadmap](./docs/todo.md) pour les prochaines fonctionnalités
 
 ---
 
@@ -122,4 +124,4 @@ Les contributions sont les bienvenues. Quelques pistes si vous voulez participer
 
 ## Licence
 
-MIT
+[MIT](./LICENSE)
