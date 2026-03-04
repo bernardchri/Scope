@@ -9,7 +9,8 @@
     "start": "next start",
     "lint": "eslint",
     "tauri": "tauri dev",
-    "build:tauri": "tauri build"
+    "build:tauri": "tauri build",
+    "release": "./scripts/release.sh"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
