@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { ComponentImage, ImagePin, Task } from '@/lib/types';
 import { usePinEditor } from '@/lib/hooks/usePinEditor';
 import { convertImageToBase64 } from '@/lib/imageHelpers';
@@ -9,7 +9,7 @@ import SortableThumbnail from '@/components/molecules/SortableThumbnail';
 import ZoomModal from '@/components/modals/ZoomModal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ChevronLeft, ChevronRight, Eye, EyeOff, Maximize2, Upload } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Eye, EyeOff, Maximize2, Plus, Upload } from 'lucide-react';
 import {
   DndContext,
   DragEndEvent,
@@ -39,6 +39,11 @@ export default function ImagePinViewer({ images, tasks, onUpdateImages }: ImageP
   const [editingCaption, setEditingCaption] = useState(false);
   const [captionDraft, setCaptionDraft] = useState('');
   const imageContainerRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const triggerFileInput = useCallback(() => {
+    fileInputRef.current?.click();
+  }, []);
 
   useEffect(() => { setLocalImages(images); }, [images]);
 
@@ -113,20 +118,17 @@ export default function ImagePinViewer({ images, tasks, onUpdateImages }: ImageP
     return (
       <div className="w-full border-2 border-dashed border-muted-foreground/25 rounded-lg p-8 text-center">
         <p className="text-muted-foreground mb-3">Aucune maquette</p>
-        <label className="cursor-pointer inline-block">
-          <Button type="button" variant="outline" size="sm" asChild>
-            <span>
-              <Upload className="h-4 w-4 mr-2" />
-              Ajouter une image
-            </span>
-          </Button>
-          <input
-            type="file"
-            accept="image/*"
-            onChange={handleAddImage}
-            className="hidden"
-          />
-        </label>
+        <Button type="button" variant="outline" size="sm" onClick={triggerFileInput}>
+          <Upload className="h-4 w-4 mr-2" />
+          Ajouter une image
+        </Button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          onChange={handleAddImage}
+          className="hidden"
+        />
         {imageError && <p className="text-destructive text-sm mt-2">{imageError}</p>}
         <p className="text-xs text-muted-foreground mt-2">Maximum 1 Mo par image</p>
       </div>
@@ -160,6 +162,13 @@ export default function ImagePinViewer({ images, tasks, onUpdateImages }: ImageP
 
   return (
     <div className="space-y-4">
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        onChange={handleAddImage}
+        className="hidden"
+      />
       {/* ── Image principale avec overlay pins ─────────────────────────────── */}
       <div className="relative w-full bg-muted rounded-lg select-none p-5">
         <div className="flex flex-col justify-center items-center">
@@ -208,14 +217,10 @@ export default function ImagePinViewer({ images, tasks, onUpdateImages }: ImageP
 
           {/* Controles haut-droit */}
           <div className="absolute top-2 right-2 flex gap-1">
-            <label className="cursor-pointer">
-              <Button variant="secondary" size="icon" className="rounded-full shadow opacity-80 hover:opacity-100" asChild>
-                <span title="Ajouter une image">
-                  <Upload className="h-4 w-4" />
-                </span>
-              </Button>
-              <input type="file" accept="image/*" onChange={handleAddImage} className="hidden" />
-            </label>
+            <Button variant="secondary" size="icon" className="rounded-full shadow opacity-80 hover:opacity-100"
+              onClick={(e) => { e.stopPropagation(); triggerFileInput(); }} title="Ajouter une image">
+              <Upload className="h-4 w-4" />
+            </Button>
             <Button variant="secondary" size="icon" className="rounded-full shadow opacity-80 hover:opacity-100"
               onClick={(e) => { e.stopPropagation(); setZoomOpen(true); }} title="Ouvrir en plein ecran">
               <Maximize2 className="h-4 w-4" />
@@ -281,6 +286,14 @@ export default function ImagePinViewer({ images, tasks, onUpdateImages }: ImageP
                   onDelete={() => handleRemoveImage(image.id)}
                 />
               ))}
+              <button
+                type="button"
+                onClick={triggerFileInput}
+                className="w-20 h-20 flex-shrink-0 rounded-md border-2 border-dashed border-muted-foreground/30 flex items-center justify-center text-muted-foreground hover:border-muted-foreground/60 hover:text-foreground transition-colors"
+                title="Ajouter une image"
+              >
+                <Plus className="h-5 w-5" />
+              </button>
             </div>
           </SortableContext>
         </DndContext>
