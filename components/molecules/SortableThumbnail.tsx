@@ -1,15 +1,17 @@
 import { ComponentImage } from '@/lib/types';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { X } from 'lucide-react';
 
 interface SortableThumbnailProps {
   image: ComponentImage;
   index: number;
   isActive: boolean;
   onClick: () => void;
+  onDelete?: () => void;
 }
 
-export default function SortableThumbnail({ image, index, isActive, onClick }: SortableThumbnailProps) {
+export default function SortableThumbnail({ image, index, isActive, onClick, onDelete }: SortableThumbnailProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: image.id,
   });
@@ -20,6 +22,7 @@ export default function SortableThumbnail({ image, index, isActive, onClick }: S
       style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1, flexShrink: 0 }}
       {...attributes}
       {...listeners}
+      className="group relative"
     >
       <button
         onClick={onClick}
@@ -42,6 +45,14 @@ export default function SortableThumbnail({ image, index, isActive, onClick }: S
           </div>
         )}
       </button>
+      {onDelete && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onDelete(); }}
+          className="absolute -top-2 -right-2 hidden group-hover:flex items-center justify-center w-5 h-5 rounded-full bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90"
+        >
+          <X className="h-3 w-3" />
+        </button>
+      )}
     </div>
   );
 }
