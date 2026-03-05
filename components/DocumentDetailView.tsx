@@ -4,13 +4,11 @@ import { useState } from 'react';
 import { Component } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
 import { Trash2, Clock } from 'lucide-react';
 import TaskList from './TaskList';
 import ComponentInstanceList from './ComponentInstanceList';
+import NoteWidget from './NoteWidget';
 
 interface DocumentDetailViewProps {
   projectId: string;
@@ -30,10 +28,8 @@ export default function DocumentDetailView({
   onNavigate,
 }: DocumentDetailViewProps) {
   const [isEditing, setIsEditing] = useState(false);
-  const [mode, setMode] = useState<'edit' | 'preview'>('preview');
   const [editName, setEditName] = useState(document.name);
   const [editDescription, setEditDescription] = useState(document.description || '');
-  const [editContent, setEditContent] = useState(document.content || '');
   const [editHours, setEditHours] = useState<string>(
     document.estimatedHours !== undefined ? String(document.estimatedHours) : ''
   );
@@ -43,25 +39,16 @@ export default function DocumentDetailView({
     onUpdate(document.id, {
       name: editName,
       description: editDescription || undefined,
-      content: editContent,
       estimatedHours: hours && !isNaN(hours) ? hours : undefined,
     });
     setIsEditing(false);
-    setMode('preview');
   }
 
   function handleCancel() {
     setEditName(document.name);
     setEditDescription(document.description || '');
-    setEditContent(document.content || '');
     setEditHours(document.estimatedHours !== undefined ? String(document.estimatedHours) : '');
     setIsEditing(false);
-    setMode('preview');
-  }
-
-  function startEditing() {
-    setIsEditing(true);
-    setMode('edit');
   }
 
   return (
@@ -87,7 +74,7 @@ export default function DocumentDetailView({
 
         {!isEditing && (
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={startEditing}>
+            <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
               Modifier
             </Button>
             <Button
@@ -145,66 +132,10 @@ export default function DocumentDetailView({
 
       <Separator />
 
-      {/* Toggle Edit/Preview */}
-      {isEditing && (
-        <div className="flex gap-2">
-          <Button
-            variant={mode === 'edit' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setMode('edit')}
-          >
-            ✏️ Éditer
-          </Button>
-          <Button
-            variant={mode === 'preview' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setMode('preview')}
-          >
-            👁️ Prévisualiser
-          </Button>
-        </div>
-      )}
-
-      {/* Contenu */}
-      {isEditing ? (
-        <>
-          {mode === 'edit' ? (
-            <Textarea
-              value={editContent}
-              onChange={(e) => setEditContent(e.target.value)}
-              placeholder="Écrivez votre contenu en Markdown..."
-              className="min-h-[600px] font-mono text-sm resize-none"
-            />
-          ) : (
-            <div className="prose prose-slate prose-lg dark:prose-invert max-w-none min-h-125 border rounded-lg p-8 bg-card">
-              {editContent ? (
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                  {editContent}
-                </ReactMarkdown>
-              ) : (
-                <p className="text-muted-foreground italic">Aucun contenu</p>
-              )}
-            </div>
-          )}
-
-          <div className="flex gap-2">
-            <Button onClick={handleSave}>Enregistrer</Button>
-            <Button variant="outline" onClick={handleCancel}>Annuler</Button>
-          </div>
-        </>
-      ) : (
-        <div className="prose prose-slate prose-lg dark:prose-invert max-w-none border rounded-lg p-8 bg-card shadow-sm">
-          {document.content ? (
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>
-              {document.content}
-            </ReactMarkdown>
-          ) : (
-            <p className="text-muted-foreground italic">
-              Aucun contenu. Cliquez sur "Modifier" pour ajouter du texte.
-            </p>
-          )}
-        </div>
-      )}
+      <NoteWidget
+        content={document.content || ''}
+        onSave={(content) => onUpdate(document.id, { content })}
+      />
 
       <Separator />
 
