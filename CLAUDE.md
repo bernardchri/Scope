@@ -100,6 +100,16 @@ Liaison pin ↔ instance : dans `InstanceItem`, un bouton `MapPin` ouvre un `Sel
 
 Category `'document'` is isolated: separate sidebar section (top), separate creation modal, separate detail view (`DocumentDetailView`). Use `COMPONENT_CATEGORIES` from `lib/categoryHelpers.ts` (excludes `'document'`) for component selects.
 
+**NoteWidget** (`components/NoteWidget.tsx`) : widget autonome d'édition/affichage Markdown extrait de `DocumentDetailView`. Props : `{ content: string, onSave: (content: string) => void }`. Gère son propre état edit/preview indépendamment du formulaire parent.
+
+### Refactoring prévu : système de types + widgets
+
+Voir [`docs/widget-system-plan.md`](./docs/widget-system-plan.md) pour le plan complet. En résumé :
+- Unifier Document/Composant en un seul concept avec un `type` parmi 4 : `document`, `component`, `template`, `section`
+- Chaque type a des **widgets par défaut** (notes, maquettes, éléments, composants utilisés), configurables par élément
+- Configuration externalisée dans `lib/scope.config.json`
+- Vue détail unifiée (`ScopeItemDetail`) remplaçant `ComponentDetail` + `DocumentDetailView`
+
 ### PDF export (`components/pdf/ProjectPDFDocument.tsx`)
 
 4 pages: overview → sommaire (with internal `#anchor` links) → component details (tasks + instances + markdown content for documents) → bon pour accord. Dynamic import via `lib/pdfExport.tsx` to avoid SSR issues. PDF bytes transferred to Rust as base64.
