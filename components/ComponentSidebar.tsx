@@ -1,13 +1,12 @@
 'use client';
 
-import { Component, ComponentCategory } from '@/lib/types';
-import { getCategoryLabel } from '@/lib/categoryHelpers';
+import { Component, ScopeItemType } from '@/lib/types';
+import { getCategoryLabel, SCOPE_ITEM_TYPES } from '@/lib/categoryHelpers';
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
-import { Separator } from '@/components/ui/separator';
 import { ChevronRight, GripVertical, Home, PanelLeftClose } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -26,10 +25,8 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
-const ALL_CATEGORIES: ComponentCategory[] = [
-  'document', 'template', 'navigation', 'section', 'composition',
-  'element', 'media', 'form', 'content',
-];
+// Display order for the sidebar
+const SIDEBAR_ORDER: ScopeItemType[] = ['document', 'template', 'section', 'component'];
 
 // ─── Sortable item ────────────────────────────────────────────────────────────
 
@@ -82,9 +79,9 @@ function SortableItem({ component, isSelected, onSelect }: SortableItemProps) {
 // ─── Category section ─────────────────────────────────────────────────────────
 
 interface CategorySectionProps {
-  category: ComponentCategory;
+  category: ScopeItemType;
   components: Component[];
-  groupedComponents: Record<ComponentCategory, Component[]>;
+  groupedComponents: Record<string, Component[]>;
   selectedComponentId: string | null;
   onSelectComponent: (id: string) => void;
   onReorderComponents: (orderedIds: string[]) => void;
@@ -110,7 +107,7 @@ function CategorySection({
     const newIndex = components.findIndex(c => c.id === over.id);
     const reordered = arrayMove(components, oldIndex, newIndex);
 
-    const newIds = ALL_CATEGORIES.flatMap(cat =>
+    const newIds = SIDEBAR_ORDER.flatMap(cat =>
       cat === category
         ? reordered.map(c => c.id)
         : (groupedComponents[cat] || []).map(c => c.id)
@@ -174,15 +171,10 @@ export default function ComponentSidebar({
     if (!acc[component.category]) acc[component.category] = [];
     acc[component.category].push(component);
     return acc;
-  }, {} as Record<ComponentCategory, Component[]>);
-
-  const componentCategories = ALL_CATEGORIES.filter(c => c !== 'document');
-  const hasDocuments = (groupedComponents['document'] || []).length > 0;
-  const hasComponents = componentCategories.some(c => (groupedComponents[c] || []).length > 0);
+  }, {} as Record<string, Component[]>);
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header sidebar : toggle + Accueil */}
       <div className="flex items-center gap-1 p-2 border-b">
         <Button
           variant="ghost"
@@ -204,33 +196,15 @@ export default function ComponentSidebar({
         </Button>
       </div>
 
-      {/* Liste des composants */}
       <div className="p-4 space-y-2 overflow-y-auto flex-1">
-        {hasDocuments && (
-          <CategorySection
-            category="document"
-            components={groupedComponents['document'] || []}
-            groupedComponents={groupedComponents}
-            selectedComponentId={selectedComponentId}
-            onSelectComponent={onSelectComponent}
-            onReorderComponents={onReorderComponents}
-          />
-        )}
-
-        {hasDocuments && hasComponents && (
-          <div className="py-1">
-            <Separator />
-          </div>
-        )}
-
-        {componentCategories.map(category => {
-          const catComponents = groupedComponents[category] || [];
-          if (catComponents.length === 0) return null;
+        {SIDEBAR_ORDER.map(type => {
+          const items = groupedComponents[type] || [];
+          if (items.length === 0) return null;
           return (
             <CategorySection
-              key={category}
-              category={category}
-              components={catComponents}
+              key={type}
+              category={type}
+              components={items}
               groupedComponents={groupedComponents}
               selectedComponentId={selectedComponentId}
               onSelectComponent={onSelectComponent}

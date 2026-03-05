@@ -7,11 +7,9 @@ import { openProjectFile, addRecentFile } from '@/lib/persistence';
 import { createAutoBackup } from '@/lib/backup';
 import HomeScreen from '@/components/HomeScreen';
 import ComponentList from '@/components/ComponentList';
-import ComponentDetail from '@/components/ComponentDetail';
 
 export default function Home() {
   const activeProjectId = useProjectStore(state => state.activeProjectId);
-  const activeComponentId = useProjectStore(state => state.activeComponentId);
   const openProject = useProjectStore(state => state.openProject);
   const closeProject = useProjectStore(state => state.closeProject);
 
@@ -34,10 +32,6 @@ export default function Home() {
 
     return () => { unlisteners.forEach(fn => fn()); };
   }, [openProject, closeProject]);
-
-  if (activeProjectId && activeComponentId) {
-    return <ComponentDetail projectId={activeProjectId} componentId={activeComponentId} />;
-  }
 
   if (activeProjectId) {
     return <ComponentList projectId={activeProjectId} />;

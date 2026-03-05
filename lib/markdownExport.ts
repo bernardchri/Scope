@@ -1,12 +1,12 @@
 import { invoke } from '@tauri-apps/api/core';
 import { save } from '@tauri-apps/plugin-dialog';
 import { Project, Component } from './types';
-import { COMPONENT_CATEGORIES, CATEGORY_SECTION_LABELS } from './categoryHelpers';
+import { CATEGORY_SECTION_LABELS, PDF_DISPLAY_ORDER, getActiveWidgets } from './categoryHelpers';
 import { TASK_CATEGORY_ORDER, TASK_CATEGORY_PLAIN_LABELS } from './taskCategoryHelpers';
 import { slugify } from './persistence';
 import { renderImageWithPins } from './imageHelpers';
 
-const CATEGORY_ORDER = COMPONENT_CATEGORIES;
+const CATEGORY_ORDER = PDF_DISPLAY_ORDER;
 
 type ImageRef = { filename: string; caption?: string; imageIndex: number };
 type ImageMap = Map<string, ImageRef[]>;
@@ -116,8 +116,6 @@ export function generateStoriesMd(project: Project, imageMap: ImageMap = new Map
     day: 'numeric', month: 'long', year: 'numeric',
   });
 
-  const uiComponents = project.components.filter(c => c.category !== 'document');
-  const documents = project.components.filter(c => c.category === 'document');
   const total = project.components.length;
 
   const sections: string[] = [];
@@ -125,25 +123,22 @@ export function generateStoriesMd(project: Project, imageMap: ImageMap = new Map
   // Header
   const headerParts = [`# ${project.name}`];
   if (project.description) headerParts.push(`> ${project.description}`);
-  headerParts.push(`Exporté le ${date} · ${total} composant${total > 1 ? 's' : ''}`);
+  headerParts.push(`Exporté le ${date} · ${total} élément${total > 1 ? 's' : ''}`);
   headerParts.push('---');
   sections.push(headerParts.join('\n\n'));
 
-  // Documents en premier
-  if (documents.length > 0) {
-    sections.push('<!-- Documents -->');
-    for (const doc of documents) {
-      sections.push(generateDocumentBlock(doc, imageMap));
-    }
-  }
-
-  // UI components grouped by category
+  // Grouped by type in display order
   for (const category of CATEGORY_ORDER) {
-    const group = uiComponents.filter(c => c.category === category);
+    const group = project.components.filter(c => c.category === category);
     if (group.length === 0) continue;
     sections.push(`<!-- ${CATEGORY_SECTION_LABELS[category] ?? category} -->`);
     for (const comp of group) {
-      sections.push(generateComponentBlock(comp, imageMap, project.components));
+      const widgets = getActiveWidgets(comp);
+      if (widgets.includes('notes') && comp.content) {
+        sections.push(generateDocumentBlock(comp, imageMap));
+      } else {
+        sections.push(generateComponentBlock(comp, imageMap, project.components));
+      }
     }
   }
 

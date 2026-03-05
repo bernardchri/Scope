@@ -1,4 +1,4 @@
-import { Project, Component, ComponentImage } from './types';
+import { Project, Component, ComponentImage, ScopeItemType } from './types';
 
 export function migrateProjectsToV2(projects: Project[]): Project[] {
   return projects.map(project => ({
@@ -19,11 +19,16 @@ export function migrateProjectsToV2(projects: Project[]): Project[] {
         }];
       }
 
+      // Migrate old 9-category system to 4-type system
+      const oldCategory = (component as any).category || 'element';
+      const VALID_TYPES: ScopeItemType[] = ['document', 'template', 'section', 'component'];
+      const category: ScopeItemType = VALID_TYPES.includes(oldCategory) ? oldCategory : 'component';
+
       return {
         ...component,
         instances: (component as any).instances || [],
         description: (component as any).description || undefined,
-        category: (component as any).category || 'element',
+        category,
         estimatedHours: (component as any).estimatedHours,
         imageBase64: (component as any).imageBase64 || undefined,
         images,

@@ -1,6 +1,6 @@
 # Plan : Unification Document/Composant — Système de types + widgets
 
-> Statut : **À implémenter** — plan finalisé, pas encore commencé.
+> Statut : **Implémenté** — toutes les étapes complétées.
 
 ## Contexte
 

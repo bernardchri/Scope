@@ -2,10 +2,9 @@
 
 import { useState } from 'react';
 import { useProjectStore } from '@/lib/projectStore';
-import { Component, ComponentCategory } from '@/lib/types';
+import { Component, ScopeItemType } from '@/lib/types';
 import ComponentSidebar from './ComponentSidebar';
-import ComponentDetailView from './ComponentDetailView';
-import DocumentDetailView from './DocumentDetailView';
+import ScopeItemDetail from './ScopeItemDetail';
 import ProjectHeader from './ProjectHeader';
 import ProjectDashboard from './ProjectDashboard';
 import CreateComponentModal from './modals/CreateComponentModal';
@@ -25,10 +24,8 @@ export default function ComponentList({ projectId }: ComponentListProps) {
   const reorderComponents = useProjectStore(state => state.reorderComponents);
   const canDeleteComponent = useProjectStore(state => state.canDeleteComponent);
 
-  // Pile de navigation : [composantA, composantB, ...] — le dernier est l'actif
   const [navHistory, setNavHistory] = useState<string[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isDocumentModalOpen, setIsDocumentModalOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const activeProject = projects.find(p => p.id === projectId);
@@ -37,17 +34,14 @@ export default function ComponentList({ projectId }: ComponentListProps) {
   const selectedComponentId = navHistory.length > 0 ? navHistory[navHistory.length - 1] : null;
   const canGoBack = navHistory.length > 1;
 
-  // Sélection depuis la sidebar : réinitialise la pile
   function selectFromSidebar(id: string | null) {
     setNavHistory(id ? [id] : []);
   }
 
-  // Navigation vers un composant lié : empile
   function navigateTo(id: string) {
     setNavHistory(prev => [...prev, id]);
   }
 
-  // Retour arrière : dépile
   function navigateBack() {
     setNavHistory(prev => prev.slice(0, -1));
   }
@@ -56,10 +50,9 @@ export default function ComponentList({ projectId }: ComponentListProps) {
     ? activeProject.components.find(c => c.id === selectedComponentId)
     : null;
 
-  const isDocument = selectedItem?.category === 'document';
   const showingDashboard = !selectedComponentId;
 
-  function handleCreateComponent(name: string, description: string, category: ComponentCategory) {
+  function handleCreateComponent(name: string, description: string, category: ScopeItemType) {
     if (!activeProject) return;
     const newComponent: Component = {
       id: crypto.randomUUID(),
@@ -68,11 +61,9 @@ export default function ComponentList({ projectId }: ComponentListProps) {
       category,
       instances: [],
       tasks: [],
-      ...(category === 'document' && { content: '' })
     };
     addComponent(activeProject.id, newComponent);
     setIsModalOpen(false);
-    setIsDocumentModalOpen(false);
     setNavHistory([newComponent.id]);
   }
 
@@ -98,8 +89,7 @@ export default function ComponentList({ projectId }: ComponentListProps) {
     <div className="flex flex-col h-screen w-full overflow-hidden">
       <ProjectHeader
         projectName={activeProject.name}
-        onNewComponent={() => setIsModalOpen(true)}
-        onNewDocument={() => setIsDocumentModalOpen(true)}
+        onNewElement={() => setIsModalOpen(true)}
         onRenameProject={(name) => updateProject(activeProject.id, { name })}
       />
 
@@ -107,12 +97,6 @@ export default function ComponentList({ projectId }: ComponentListProps) {
         open={isModalOpen}
         onOpenChange={setIsModalOpen}
         onSubmit={handleCreateComponent}
-      />
-      <CreateComponentModal
-        open={isDocumentModalOpen}
-        onOpenChange={setIsDocumentModalOpen}
-        onSubmit={handleCreateComponent}
-        isDocument
       />
 
       <div className="flex flex-1 overflow-hidden relative">
@@ -143,28 +127,15 @@ export default function ComponentList({ projectId }: ComponentListProps) {
         <div className="flex-1 overflow-y-auto">
           {selectedItem ? (
             <div className="p-8">
-              {isDocument ? (
-                <DocumentDetailView
-                  key={selectedItem.id}
-                  projectId={projectId}
-                  document={selectedItem}
-                  allComponents={activeProject.components}
-                  onUpdate={handleUpdateComponent}
-                  onDelete={() => handleDeleteComponent(selectedItem.id)}
-                  onNavigate={navigateTo}
-                />
-              ) : (
-                <ComponentDetailView
-                  key={selectedItem.id}
-                  projectId={projectId}
-                  component={selectedItem}
-                  allComponents={activeProject.components}
-                  onUpdate={handleUpdateComponent}
-                  onDelete={() => handleDeleteComponent(selectedItem.id)}
-                  onBack={canGoBack ? navigateBack : undefined}
-                  onNavigate={navigateTo}
-                />
-              )}
+              <ScopeItemDetail
+                key={selectedItem.id}
+                projectId={projectId}
+                item={selectedItem}
+                allComponents={activeProject.components}
+                onUpdate={handleUpdateComponent}
+                onDelete={() => handleDeleteComponent(selectedItem.id)}
+                onNavigate={navigateTo}
+              />
             </div>
           ) : (
             <ProjectDashboard

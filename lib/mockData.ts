@@ -37,7 +37,7 @@ export const mockProjects: Project[] = [
         id: 'component-2',
         name: 'Bouton CTA',
         description: 'Bouton d\'appel à l\'action réutilisable',
-        category: 'element',
+        category: 'component',
         instances: [],
         tasks: [
           {

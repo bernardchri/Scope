@@ -8,7 +8,7 @@ import {
 } from '@react-pdf/renderer';
 import { Project, Component, TaskCategory, ComponentCategory } from '@/lib/types';
 import { renderMarkdown } from './renderMarkdown';
-import { CATEGORY_SECTION_LABELS, PDF_DISPLAY_ORDER } from '@/lib/categoryHelpers';
+import { CATEGORY_SECTION_LABELS, PDF_DISPLAY_ORDER, getActiveWidgets } from '@/lib/categoryHelpers';
 import { TASK_CATEGORY_ORDER } from '@/lib/taskCategoryHelpers';
 import { s, CONTENT_WIDTH, IMG_MAX_HEIGHT } from './pdfStyles';
 
@@ -160,8 +160,8 @@ function ComponentDetailBlock({
         </View>
       )}
 
-      {/* Contenu markdown (documents) */}
-      {component.category === 'document' && component.content && (
+      {/* Contenu markdown (si widget notes actif) */}
+      {getActiveWidgets(component).includes('notes') && component.content && (
         <View style={{ marginTop: 14 }}>
           <Text style={s.taskSectionLabel}>Contenu</Text>
           {renderMarkdown(component.content)}

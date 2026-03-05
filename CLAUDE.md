@@ -31,8 +31,7 @@ Tauri v2 desktop app wrapping a Next.js 15 static export. No backend/API. All da
 
 Single page acting as client router:
 - no `activeProjectId` → `HomeScreen`
-- `activeProjectId` only → `ComponentList` (sidebar + dashboard or component detail)
-- both `activeProjectId` + `activeComponentId` → `ComponentDetail` / `DocumentDetailView`
+- `activeProjectId` → `ComponentList` (sidebar + dashboard or item detail)
 
 Also registers global Tauri event listeners: `menu-open-file` and `menu-close-project` (triggered by native macOS menu).
 
@@ -61,14 +60,47 @@ Native macOS menu (`src-tauri/src/main.rs` `.setup()`):
 
 Config in `config.dat` via `@tauri-apps/plugin-store` (separate from project data).
 
+### Type system & Widgets (`lib/scope.config.json`)
+
+4 element types configured in `lib/scope.config.json`: `document`, `component`, `template`, `section`. Each type has default widgets, configurable per element.
+
+- `ScopeItemType = 'document' | 'component' | 'template' | 'section'`
+- `ComponentCategory` is an alias for `ScopeItemType` (compat)
+- `WidgetType = 'notes' | 'images' | 'tasks' | 'instances'`
+- `Component.widgets?: WidgetType[]` — when undefined, uses type defaults from config
+
+Default widgets:
+| Type | Widgets |
+|------|---------|
+| document | notes, tasks, instances |
+| component | images, tasks, instances |
+| template | images, notes, tasks, instances |
+| section | images, tasks, instances |
+
+`getActiveWidgets(item)` in `lib/categoryHelpers.ts` returns `item.widgets ?? DEFAULT_WIDGETS[item.category]`.
+
+Widget toggle UI in `ScopeItemDetail.tsx` allows enabling/disabling widgets per element.
+
 ### Data types (`lib/types.ts`)
 
 - `Project`: `{ id, name, description?, filename?, hourlyRate?, budgetCap?, components[], createdAt }`
-- `Component`: `{ category, tasks[], instances[], images[], content?, estimatedHours? }` — category `'document'` is separate from other categories
+- `Component`: `{ category: ScopeItemType, tasks[], instances[], images[], content?, estimatedHours?, widgets? }`
 - `Task`: `{ id, name, completed, category: 'frontend'|'backend'|'seo'|'motion', pinRef? }` — `pinRef: { imageId, pinId, pinNumber }` links a task to an image pin
 - `ComponentImage`: `{ id, base64, caption?, isPrimary, pins? }` — supersedes legacy `imageBase64` field (migration in `lib/migrations.ts`)
-- `ImagePin`: `{ id, number, x, y }` — x/y are percentages (0–100) relative to the image container
+- `ImagePin`: `{ id, number, x, y }` — x/y are percentages (0-100) relative to the image container
 - `ComponentInstance`: `{ id, componentId, pinRef? }` — `pinRef: { imageId, pinId, pinNumber }` links an instance to an image pin
+
+### Detail view (`components/ScopeItemDetail.tsx`)
+
+Unified detail view for all element types. Renders a header (title, type badge, description, hours, edit/delete) then widgets in order based on `getActiveWidgets(item)`:
+- `'images'` → `ImagePinViewer`
+- `'notes'` → `NoteWidget`
+- `'tasks'` → `TaskList`
+- `'instances'` → `ComponentInstanceList`
+
+**NoteWidget** (`components/NoteWidget.tsx`): standalone markdown editor/viewer. Props: `{ content, onSave }`. Manages its own edit/preview state.
+
+Edit mode uses `ComponentEditForm` (name, description, type selector, hours, image gallery).
 
 ### Éléments (anciennement Tâches)
 
@@ -76,47 +108,31 @@ Le terme "Tâches" est remplacé par "Éléments" dans toute l'interface. Le cha
 
 ### Pins sur images (`components/ImagePinViewer.tsx`)
 
-`ImagePinViewer` remplace `ImageCarousel` dans `ComponentDetailHeader`. Il gère l'overlay de pins sur chaque image du carousel :
-- Clic sur l'image → crée un pin et le glisse immédiatement
-- Clic sur un pin existant → sélection (rouge)
-- Drag sur un pin → repositionnement (pointer events natifs, coordonnées en %)
-- Touche `Delete` avec un pin sélectionné → suppression
-- Bouton œil → affiche/masque tous les pins
-- Les pins sont sauvegardés dans `ComponentImage.pins[]` via `onUpdateImages` → `updateComponent`
+`ImagePinViewer` is rendered as the `'images'` widget. It manages pin overlay on each image:
+- Click on image → creates a pin and drags immediately
+- Click on existing pin → selection (red)
+- Drag pin → repositions (native pointer events, % coords)
+- Delete key with selected pin → removes pin
+- Eye button → show/hide all pins
+- Pins saved in `ComponentImage.pins[]` via `onUpdateImages` → `updateComponent`
 
-Liaison pin ↔ élément : dans le formulaire d'édition d'un élément (`TaskItem`), un `Select` permet de choisir un pin parmi ceux disponibles sur toutes les images du composant. La référence est stockée dans `Task.pinRef`. Un badge `📍 #N` s'affiche en lecture si un pin est lié.
+Pin ↔ element link: in `TaskItem` edit form, a `Select` for picking a pin. Stored in `Task.pinRef`. Badge `#N` displayed if linked.
 
-Liaison pin ↔ instance : dans `InstanceItem`, un bouton `MapPin` ouvre un `Select` inline pour choisir un pin. La référence est stockée dans `ComponentInstance.pinRef`. `ComponentInstanceList` reçoit `images?: ComponentImage[]` et calcule `availablePins` passée à chaque `InstanceItem`. Action `updateComponentInstance` dans `instanceSlice`.
+Pin ↔ instance link: in `InstanceItem`, a `MapPin` button opens inline `Select`. Stored in `ComponentInstance.pinRef`.
 
-`TaskList` reçoit une prop optionnelle `images?: ComponentImage[]` et calcule `availablePins` (liste plate de tous les pins de toutes les images, avec `imageCaption`) passée à chaque `TaskItem`.
-
-**Drag & drop** : les composants sont réordonnables dans la sidebar par catégorie (`@dnd-kit`, action `reorderComponents` dans `componentSlice`). Les images sont réordonnables dans le thumbnail strip de `ImagePinViewer`.
+**Drag & drop**: components reorderable in sidebar by type (`@dnd-kit`, action `reorderComponents`). Images reorderable in thumbnail strip.
 
 ### Navigation (`components/ComponentList.tsx`)
 
 `navHistory: string[]` stack — last item is active component. Sidebar click resets stack, instance link pushes to stack, back button pops. `onGoHome` resets to `[]` (shows dashboard).
 
-### Component vs Document
-
-Category `'document'` is isolated: separate sidebar section (top), separate creation modal, separate detail view (`DocumentDetailView`). Use `COMPONENT_CATEGORIES` from `lib/categoryHelpers.ts` (excludes `'document'`) for component selects.
-
-**NoteWidget** (`components/NoteWidget.tsx`) : widget autonome d'édition/affichage Markdown extrait de `DocumentDetailView`. Props : `{ content: string, onSave: (content: string) => void }`. Gère son propre état edit/preview indépendamment du formulaire parent.
-
-### Refactoring prévu : système de types + widgets
-
-Voir [`docs/widget-system-plan.md`](./docs/widget-system-plan.md) pour le plan complet. En résumé :
-- Unifier Document/Composant en un seul concept avec un `type` parmi 4 : `document`, `component`, `template`, `section`
-- Chaque type a des **widgets par défaut** (notes, maquettes, éléments, composants utilisés), configurables par élément
-- Configuration externalisée dans `lib/scope.config.json`
-- Vue détail unifiée (`ScopeItemDetail`) remplaçant `ComponentDetail` + `DocumentDetailView`
-
 ### PDF export (`components/pdf/ProjectPDFDocument.tsx`)
 
-4 pages: overview → sommaire (with internal `#anchor` links) → component details (tasks + instances + markdown content for documents) → bon pour accord. Dynamic import via `lib/pdfExport.tsx` to avoid SSR issues. PDF bytes transferred to Rust as base64.
+4 pages: overview → sommaire (with internal `#anchor` links) → component details (tasks + instances + markdown content if notes widget active) → bon pour accord. Dynamic import via `lib/pdfExport.tsx` to avoid SSR issues. PDF bytes transferred to Rust as base64.
 
-**Pins dans le PDF** : avant génération, `preparePdfProject` (dans `lib/pdfExport.tsx`) pré-cuit les pins dans les images via Canvas (`renderImageWithPins`, exportée depuis `lib/markdownExport.ts` et partagée avec l'export Markdown). Les images passées au renderer n'ont plus de `pins[]` — pas d'overlay dans `ProjectPDFDocument`. Cela évite les décalages dus à `objectFit: contain`.
+**Pins dans le PDF** : avant génération, `preparePdfProject` (dans `lib/pdfExport.tsx`) pré-cuit les pins dans les images via Canvas (`renderImageWithPins`, exportée depuis `lib/imageHelpers.ts`). Les images passées au renderer n'ont plus de `pins[]` — pas d'overlay dans `ProjectPDFDocument`.
 
-**Ordre dans les exports** : `'document'` apparaît en premier dans le PDF et dans le STORIES.md.
+**Ordre dans les exports** : les types sont ordonnés selon `PDF_DISPLAY_ORDER` (document en premier).
 
 ### Styling
 

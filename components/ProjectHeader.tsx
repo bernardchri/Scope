@@ -2,19 +2,17 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { FileText } from 'lucide-react';
+import { Plus } from 'lucide-react';
 
 interface ProjectHeaderProps {
   projectName: string;
-  onNewComponent: () => void;
-  onNewDocument: () => void;
+  onNewElement: () => void;
   onRenameProject: (name: string) => void;
 }
 
 export default function ProjectHeader({
   projectName,
-  onNewComponent,
-  onNewDocument,
+  onNewElement,
   onRenameProject,
 }: ProjectHeaderProps) {
   const [isEditing, setIsEditing] = useState(false);
@@ -44,7 +42,6 @@ export default function ProjectHeader({
   return (
     <div className="border-b bg-white shadow-sm">
       <div className="relative flex items-center justify-between px-4 py-3">
-        {/* Centre : Nom du projet (éditable) */}
         <div className="absolute left-1/2 -translate-x-1/2">
           {isEditing ? (
             <input
@@ -69,17 +66,12 @@ export default function ProjectHeader({
           )}
         </div>
 
-        {/* Gauche : espace réservé pour aligner le centre */}
         <div className="w-24" />
 
-        {/* Droite : Nouveau document + Nouveau composant */}
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={onNewDocument}>
-            <FileText className="h-4 w-4 mr-2" />
-            Document
-          </Button>
-          <Button size="sm" onClick={onNewComponent}>
-            Nouveau composant
+          <Button size="sm" onClick={onNewElement}>
+            <Plus className="h-4 w-4 mr-1" />
+            Nouvel element
           </Button>
         </div>
       </div>

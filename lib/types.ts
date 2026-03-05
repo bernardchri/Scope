@@ -1,13 +1,7 @@
-export type ComponentCategory = 
-  | 'document'
-  | 'template'
-  | 'section'
-  | 'composition'
-  | 'element'
-  | 'navigation'
-  | 'media'
-  | 'form'
-  | 'content';
+export type ScopeItemType = 'document' | 'component' | 'template' | 'section';
+export type ComponentCategory = ScopeItemType;
+
+export type WidgetType = 'notes' | 'images' | 'tasks' | 'instances';
 
 export type TaskCategory = 'frontend' | 'backend' | 'seo' | 'motion';
 
@@ -32,12 +26,11 @@ export interface ImagePin {
   y: number; // % 0-100
 }
 
-// 🆕 Nouvelle interface pour les images
 export interface ComponentImage {
   id: string;
   base64: string;
   caption?: string;
-  isPrimary: boolean; // Une seule image peut être principale
+  isPrimary: boolean;
   pins?: ImagePin[];
 }
 
@@ -45,14 +38,14 @@ export interface Component {
   id: string;
   name: string;
   description?: string;
-  category: ComponentCategory;
-  
-  // 🆕 Remplacer imageBase64 par images (array)
-  imageBase64?: string; // @deprecated - Garder pour compatibilité
-  images?: ComponentImage[]; // 🆕 Nouvelle propriété
-  
+  category: ScopeItemType;
+
+  imageBase64?: string; // @deprecated - kept for migration compat
+  images?: ComponentImage[];
+
   estimatedHours?: number;
   content?: string;
+  widgets?: WidgetType[];
   instances: ComponentInstance[];
   tasks: Task[];
 }
@@ -61,7 +54,7 @@ export interface Project {
   id: string;
   name: string;
   description?: string;
-  filename?: string; // slug utilisé pour le fichier, ex: "site-menuiserie"
+  filename?: string;
   hourlyRate?: number;
   budgetCap?: number;
   components: Component[];
