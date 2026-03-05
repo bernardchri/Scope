@@ -1,4 +1,5 @@
 import { ScopeItemType, WidgetType, Component } from './types';
+import { FileText, Image, ListChecks, Layers, type LucideIcon } from 'lucide-react';
 import scopeConfig from './scope.config.json';
 
 // --- Derived from scope.config.json ---
@@ -20,6 +21,23 @@ export const WIDGET_LABELS: Record<WidgetType, string> =
 
 export const ALL_WIDGET_TYPES: WidgetType[] =
   scopeConfig.widgets.map(w => w.id as WidgetType);
+
+export const WIDGET_ICONS: Record<WidgetType, LucideIcon> = {
+  notes: FileText,
+  images: Image,
+  tasks: ListChecks,
+  instances: Layers,
+};
+
+export function widgetHasContent(item: Component, widget: WidgetType): boolean {
+  switch (widget) {
+    case 'images':    return (item.images?.length ?? 0) > 0;
+    case 'notes':     return !!item.content?.trim();
+    case 'tasks':     return item.tasks.length > 0;
+    case 'instances': return item.instances.length > 0;
+    default: return false;
+  }
+}
 
 // --- Helpers ---
 
