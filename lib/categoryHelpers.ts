@@ -1,5 +1,5 @@
 import { ScopeItemType, WidgetType, WidgetInstance, Component } from './types';
-import { FileText, Image, ListChecks, Layers, type LucideIcon } from 'lucide-react';
+import { FileText, Image, ListChecks, Layers, AlignLeft, type LucideIcon } from 'lucide-react';
 import scopeConfig from './scope.config.json';
 
 // --- Derived from scope.config.json ---
@@ -33,6 +33,7 @@ export const WIDGET_ICONS: Record<WidgetType, LucideIcon> = {
   images: Image,
   tasks: ListChecks,
   instances: Layers,
+  paragraph: AlignLeft,
 };
 
 export function widgetHasContent(item: Component, widget: WidgetInstance): boolean {
@@ -44,6 +45,10 @@ export function widgetHasContent(item: Component, widget: WidgetInstance): boole
     }
     case 'tasks':     return item.tasks.length > 0;
     case 'instances': return item.instances.length > 0;
+    case 'paragraph': {
+      const para = item.notes?.find(n => n.id === widget.id);
+      return !!para?.content?.trim();
+    }
     default: return false;
   }
 }
@@ -70,8 +75,8 @@ export function getActiveWidgets(item: Component): WidgetInstance[] {
 export function getAvailableWidgetTypes(activeWidgets: WidgetInstance[]): WidgetType[] {
   const result: WidgetType[] = [];
   for (const type of ALL_WIDGET_TYPES) {
-    if (type === 'notes') {
-      result.push(type); // notes always available
+    if (type === 'notes' || type === 'paragraph') {
+      result.push(type); // notes & paragraph always available (multiple allowed)
     } else if (!activeWidgets.some(w => w.type === type)) {
       result.push(type);
     }

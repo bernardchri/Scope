@@ -160,12 +160,19 @@ function ComponentDetailBlock({
         </View>
       )}
 
-      {/* Contenu markdown (toutes les notes actives) */}
+      {/* Contenu markdown (notes) et paragraphes */}
       {getActiveWidgets(component)
-        .filter(w => w.type === 'notes')
+        .filter(w => w.type === 'notes' || w.type === 'paragraph')
         .map(w => {
           const note = component.notes?.find(n => n.id === w.id);
           if (!note?.content) return null;
+          if (w.type === 'paragraph') {
+            return (
+              <View key={w.id} style={{ marginTop: 8 }}>
+                <Text style={{ fontSize: 10, lineHeight: 1.5 }}>{note.content}</Text>
+              </View>
+            );
+          }
           return (
             <View key={w.id} style={{ marginTop: 14 }}>
               <Text style={s.taskSectionLabel}>Contenu</Text>

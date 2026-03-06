@@ -33,10 +33,12 @@ import {
 import ComponentEditForm from './forms/ComponentEditForm';
 import ImagePinViewer from './ImagePinViewer';
 import NoteWidget from './NoteWidget';
+import ParagraphWidget from './ParagraphWidget';
 import TaskList from './TaskList';
 import ComponentInstanceList from './ComponentInstanceList';
 import SortableWidget from './molecules/SortableWidget';
 import WidgetInserter from './molecules/WidgetInserter';
+import SlashCommandMenu from './molecules/SlashCommandMenu';
 
 interface ScopeItemDetailProps {
   projectId: string;
@@ -58,6 +60,14 @@ export default function ScopeItemDetail({
   const [isEditing, setIsEditing] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [pendingRemove, setPendingRemove] = useState<WidgetInstance | null>(null);
+  const [autoFocusWidgetId, setAutoFocusWidgetId] = useState<string | null>(null);
+  const [slashMenu, setSlashMenu] = useState<{
+    position: { top: number; left: number };
+    widgetId: string;
+    textBefore: string;
+    textAfter: string;
+    filter: string;
+  } | null>(null);
 
   const activeWidgets = getActiveWidgets(item);
   const available = getAvailableWidgetTypes(activeWidgets);
@@ -82,16 +92,18 @@ export default function ScopeItemDetail({
     setIsEditing(false);
   }
 
-  function addWidget(widgetType: WidgetType, position: number) {
+  function addWidget(widgetType: WidgetType, position: number): string {
     const current = [...activeWidgets];
-    if (widgetType === 'notes') {
+    if (widgetType === 'notes' || widgetType === 'paragraph') {
       const noteId = crypto.randomUUID();
-      current.splice(position, 0, { id: noteId, type: 'notes' });
+      current.splice(position, 0, { id: noteId, type: widgetType });
       const notes = [...(item.notes || []), { id: noteId, content: '' }];
       onUpdate(item.id, { widgets: current, notes });
+      return noteId;
     } else {
       current.splice(position, 0, { id: widgetType, type: widgetType });
       onUpdate(item.id, { widgets: current });
+      return widgetType;
     }
   }
 
@@ -110,6 +122,7 @@ export default function ScopeItemDetail({
     switch (widget.type) {
       case 'images':    updates.images = []; break;
       case 'notes':     updates.notes = (item.notes || []).filter(n => n.id !== widget.id); break;
+      case 'paragraph': updates.notes = (item.notes || []).filter(n => n.id !== widget.id); break;
       case 'tasks':     updates.tasks = []; break;
       case 'instances': updates.instances = []; break;
     }
@@ -184,6 +197,37 @@ export default function ScopeItemDetail({
             onNavigate={onNavigate}
           />
         );
+      case 'paragraph': {
+        const para = item.notes?.find(n => n.id === widget.id);
+        return (
+          <ParagraphWidget
+            key={widget.id}
+            content={para?.content || ''}
+            autoFocus={autoFocusWidgetId === widget.id}
+            onSave={(content) => {
+              const notes = [...(item.notes || [])];
+              const idx = notes.findIndex(n => n.id === widget.id);
+              if (idx >= 0) {
+                notes[idx] = { ...notes[idx], content };
+              } else {
+                notes.push({ id: widget.id, content });
+              }
+              onUpdate(item.id, { notes });
+              if (autoFocusWidgetId === widget.id) setAutoFocusWidgetId(null);
+            }}
+            onSlashCommand={(caretRect, textBefore, textAfter) => {
+              setSlashMenu({
+                position: { top: caretRect.bottom, left: caretRect.left },
+                widgetId: widget.id,
+                textBefore,
+                textAfter,
+                filter: '',
+              });
+            }}
+            onDelete={() => removeWidget(widget)}
+          />
+        );
+      }
       default:
         return null;
     }
@@ -202,6 +246,62 @@ export default function ScopeItemDetail({
         />
       </div>
     );
+  }
+
+  function handleAddParagraph(position: number) {
+    const id = addWidget('paragraph', position);
+    setAutoFocusWidgetId(id);
+  }
+
+  function handleSlashSelect(widgetType: WidgetType) {
+    if (!slashMenu) return;
+    const { widgetId, textBefore, textAfter } = slashMenu;
+    const widgetIndex = activeWidgets.findIndex(w => w.id === widgetId);
+    if (widgetIndex < 0) { setSlashMenu(null); return; }
+
+    // Update the current paragraph with textBefore (remove the "/")
+    const notes = [...(item.notes || [])];
+    const noteIdx = notes.findIndex(n => n.id === widgetId);
+
+    const updates: Partial<Component> = {};
+    const currentWidgets = [...activeWidgets];
+    let insertPos = widgetIndex + 1;
+
+    if (textBefore.trim() === '') {
+      // Remove the empty paragraph
+      currentWidgets.splice(widgetIndex, 1);
+      updates.notes = notes.filter(n => n.id !== widgetId);
+      insertPos = widgetIndex;
+    } else {
+      // Save textBefore in the current paragraph
+      if (noteIdx >= 0) {
+        notes[noteIdx] = { ...notes[noteIdx], content: textBefore };
+      }
+      updates.notes = notes;
+    }
+
+    // Insert the chosen widget
+    if (widgetType === 'notes' || widgetType === 'paragraph') {
+      const newId = crypto.randomUUID();
+      currentWidgets.splice(insertPos, 0, { id: newId, type: widgetType });
+      (updates.notes as typeof notes) = [...(updates.notes || notes), { id: newId, content: '' }];
+      insertPos++;
+    } else {
+      currentWidgets.splice(insertPos, 0, { id: widgetType, type: widgetType });
+      insertPos++;
+    }
+
+    // If textAfter is not empty, create a new paragraph after
+    if (textAfter.trim() !== '') {
+      const afterId = crypto.randomUUID();
+      currentWidgets.splice(insertPos, 0, { id: afterId, type: 'paragraph' });
+      (updates.notes as typeof notes) = [...(updates.notes || notes), { id: afterId, content: textAfter }];
+      setAutoFocusWidgetId(afterId);
+    }
+
+    updates.widgets = currentWidgets;
+    onUpdate(item.id, updates);
+    setSlashMenu(null);
   }
 
   const activeWidget = activeId ? activeWidgets.find(w => w.id === activeId) : null;
@@ -239,7 +339,7 @@ export default function ScopeItemDetail({
       )}
 
       {/* Widgets */}
-      <WidgetInserter availableWidgets={available} onAdd={(w) => addWidget(w, 0)} />
+      <WidgetInserter availableWidgets={available} onAdd={(w) => addWidget(w, 0)} onAddParagraph={() => handleAddParagraph(0)} />
 
       <DndContext
         sensors={sensors}
@@ -258,7 +358,7 @@ export default function ScopeItemDetail({
               >
                 {renderWidget(widget)}
               </SortableWidget>
-              <WidgetInserter availableWidgets={available} onAdd={(w) => addWidget(w, i + 1)} />
+              <WidgetInserter availableWidgets={available} onAdd={(w) => addWidget(w, i + 1)} onAddParagraph={() => handleAddParagraph(i + 1)} />
             </div>
           ))}
         </SortableContext>
@@ -274,6 +374,17 @@ export default function ScopeItemDetail({
           })()}
         </DragOverlay>
       </DndContext>
+
+      {/* Slash command menu */}
+      {slashMenu && (
+        <SlashCommandMenu
+          position={slashMenu.position}
+          availableWidgets={available}
+          onSelect={handleSlashSelect}
+          onClose={() => setSlashMenu(null)}
+          filter={slashMenu.filter}
+        />
+      )}
 
       {/* AlertDialog for removing widget with content */}
       <AlertDialog open={!!pendingRemove} onOpenChange={() => setPendingRemove(null)}>

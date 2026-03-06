@@ -55,6 +55,15 @@ function generateComponentBlock(component: Component, imageMap: ImageMap, allCom
     parts.push(taskLines.join('\n'));
   }
 
+  // Paragraphs
+  const paragraphs = getActiveWidgets(component)
+    .filter(w => w.type === 'paragraph')
+    .map(w => component.notes?.find(n => n.id === w.id))
+    .filter((n): n is { id: string; content: string } => !!n?.content);
+  for (const para of paragraphs) {
+    parts.push(para.content);
+  }
+
   // Légende des pins (une section par image qui a des pins)
   const compImages = component.images ?? [];
   const pinsLegendLines: string[] = [];
@@ -103,9 +112,19 @@ function generateDocumentBlock(component: Component, imageMap: ImageMap): string
     parts.push(imagesSection(images, component.name));
   }
 
-  const allNotes = (component.notes || []).filter(n => n.content);
-  for (const note of allNotes) {
-    parts.push(`## Contenu\n\n${note.content}`);
+  // Notes (markdown content)
+  const widgets = getActiveWidgets(component);
+  const noteWidgets = widgets.filter(w => w.type === 'notes');
+  for (const w of noteWidgets) {
+    const note = component.notes?.find(n => n.id === w.id);
+    if (note?.content) parts.push(`## Contenu\n\n${note.content}`);
+  }
+
+  // Paragraphs (plain text)
+  const paraWidgets = widgets.filter(w => w.type === 'paragraph');
+  for (const w of paraWidgets) {
+    const para = component.notes?.find(n => n.id === w.id);
+    if (para?.content) parts.push(para.content);
   }
 
   parts.push('---');

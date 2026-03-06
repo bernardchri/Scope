@@ -1,7 +1,7 @@
 export type ScopeItemType = 'document' | 'component' | 'template' | 'section';
 export type ComponentCategory = ScopeItemType;
 
-export type WidgetType = 'notes' | 'images' | 'tasks' | 'instances';
+export type WidgetType = 'notes' | 'images' | 'tasks' | 'instances' | 'paragraph';
 
 export interface WidgetInstance {
   id: string;
