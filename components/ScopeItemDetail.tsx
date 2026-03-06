@@ -1,8 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { Component, ScopeItemType, WidgetType } from '@/lib/types';
-import { getCategoryLabel, getCategoryColor, getActiveWidgets, ALL_WIDGET_TYPES, WIDGET_LABELS, WIDGET_ICONS, widgetHasContent } from '@/lib/categoryHelpers';
+import { Component, ScopeItemType, WidgetType, WidgetInstance } from '@/lib/types';
+import { getCategoryLabel, getCategoryColor, getActiveWidgets, getAvailableWidgetTypes, WIDGET_LABELS, WIDGET_ICONS, widgetHasContent } from '@/lib/categoryHelpers';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Trash2, Clock } from 'lucide-react';
@@ -56,11 +56,11 @@ export default function ScopeItemDetail({
   onNavigate,
 }: ScopeItemDetailProps) {
   const [isEditing, setIsEditing] = useState(false);
-  const [activeId, setActiveId] = useState<WidgetType | null>(null);
-  const [pendingRemove, setPendingRemove] = useState<WidgetType | null>(null);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [pendingRemove, setPendingRemove] = useState<WidgetInstance | null>(null);
 
   const activeWidgets = getActiveWidgets(item);
-  const available = ALL_WIDGET_TYPES.filter(w => !activeWidgets.includes(w));
+  const available = getAvailableWidgetTypes(activeWidgets);
   const images = item.images || [];
 
   const sensors = useSensors(
@@ -82,23 +82,43 @@ export default function ScopeItemDetail({
     setIsEditing(false);
   }
 
-  function addWidget(widget: WidgetType, position: number) {
+  function addWidget(widgetType: WidgetType, position: number) {
     const current = [...activeWidgets];
-    current.splice(position, 0, widget);
-    onUpdate(item.id, { widgets: current });
+    if (widgetType === 'notes') {
+      const noteId = crypto.randomUUID();
+      current.splice(position, 0, { id: noteId, type: 'notes' });
+      const notes = [...(item.notes || []), { id: noteId, content: '' }];
+      onUpdate(item.id, { widgets: current, notes });
+    } else {
+      current.splice(position, 0, { id: widgetType, type: widgetType });
+      onUpdate(item.id, { widgets: current });
+    }
   }
 
-  function removeWidget(widget: WidgetType) {
+  function removeWidget(widget: WidgetInstance) {
     if (widgetHasContent(item, widget)) {
       setPendingRemove(widget);
       return;
     }
-    onUpdate(item.id, { widgets: activeWidgets.filter(w => w !== widget) });
+    doRemoveWidget(widget);
+  }
+
+  function doRemoveWidget(widget: WidgetInstance) {
+    const updates: Partial<Component> = {
+      widgets: activeWidgets.filter(w => w.id !== widget.id),
+    };
+    switch (widget.type) {
+      case 'images':    updates.images = []; break;
+      case 'notes':     updates.notes = (item.notes || []).filter(n => n.id !== widget.id); break;
+      case 'tasks':     updates.tasks = []; break;
+      case 'instances': updates.instances = []; break;
+    }
+    onUpdate(item.id, updates);
   }
 
   function confirmRemove() {
     if (!pendingRemove) return;
-    onUpdate(item.id, { widgets: activeWidgets.filter(w => w !== pendingRemove) });
+    doRemoveWidget(pendingRemove);
     setPendingRemove(null);
   }
 
@@ -106,50 +126,61 @@ export default function ScopeItemDetail({
     setActiveId(null);
     const { active, over } = event;
     if (over && active.id !== over.id) {
-      const oldIdx = activeWidgets.indexOf(active.id as WidgetType);
-      const newIdx = activeWidgets.indexOf(over.id as WidgetType);
+      const oldIdx = activeWidgets.findIndex(w => w.id === active.id);
+      const newIdx = activeWidgets.findIndex(w => w.id === over.id);
       onUpdate(item.id, { widgets: arrayMove(activeWidgets, oldIdx, newIdx) });
     }
   }
 
-  function renderWidget(widget: WidgetType) {
-    switch (widget) {
+  function renderWidget(widget: WidgetInstance) {
+    switch (widget.type) {
       case 'images':
         return (
           <ImagePinViewer
-            key="images"
+            key={widget.id}
             images={images}
             tasks={item.tasks}
             onUpdateImages={(imgs) => onUpdate(item.id, { images: imgs })}
           />
         );
-      case 'notes':
+      case 'notes': {
+        const note = item.notes?.find(n => n.id === widget.id);
         return (
           <NoteWidget
-            key="notes"
-            content={item.content || ''}
-            onSave={(content) => onUpdate(item.id, { content })}
+            key={widget.id}
+            content={note?.content || ''}
+            onSave={(content) => {
+              const notes = [...(item.notes || [])];
+              const idx = notes.findIndex(n => n.id === widget.id);
+              if (idx >= 0) {
+                notes[idx] = { ...notes[idx], content };
+              } else {
+                notes.push({ id: widget.id, content });
+              }
+              onUpdate(item.id, { notes });
+            }}
           />
         );
+      }
       case 'tasks':
         return (
           <TaskList
-            key="tasks"
+            key={widget.id}
             projectId={projectId}
             componentId={item.id}
             tasks={item.tasks}
-            images={activeWidgets.includes('images') ? images : undefined}
+            images={activeWidgets.some(w => w.type === 'images') ? images : undefined}
           />
         );
       case 'instances':
         return (
           <ComponentInstanceList
-            key="instances"
+            key={widget.id}
             projectId={projectId}
             componentId={item.id}
             instances={item.instances}
             allComponents={allComponents}
-            images={activeWidgets.includes('images') ? images : undefined}
+            images={activeWidgets.some(w => w.type === 'images') ? images : undefined}
             onNavigate={onNavigate}
           />
         );
@@ -172,6 +203,8 @@ export default function ScopeItemDetail({
       </div>
     );
   }
+
+  const activeWidget = activeId ? activeWidgets.find(w => w.id === activeId) : null;
 
   return (
     <div className="space-y-2 max-w-4xl mx-auto">
@@ -211,16 +244,16 @@ export default function ScopeItemDetail({
       <DndContext
         sensors={sensors}
         collisionDetection={closestCenter}
-        onDragStart={({ active }) => setActiveId(active.id as WidgetType)}
+        onDragStart={({ active }) => setActiveId(active.id as string)}
         onDragEnd={handleDragEnd}
       >
-        <SortableContext items={activeWidgets} strategy={verticalListSortingStrategy}>
+        <SortableContext items={activeWidgets.map(w => w.id)} strategy={verticalListSortingStrategy}>
           {activeWidgets.map((widget, i) => (
-            <div key={widget}>
+            <div key={widget.id}>
               <SortableWidget
-                id={widget}
-                label={WIDGET_LABELS[widget]}
-                icon={WIDGET_ICONS[widget]}
+                id={widget.id}
+                label={WIDGET_LABELS[widget.type]}
+                icon={WIDGET_ICONS[widget.type]}
                 onRemove={() => removeWidget(widget)}
               >
                 {renderWidget(widget)}
@@ -230,12 +263,12 @@ export default function ScopeItemDetail({
           ))}
         </SortableContext>
         <DragOverlay>
-          {activeId && (() => {
-            const Icon = WIDGET_ICONS[activeId];
+          {activeWidget && (() => {
+            const Icon = WIDGET_ICONS[activeWidget.type];
             return (
               <div className="bg-background/80 backdrop-blur border rounded-lg shadow-lg p-3 flex items-center gap-2">
                 <Icon className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm font-medium">{WIDGET_LABELS[activeId]}</span>
+                <span className="text-sm font-medium">{WIDGET_LABELS[activeWidget.type]}</span>
               </div>
             );
           })()}
@@ -246,15 +279,15 @@ export default function ScopeItemDetail({
       <AlertDialog open={!!pendingRemove} onOpenChange={() => setPendingRemove(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Masquer le widget ?</AlertDialogTitle>
+            <AlertDialogTitle>Supprimer le widget ?</AlertDialogTitle>
             <AlertDialogDescription>
-              Le widget &laquo;&nbsp;{pendingRemove && WIDGET_LABELS[pendingRemove]}&nbsp;&raquo; contient des donn&eacute;es.
-              Elles seront masqu&eacute;es mais pas supprim&eacute;es.
+              Le widget &laquo;&nbsp;{pendingRemove && WIDGET_LABELS[pendingRemove.type]}&nbsp;&raquo; contient des donn&eacute;es.
+              Elles seront d&eacute;finitivement supprim&eacute;es.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Annuler</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmRemove}>Masquer</AlertDialogAction>
+            <AlertDialogAction onClick={confirmRemove}>Supprimer</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

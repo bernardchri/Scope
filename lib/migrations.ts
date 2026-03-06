@@ -1,4 +1,4 @@
-import { Project, Component, ComponentImage, ScopeItemType } from './types';
+import { Project, Component, ComponentImage, ScopeItemType, WidgetInstance, NoteData } from './types';
 
 export function migrateProjectsToV2(projects: Project[]): Project[] {
   return projects.map(project => ({
@@ -38,8 +38,47 @@ export function migrateProjectsToV2(projects: Project[]): Project[] {
           completed: task.completed,
           category: task.category || 'frontend'
         })),
-        content: (component as any).content || undefined
+        content: (component as any).content || undefined,
+        ...migrateWidgetsAndNotes(component as any),
       };
     })
   }));
+}
+
+/** Migrate widgets from WidgetType[] to WidgetInstance[] and content to notes[] */
+function migrateWidgetsAndNotes(component: any): { widgets?: WidgetInstance[]; notes?: NoteData[] } {
+  const result: { widgets?: WidgetInstance[]; notes?: NoteData[] } = {};
+
+  // Migrate widgets: string[] → WidgetInstance[]
+  const rawWidgets = component.widgets;
+  if (Array.isArray(rawWidgets) && rawWidgets.length > 0) {
+    if (typeof rawWidgets[0] === 'string') {
+      // Old format: WidgetType[]
+      result.widgets = (rawWidgets as string[]).map(type => {
+        if (type === 'notes') {
+          const noteId = crypto.randomUUID();
+          return { id: noteId, type: 'notes' as const };
+        }
+        return { id: type, type: type as any };
+      });
+    } else {
+      // Already new format
+      result.widgets = rawWidgets;
+    }
+  }
+
+  // Migrate content → notes[]
+  const existingNotes = component.notes;
+  if (Array.isArray(existingNotes) && existingNotes.length > 0) {
+    result.notes = existingNotes;
+  } else if (component.content) {
+    // Find the notes widget ID (from already-migrated widgets, or generate one)
+    const notesWidget = result.widgets?.find((w: WidgetInstance) => w.type === 'notes');
+    const noteId = notesWidget?.id ?? crypto.randomUUID();
+    result.notes = [{ id: noteId, content: component.content }];
+    // If widgets weren't set but we had content, make sure the note ID matches
+    // when defaults are used later via getActiveWidgets
+  }
+
+  return result;
 }

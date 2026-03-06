@@ -103,8 +103,9 @@ function generateDocumentBlock(component: Component, imageMap: ImageMap): string
     parts.push(imagesSection(images, component.name));
   }
 
-  if (component.content) {
-    parts.push(`## Contenu\n\n${component.content}`);
+  const allNotes = (component.notes || []).filter(n => n.content);
+  for (const note of allNotes) {
+    parts.push(`## Contenu\n\n${note.content}`);
   }
 
   parts.push('---');
@@ -134,7 +135,8 @@ export function generateStoriesMd(project: Project, imageMap: ImageMap = new Map
     sections.push(`<!-- ${CATEGORY_SECTION_LABELS[category] ?? category} -->`);
     for (const comp of group) {
       const widgets = getActiveWidgets(comp);
-      if (widgets.includes('notes') && comp.content) {
+      const hasNotes = widgets.some(w => w.type === 'notes') && comp.notes?.some(n => n.content);
+      if (hasNotes) {
         sections.push(generateDocumentBlock(comp, imageMap));
       } else {
         sections.push(generateComponentBlock(comp, imageMap, project.components));

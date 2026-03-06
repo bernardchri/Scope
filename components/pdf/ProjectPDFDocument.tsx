@@ -160,13 +160,19 @@ function ComponentDetailBlock({
         </View>
       )}
 
-      {/* Contenu markdown (si widget notes actif) */}
-      {getActiveWidgets(component).includes('notes') && component.content && (
-        <View style={{ marginTop: 14 }}>
-          <Text style={s.taskSectionLabel}>Contenu</Text>
-          {renderMarkdown(component.content)}
-        </View>
-      )}
+      {/* Contenu markdown (toutes les notes actives) */}
+      {getActiveWidgets(component)
+        .filter(w => w.type === 'notes')
+        .map(w => {
+          const note = component.notes?.find(n => n.id === w.id);
+          if (!note?.content) return null;
+          return (
+            <View key={w.id} style={{ marginTop: 14 }}>
+              <Text style={s.taskSectionLabel}>Contenu</Text>
+              {renderMarkdown(note.content)}
+            </View>
+          );
+        })}
 
       {/* Composants utilisés (instances) */}
       {instanceComponents.length > 0 && (

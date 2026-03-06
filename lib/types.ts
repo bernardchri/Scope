@@ -3,6 +3,16 @@ export type ComponentCategory = ScopeItemType;
 
 export type WidgetType = 'notes' | 'images' | 'tasks' | 'instances';
 
+export interface WidgetInstance {
+  id: string;
+  type: WidgetType;
+}
+
+export interface NoteData {
+  id: string;
+  content: string;
+}
+
 export type TaskCategory = 'frontend' | 'backend' | 'seo' | 'motion';
 
 export interface ComponentInstance {
@@ -44,8 +54,9 @@ export interface Component {
   images?: ComponentImage[];
 
   estimatedHours?: number;
-  content?: string;
-  widgets?: WidgetType[];
+  content?: string; // @deprecated - kept for migration compat
+  notes?: NoteData[];
+  widgets?: WidgetInstance[];
   instances: ComponentInstance[];
   tasks: Task[];
 }

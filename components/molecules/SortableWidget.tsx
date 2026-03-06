@@ -4,10 +4,9 @@ import { type ReactNode } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { GripVertical, X, type LucideIcon } from 'lucide-react';
-import { WidgetType } from '@/lib/types';
 
 interface SortableWidgetProps {
-  id: WidgetType;
+  id: string;
   label: string;
   icon: LucideIcon;
   onRemove: () => void;
