@@ -66,8 +66,9 @@ Config in `config.dat` via `@tauri-apps/plugin-store` (separate from project dat
 
 - `ScopeItemType = 'document' | 'component' | 'template' | 'section'`
 - `ComponentCategory` is an alias for `ScopeItemType` (compat)
-- `WidgetType = 'notes' | 'images' | 'tasks' | 'instances'`
+- `WidgetType = 'notes' | 'images' | 'tasks' | 'instances' | 'paragraph'`
 - `Component.widgets?: WidgetType[]` — when undefined, uses type defaults from config
+- Singleton widgets (`images`, `tasks`, `instances`): only one instance per element. `notes` and `paragraph` allow multiple instances.
 
 Default widgets:
 | Type | Widgets |
@@ -95,10 +96,19 @@ Widget toggle UI in `ScopeItemDetail.tsx` allows enabling/disabling widgets per 
 Unified detail view for all element types. Renders a header (title, type badge, description, hours, edit/delete) then widgets in order based on `getActiveWidgets(item)`:
 - `'images'` → `ImagePinViewer`
 - `'notes'` → `NoteWidget`
+- `'paragraph'` → `ParagraphWidget`
 - `'tasks'` → `TaskList`
 - `'instances'` → `ComponentInstanceList`
 
 **NoteWidget** (`components/NoteWidget.tsx`): standalone markdown editor/viewer. Props: `{ content, onSave }`. Manages its own edit/preview state.
+
+**ParagraphWidget** (`components/ParagraphWidget.tsx`): inline-editable textarea (no markdown). Auto-resize, save on blur. Typing `/` triggers a slash command menu (`SlashCommandMenu`) to insert a widget at the cursor position — text is split around the `/`, chosen widget inserted between. Backspace on empty paragraph deletes it.
+
+**WidgetInserter** (`components/molecules/WidgetInserter.tsx`): Notion-like inserter between widgets. Click on the zone creates a paragraph (auto-focused). The `+` button opens a `DropdownMenu` with all available widget types. Appears on hover.
+
+**SlashCommandMenu** (`components/molecules/SlashCommandMenu.tsx`): fixed-position dropdown triggered by `/` in a paragraph. Filters available widgets as user types. Keyboard navigation (arrows, Enter, Escape).
+
+Both `paragraph` and `notes` store their content in `Component.notes[]` (same `NoteData` structure, keyed by widget ID). The `WidgetInstance.type` distinguishes rendering.
 
 Edit mode uses `ComponentEditForm` (name, description, type selector, hours, image gallery).
 
@@ -128,7 +138,7 @@ Pin ↔ instance link: in `InstanceItem`, a `MapPin` button opens inline `Select
 
 ### PDF export (`components/pdf/ProjectPDFDocument.tsx`)
 
-4 pages: overview → sommaire (with internal `#anchor` links) → component details (tasks + instances + markdown content if notes widget active) → bon pour accord. Dynamic import via `lib/pdfExport.tsx` to avoid SSR issues. PDF bytes transferred to Rust as base64.
+4 pages: overview → sommaire (with internal `#anchor` links) → component details (tasks + instances + markdown content if notes widget active + paragraph plain text) → bon pour accord. Dynamic import via `lib/pdfExport.tsx` to avoid SSR issues. PDF bytes transferred to Rust as base64.
 
 **Pins dans le PDF** : avant génération, `preparePdfProject` (dans `lib/pdfExport.tsx`) pré-cuit les pins dans les images via Canvas (`renderImageWithPins`, exportée depuis `lib/imageHelpers.ts`). Les images passées au renderer n'ont plus de `pins[]` — pas d'overlay dans `ProjectPDFDocument`.
 
