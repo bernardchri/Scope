@@ -7,7 +7,6 @@ import { computeAvailablePins } from '@/lib/pinHelpers';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
 import TaskItem from './molecules/TaskItem';
 import {
   DndContext,
@@ -43,7 +42,7 @@ function SortableTaskItem(props: any) {
     transform,
     transition,
     isDragging,
-  } = useSortable({ 
+  } = useSortable({
     id: props.task.id,
     disabled: props.isEditing // 🆕 Désactiver drag pendant édition
   });
@@ -56,8 +55,8 @@ function SortableTaskItem(props: any) {
 
   return (
     <div ref={setNodeRef} style={style}>
-      <TaskItem 
-        {...props} 
+      <TaskItem
+        {...props}
         dragHandleProps={props.isEditing ? {} : { ...attributes, ...listeners }} // 🆕
       />
     </div>
@@ -70,11 +69,11 @@ export default function TaskList({ projectId, componentId, tasks, images = [] }:
   const toggleTask = useProjectStore(state => state.toggleTask);
   const updateTask = useProjectStore(state => state.updateTask);
   const updateComponent = useProjectStore(state => state.updateComponent);
-  
+
   const [newTaskName, setNewTaskName] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<TaskCategory>('frontend');
   const inputRef = useRef<HTMLInputElement>(null);
-  
+
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [editTaskName, setEditTaskName] = useState('');
   const [editTaskCategory, setEditTaskCategory] = useState<TaskCategory>('frontend');
@@ -102,14 +101,14 @@ export default function TaskList({ projectId, componentId, tasks, images = [] }:
   function handleCreate(e: React.FormEvent) {
     e.preventDefault();
     if (!newTaskName.trim()) return;
-    
+
     const newTask: Task = {
       id: crypto.randomUUID(),
       name: newTaskName,
       completed: false,
       category: selectedCategory
     };
-    
+
     addTask(projectId, componentId, newTask);
     setNewTaskName('');
     inputRef.current?.focus();
@@ -152,16 +151,7 @@ export default function TaskList({ projectId, componentId, tasks, images = [] }:
   const availablePins = computeAvailablePins(images);
 
   return (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <h2 className="text-xl font-semibold">
-          Éléments {localTasks.length > 0 && (
-            <span className="text-muted-foreground text-sm ml-2">
-              {localTasks.length}
-            </span>
-          )}
-        </h2>
-      </div>
+    <div className="space-y-4 my-8">
 
       {localTasks.length === 0 ? (
         <p className="text-muted-foreground text-sm">Aucun élément pour le moment</p>
@@ -199,17 +189,15 @@ export default function TaskList({ projectId, componentId, tasks, images = [] }:
         </DndContext>
       )}
 
-      <Separator />
-
-      <form onSubmit={handleCreate} className="space-y-2">
+      <form onSubmit={handleCreate} className="space-y-4">
         <Input
           ref={inputRef}
           value={newTaskName}
           onChange={(e) => setNewTaskName(e.target.value)}
           placeholder="+ Ajouter un élément (Enter)..."
-          className="w-full"
+          className="w-full h-14 rounded-xl bg-gray-100"
         />
-        
+
         <div className="flex gap-2 items-center flex-wrap">
           <span className="text-xs text-muted-foreground">Catégorie :</span>
           <Badge

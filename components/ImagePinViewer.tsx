@@ -238,44 +238,46 @@ export default function ImagePinViewer({ images, tasks, onUpdateImages }: ImageP
               {selectedPinId ? 'Suppr. pour effacer' : 'Cliquer pour ajouter un pin'}
             </div>
           )}
+
+
+          {/* Caption (editable inline) */}
+          <div className="text-center my-4">
+            {editingCaption ? (
+              <div className="flex items-center gap-2 justify-center max-w-md mx-auto">
+                <Input
+                  value={captionDraft}
+                  onChange={(e) => setCaptionDraft(e.target.value)}
+                  placeholder="Legende (optionnelle)"
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleSaveCaption();
+                    if (e.key === 'Escape') setEditingCaption(false);
+                  }}
+                />
+                <Button size="sm" onClick={handleSaveCaption}>OK</Button>
+                <Button size="sm" variant="ghost" onClick={() => setEditingCaption(false)}>Annuler</Button>
+              </div>
+            ) : (
+              <button
+                className="text-sm text-muted-foreground italic hover:text-foreground transition-colors"
+                onClick={() => { setCaptionDraft(currentImage.caption || ''); setEditingCaption(true); }}
+                title="Cliquer pour modifier la legende"
+              >
+                {currentImage.caption || 'Ajouter une legende...'}
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
       {imageError && <p className="text-destructive text-sm">{imageError}</p>}
 
-      {/* Caption (editable inline) */}
-      <div className="text-center">
-        {editingCaption ? (
-          <div className="flex items-center gap-2 justify-center max-w-md mx-auto">
-            <Input
-              value={captionDraft}
-              onChange={(e) => setCaptionDraft(e.target.value)}
-              placeholder="Legende (optionnelle)"
-              autoFocus
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') handleSaveCaption();
-                if (e.key === 'Escape') setEditingCaption(false);
-              }}
-            />
-            <Button size="sm" onClick={handleSaveCaption}>OK</Button>
-            <Button size="sm" variant="ghost" onClick={() => setEditingCaption(false)}>Annuler</Button>
-          </div>
-        ) : (
-          <button
-            className="text-sm text-muted-foreground italic hover:text-foreground transition-colors"
-            onClick={() => { setCaptionDraft(currentImage.caption || ''); setEditingCaption(true); }}
-            title="Cliquer pour modifier la legende"
-          >
-            {currentImage.caption || 'Ajouter une legende...'}
-          </button>
-        )}
-      </div>
 
       {/* Thumbnails avec drag & drop */}
       {localImages.length >= 1 && (
         <DndContext sensors={thumbnailSensors} collisionDetection={closestCenter} onDragEnd={handleThumbnailDragEnd}>
           <SortableContext items={localImages.map(img => img.id)} strategy={horizontalListSortingStrategy}>
-            <div className="flex gap-2 overflow-x-auto pb-2">
+            <div className="flex gap-2 overflow-x-auto py-2 z-">
               {localImages.map((image, index) => (
                 <SortableThumbnail
                   key={image.id}
@@ -289,7 +291,7 @@ export default function ImagePinViewer({ images, tasks, onUpdateImages }: ImageP
               <button
                 type="button"
                 onClick={triggerFileInput}
-                className="w-20 h-20 flex-shrink-0 rounded-md border-2 border-dashed border-muted-foreground/30 flex items-center justify-center text-muted-foreground hover:border-muted-foreground/60 hover:text-foreground transition-colors"
+                className="w-20 h-20 flex-shrink-0 rounded-md border-2 border-dashed border-muted-foreground/30 flex items-center justify-center text-muted-foreground hover:border-muted-foreground/60 hover:text-foreground transition-colors cursor-pointer"
                 title="Ajouter une image"
               >
                 <Plus className="h-5 w-5" />

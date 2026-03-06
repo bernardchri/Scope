@@ -339,7 +339,8 @@ export default function ScopeItemDetail({
       )}
 
       {/* Widgets */}
-      <WidgetInserter availableWidgets={available} onAdd={(w) => addWidget(w, 0)} onAddParagraph={() => handleAddParagraph(0)} />
+      <br/>
+      {/* <WidgetInserter availableWidgets={available} onAdd={(w) => addWidget(w, 0)} onAddParagraph={() => handleAddParagraph(0)} /> */}
 
       <DndContext
         sensors={sensors}
@@ -358,6 +359,7 @@ export default function ScopeItemDetail({
               >
                 {renderWidget(widget)}
               </SortableWidget>
+                <br/>
               <WidgetInserter availableWidgets={available} onAdd={(w) => addWidget(w, i + 1)} onAddParagraph={() => handleAddParagraph(i + 1)} />
             </div>
           ))}

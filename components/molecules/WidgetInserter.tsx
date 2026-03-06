@@ -20,11 +20,11 @@ export default function WidgetInserter({ availableWidgets, onAdd, onAddParagraph
   return (
     <div className="group/inserter relative py-3">
       {/* Clickable zone — creates paragraph */}
-      <button
-        className="absolute inset-0 w-full cursor-text"
+      {/* <button
+        className="absolute inset-0 w-full cursor-pointer"
         onClick={onAddParagraph}
         aria-label="Ajouter un paragraphe"
-      />
+      /> */}
       {/* Horizontal line */}
       <div className="h-px bg-border opacity-0 group-hover/inserter:opacity-100 transition-opacity" />
       {/* + button */}

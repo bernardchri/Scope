@@ -61,13 +61,8 @@ export default function ComponentInstanceList({
   const availableComponents = allComponents.filter(c => c.id !== componentId);
 
   return (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <h2 className="text-xl font-semibold">Composants utilisés</h2>
-        <Button onClick={() => setIsAdding(true)}>
-          + Ajouter
-        </Button>
-      </div>
+    <div className="space-y-4 my-2">
+
 
       {isAdding && (
         <Card>
@@ -120,6 +115,10 @@ export default function ComponentInstanceList({
           ))}
         </div>
       )}
+
+      <Button onClick={() => setIsAdding(true)}>
+        + Ajouter
+      </Button>
     </div>
   );
 }

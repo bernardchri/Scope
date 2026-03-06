@@ -28,7 +28,7 @@
   "widgets": [
     { "id": "notes",     "label": "Notes" },
     { "id": "images",    "label": "Maquettes" },
-    { "id": "tasks",     "label": "Éléments" },
+    { "id": "tasks",     "label": "Tâches" },
     { "id": "instances", "label": "Composants utilisés" },
     { "id": "paragraph", "label": "Paragraphe" }
   ]
