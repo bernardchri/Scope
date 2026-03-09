@@ -37,7 +37,6 @@ import ParagraphWidget from './ParagraphWidget';
 import TaskList from './TaskList';
 import ComponentInstanceList from './ComponentInstanceList';
 import SortableWidget from './molecules/SortableWidget';
-import WidgetInserter from './molecules/WidgetInserter';
 import SlashCommandMenu from './molecules/SlashCommandMenu';
 
 interface ScopeItemDetailProps {
@@ -225,6 +224,26 @@ export default function ScopeItemDetail({
               });
             }}
             onDelete={() => removeWidget(widget)}
+            onSplit={(textBefore, textAfter) => {
+              // Save current paragraph with text before cursor
+              const notes = [...(item.notes || [])];
+              const idx = notes.findIndex(n => n.id === widget.id);
+              if (idx >= 0) {
+                notes[idx] = { ...notes[idx], content: textBefore };
+              } else {
+                notes.push({ id: widget.id, content: textBefore });
+              }
+
+              // Create new paragraph after current one
+              const widgetIdx = activeWidgets.findIndex(w => w.id === widget.id);
+              const newId = crypto.randomUUID();
+              const newWidgets = [...activeWidgets];
+              newWidgets.splice(widgetIdx + 1, 0, { type: 'paragraph', id: newId });
+              notes.push({ id: newId, content: textAfter });
+
+              onUpdate(item.id, { widgets: newWidgets, notes });
+              setAutoFocusWidgetId(newId);
+            }}
           />
         );
       }
@@ -340,7 +359,6 @@ export default function ScopeItemDetail({
 
       {/* Widgets */}
       <br/>
-      {/* <WidgetInserter availableWidgets={available} onAdd={(w) => addWidget(w, 0)} onAddParagraph={() => handleAddParagraph(0)} /> */}
 
       <DndContext
         sensors={sensors}
@@ -349,6 +367,7 @@ export default function ScopeItemDetail({
         onDragEnd={handleDragEnd}
       >
         <SortableContext items={activeWidgets.map(w => w.id)} strategy={verticalListSortingStrategy}>
+          <div className="space-y-8">
           {activeWidgets.map((widget, i) => (
             <div key={widget.id}>
               <SortableWidget
@@ -359,11 +378,16 @@ export default function ScopeItemDetail({
               >
                 {renderWidget(widget)}
               </SortableWidget>
-                <br/>
-              <WidgetInserter availableWidgets={available} onAdd={(w) => addWidget(w, i + 1)} onAddParagraph={() => handleAddParagraph(i + 1)} />
             </div>
           ))}
+          </div>
         </SortableContext>
+        <button
+          onClick={() => handleAddParagraph(activeWidgets.length)}
+          className="w-full h-8 mt-8 text-left text-sm text-muted-foreground/50 hover:text-muted-foreground px-3 transition-colors cursor-text"
+        >
+          Tapez du texte…
+        </button>
         <DragOverlay>
           {activeWidget && (() => {
             const Icon = WIDGET_ICONS[activeWidget.type];

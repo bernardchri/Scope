@@ -102,9 +102,9 @@ Unified detail view for all element types. Renders a header (title, type badge, 
 
 **NoteWidget** (`components/NoteWidget.tsx`): standalone markdown editor/viewer. Props: `{ content, onSave }`. Manages its own edit/preview state.
 
-**ParagraphWidget** (`components/ParagraphWidget.tsx`): inline-editable textarea (no markdown). Auto-resize, save on blur. Typing `/` triggers a slash command menu (`SlashCommandMenu`) to insert a widget at the cursor position — text is split around the `/`, chosen widget inserted between. Backspace on empty paragraph deletes it.
+**ParagraphWidget** (`components/ParagraphWidget.tsx`): inline-editable textarea (no markdown). Auto-resize, save on blur. Typing `/` triggers a slash command menu (`SlashCommandMenu`) to insert a widget at the cursor position — text is split around the `/`, chosen widget inserted between. Backspace on empty paragraph deletes it. Enter splits paragraph at cursor (Notion-like): text before stays, text after goes to a new auto-focused paragraph. Shift+Enter for newline within paragraph.
 
-**WidgetInserter** (`components/molecules/WidgetInserter.tsx`): Notion-like inserter between widgets. Click on the zone creates a paragraph (auto-focused). The `+` button opens a `DropdownMenu` with all available widget types. Appears on hover.
+A "Tapez du texte…" button after the last widget creates a new paragraph at the end.
 
 **SlashCommandMenu** (`components/molecules/SlashCommandMenu.tsx`): fixed-position dropdown triggered by `/` in a paragraph. Filters available widgets as user types. Keyboard navigation (arrows, Enter, Escape).
 
@@ -130,7 +130,9 @@ Pin ↔ element link: in `TaskItem` edit form, a `Select` for picking a pin. Sto
 
 Pin ↔ instance link: in `InstanceItem`, a `MapPin` button opens inline `Select`. Stored in `ComponentInstance.pinRef`.
 
-**Drag & drop**: components reorderable in sidebar by type (`@dnd-kit`, action `reorderComponents`). Images reorderable in thumbnail strip.
+**Drag & drop**: components reorderable in sidebar by type (`@dnd-kit`, action `reorderComponents`). Images reorderable in thumbnail strip. Widgets reorderable via `SortableWidget` wrapper — drag handle (GripVertical) and remove button (X) on the left column, visible on hover. During drag, the source widget collapses to a single line placeholder.
+
+**Task category badge**: clicking the badge in view mode directly saves the new category to the store (via `onDirectCategoryChange`).
 
 ### Navigation (`components/ComponentList.tsx`)
 

@@ -151,8 +151,8 @@ export default function TaskList({ projectId, componentId, tasks, images = [] }:
   const availablePins = computeAvailablePins(images);
 
   return (
-    <div className="space-y-4 my-8">
-
+    <div className="space-y-4 p-2">
+      <h2>Tâches</h2>
       {localTasks.length === 0 ? (
         <p className="text-muted-foreground text-sm">Aucun élément pour le moment</p>
       ) : (
@@ -177,6 +177,7 @@ export default function TaskList({ projectId, componentId, tasks, images = [] }:
                   availablePins={availablePins}
                   onEditNameChange={setEditTaskName}
                   onEditCategoryChange={setEditTaskCategory}
+                  onDirectCategoryChange={(cat: TaskCategory) => updateTask(projectId, componentId, task.id, { category: cat })}
                   onEditPinRefChange={setEditPinRef}
                   onStartEdit={() => startEditing(task)}
                   onSaveEdit={handleSaveEdit}

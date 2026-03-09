@@ -34,14 +34,6 @@ export default function NoteWidget({ content, onSave }: NoteWidgetProps) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold">Notes</h2>
-        {!isEditing && (
-          <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
-            Modifier
-          </Button>
-        )}
-      </div>
 
       {isEditing ? (
         <>
@@ -98,6 +90,12 @@ export default function NoteWidget({ content, onSave }: NoteWidgetProps) {
             </p>
           )}
         </div>
+      )}
+
+      {!isEditing && (
+        <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
+          Modifier
+        </Button>
       )}
     </div>
   );

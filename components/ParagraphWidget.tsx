@@ -8,6 +8,7 @@ interface ParagraphWidgetProps {
   autoFocus?: boolean;
   onSlashCommand?: (caretRect: DOMRect, textBefore: string, textAfter: string) => void;
   onDelete?: () => void;
+  onSplit?: (textBefore: string, textAfter: string) => void;
 }
 
 export default function ParagraphWidget({
@@ -16,6 +17,7 @@ export default function ParagraphWidget({
   autoFocus,
   onSlashCommand,
   onDelete,
+  onSplit,
 }: ParagraphWidgetProps) {
   const [localValue, setLocalValue] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -75,6 +77,17 @@ export default function ParagraphWidget({
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (e.key === 'Enter' && !e.shiftKey && onSplit) {
+      e.preventDefault();
+      const ta = textareaRef.current;
+      if (!ta) return;
+      const pos = ta.selectionStart;
+      const value = localValue ?? content;
+      const before = value.slice(0, pos);
+      const after = value.slice(pos);
+      onSplit(before, after);
+      return;
+    }
     if (e.key === 'Backspace' && displayValue === '' && onDelete) {
       e.preventDefault();
       onDelete();
@@ -90,7 +103,7 @@ export default function ParagraphWidget({
       onBlur={handleBlur}
       onKeyDown={handleKeyDown}
       placeholder="Tapez du texte ou / pour les commandes..."
-      className="w-full resize-none bg-transparent text-base leading-relaxed outline-none border-0 border-l-2 border-transparent focus:border-border px-3 py-1 transition-colors placeholder:text-muted-foreground/50"
+      className="w-full resize-none bg-transparent text-base leading-relaxed outline-none border-0 border-l-2 border-transparent focus:border-border transition-colors placeholder:text-muted-foreground/50 py-2"
       rows={1}
     />
   );

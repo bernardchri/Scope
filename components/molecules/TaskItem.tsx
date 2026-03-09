@@ -26,6 +26,7 @@ interface TaskItemProps {
   dragHandleProps?: any;
   onEditNameChange: (name: string) => void;
   onEditCategoryChange: (category: TaskCategory) => void;
+  onDirectCategoryChange: (category: TaskCategory) => void;
   onEditPinRefChange?: (pinRef: Task['pinRef']) => void;
   onStartEdit: () => void;
   onSaveEdit: () => void;
@@ -43,6 +44,7 @@ export default function TaskItem({
   dragHandleProps = {},
   onEditNameChange,
   onEditCategoryChange,
+  onDirectCategoryChange,
   onEditPinRefChange,
   onStartEdit,
   onSaveEdit,
@@ -136,7 +138,7 @@ export default function TaskItem({
               {Object.entries(TASK_CATEGORY_LABELS).map(([value, label]) => (
                 <DropdownMenuItem
                   key={value}
-                  onClick={() => onEditCategoryChange(value as TaskCategory)}
+                  onClick={() => onDirectCategoryChange(value as TaskCategory)}
                 >
                   {label}
                 </DropdownMenuItem>
