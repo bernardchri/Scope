@@ -1,76 +1,185 @@
 # Todo
 
 ## Bugs connus
-- [x] Doublons d'ID de composants possibles si deux composants créés au même milliseconde (`component-${Date.now()}`) → passer à `crypto.randomUUID()`
 
-## Composants Document
-- [x] Séparer les `Document` des autres catégories : un `Element` ne peut pas devenir un `Document` et inversement
-- [x] Dans la sidebar, afficher les Documents dans une section séparée en haut
+_(aucun bug connu)_
 
-## Informations globales du projet
-- [ ] Ajouter le nom du créateur / studio (ex : "Studio Bergall") — utilisé dans le PDF et l'export
-- [ ] Ajouter un numéro de version au projet (ex : v1.0) pour le PDF
-- [x] Taux horaire configurable pour calculer les coûts estimés (affiché HT dans le dashboard)
-- [x] Ajouter un champ plafond budget — alerte rouge + montant du dépassement si `totalCost > budgetCap`
-- [ ] Total HT 
-  
 ## Export PDF
-- [ ] Toutes les images sont rendues dans le pdf 
+
+- [ ] Toutes les images sont rendues dans le PDF
 - [ ] Les images prennent la largeur de la page
-- [ ] Page de garde : nom projet, date, version, nom du créateur
-- [ ] Tableau récapitulatif : composants × estimation × coût (si taux horaire configuré)
+- [ ] Page de garde : nom projet, date, version, nom du créateur/studio
+- [ ] Supprimer les estimations de temps du rendu PDF (heures, coûts)
 - [ ] Section "Hors périmètre" : lister les tâches marquées `v2`
 
+## Export Devis (nouveau document PDF)
 
-## Export Devis
-- [ ] Export PDF devis commercial : tableau composants × estimation × coût (taux horaire × heures)
+- [ ] Tableau composants × estimation × coût (taux horaire × heures)
 - [ ] Total HT + mention TVA
 - [ ] Conditions : délais, acompte, hors périmètre
-- [ ] Réutilise l'infrastructure `@react-pdf/renderer` existante (nouveau document séparé du cahier des charges)
+- [ ] Réutilise l'infrastructure `@react-pdf/renderer` existante
 
+## Export STORIES.md
 
-## Export Story-compiler (STORIES.md)
-- [ ] Exporter en début de projet le nombre d'éléments, les composants, les heures estimés,
-- [x] Export global `STORIES.md` (un seul fichier, tous les composants)
-- [x] Format : `# Nom`, `<!-- estimate: Xh -->`, `## Description`, `## Tâches` avec checkboxes GFM
-- [x] Images exportées dans un dossier `stories-img/` et référencées en Markdown
-- [x] Documents : section séparée avec contenu Markdown complet
-- [ ] Export par composant (un fichier `.md` par composant, à placer dans le projet)
-- [ ] Les tâches marquées v2 dans SCOPE → préfixe `v2:` dans le fichier exporté
+- [ ] En-tête d'export : nombre d'éléments, composants, heures estimées
+- [ ] Export par composant (un fichier `.md` par composant)
+- [ ] Tâches marquées v2 → préfixe `v2:` dans l'export
+
+## Informations projet
+
+- [ ] Nom du créateur / studio (ex : "Studio Bergall") — utilisé dans PDF et export
+- [ ] Numéro de version du projet (ex : v1.0) pour le PDF
+- [ ] Total HT affiché
+- [ ] Informations client : nom, lien internet, etc.
+
+## Annotations images
+
+Les pins permettent de marquer un point précis sur une maquette. Les **zones** étendent ce concept à des rectangles :
+
+- [ ] Zones rectangulaires : cliquer-glisser sur une image pour dessiner une zone (stockée en `{ x, y, width, height }` en %)
+- [ ] Lier une zone à un composant existant du projet (ex : zone "header" → composant "Hero")
+- [ ] Affichage : overlay semi-transparent avec le nom du composant lié
+- [ ] Rendu PDF : zones dessinées sur les images de templates avec légende
+- [ ] Cohabitation pins + zones sur la même image (toggle séparé ou mode unique)
 
 ## UX / Navigation
-- [x] Pouvoir modifier le nom du projet (renommage inline dans le header)
-- [x] Pouvoir réordonner les composants (drag & drop dans la sidebar). Ce qui a un impact sur la sortie en markdown et pdf.
+
 - [ ] Recherche / filtre de composants dans la sidebar
-- [ ] Possiblité de changer l'ordre des images en drag and drop.
 - [ ] Dupliquer un composant existant
-- [x] Enlever dans le header "changer de projet"
-- [x] Ajouter une entrée accueil dans la sidebar, tout en haut avec une icône — toggle sidebar déplacé également dans la sidebar
-- [ ] Ajout des références aux pins dans les composants utilisés
+- [ ] Recadrage d'image : crop interactif dans l'interface, export du recadrage (remplace l'image originale ou crée une variante)
 
----
+## Réglages & préférences
 
-## Évaluation effort / priorité
+- [ ] Menu application pour les options générales
+- [ ] Réglages généraux du projet (visibilité taux horaire, etc.)
+- [ ] Pouvoir masquer certaines informations (taux horaire, etc.) — utile en présentation client
+- [ ] Snippets/templates de contenu réutilisables (navigateurs supportés, textes récurrents, todo-listes) — stockés au niveau global de l'app
+- [ ] Export/import des préférences et snippets
 
-### Gains rapides — faire en premier
-| Tâche | Effort | Fichiers |
-|---|---|---|
-| Bug `crypto.randomUUID()` | Trivial | 1 |
-| Recherche/filtre sidebar | Faible | 1 |
-| Dupliquer un composant | Faible | 2 |
-| Modifier le nom du projet | Moyen | 3 |
+## Documents & fichiers
 
-### Valeur métier — priorité haute
-| Tâche | Effort | Fichiers | Note |
-|---|---|---|---|
-| Séparer Documents (sidebar + création) | Moyen | 3–4 | Cohérence UX |
-| Nom créateur + version projet | Moyen | 3–4 | Requis pour PDF/devis |
-| Taux horaire configurable | Moyen | 2–3 | Prérequis devis |
-| Export Devis PDF | Moyen | 2–3 | Dépend taux horaire |
-| Export STORIES.md | Élevé | 4+ | ✅ Fait (global + images) |
+- [ ] Importer d'autres types de documents (Excel, PDF, etc.) et les lier au projet — stockés dans un dossier `documents/`
 
-### Améliorations secondaires
-| Tâche | Effort | Fichiers | Note |
-|---|---|---|---|
-| Améliorations PDF (page de garde, hors périmètre) | Moyen | 2 | Livrable plus pro |
-| Drag & drop composants | Très élevé | 3+ | Confort, pas critique |
+
+## estimation
+Tâche: Supprimer estimations du PDF
+  Effort: ~20 lignes
+  Fichiers touchés: 1 (ProjectPDFDocument.tsx)
+  Note: Juste retirer des blocs
+  ────────────────────────────────────────
+  Tâche: Images pleine largeur PDF
+  Effort: ~10 lignes
+  Fichiers touchés: 1 (ProjectPDFDocument.tsx)
+  Note: Ajuster les styles
+  ────────────────────────────────────────
+  Tâche: Toutes les images dans le PDF
+  Effort: ~40 lignes
+  Fichiers touchés: 1-2 (ProjectPDFDocument.tsx,
+    pdfExport.tsx)
+  Note: Boucle sur images[] au lieu de la primary
+  ────────────────────────────────────────
+  Tâche: Dupliquer un composant
+  Effort: ~30 lignes
+  Fichiers touchés: 2 (componentSlice.ts, ComponentList.tsx)
+  Note: Deep clone + nouveau UUID
+  ────────────────────────────────────────
+  Tâche: Recherche sidebar
+  Effort: ~40 lignes
+  Fichiers touchés: 1 (ComponentList.tsx)
+  Note: Input + filter sur le state
+  ────────────────────────────────────────
+  Tâche: Infos projet (créateur, version, client)
+  Effort: ~100 lignes
+  Fichiers touchés: 3-4 (types, store, dashboard, PDF)
+  Note: Nouveaux champs + UI
+  ────────────────────────────────────────
+  Tâche: Total HT affiché
+  Effort: ~20 lignes
+  Fichiers touchés: 1 (ProjectDashboard.tsx)
+  Note: Calcul déjà dispo
+  ────────────────────────────────────────
+  Tâche: Page de garde PDF
+  Effort: ~80 lignes
+  Fichiers touchés: 1-2 (ProjectPDFDocument.tsx)
+  Note: Nouveau <Page>, dépend des infos projet
+  ────────────────────────────────────────
+  Tâche: Masquer taux horaire
+  Effort: ~30 lignes
+  Fichiers touchés: 2-3 (settings, dashboard, PDF)
+  Note: Toggle booléen
+  ────────────────────────────────────────
+  Tâche: En-tête STORIES.md
+  Effort: ~20 lignes
+  Fichiers touchés: 1 (markdownExport.ts)
+  Note: Texte en haut du fichier
+  ────────────────────────────────────────
+  Tâche: Export STORIES par composant
+  Effort: ~60 lignes
+  Fichiers touchés: 1-2 (markdownExport.ts)
+  Note: Boucle + écriture multiple
+  ────────────────────────────────────────
+  Tâche: Tâches v2 dans exports
+  Effort: ~40 lignes
+  Fichiers touchés: 2 (types + exports)
+  Note: Nouveau champ Task.version + filtrage
+  ────────────────────────────────────────
+  Tâche: Section hors périmètre PDF
+  Effort: ~50 lignes
+  Fichiers touchés: 1 (ProjectPDFDocument.tsx)
+  Note: Dépend du flag v2
+  ────────────────────────────────────────
+  Tâche: Recadrage d'image
+  Effort: ~300 lignes
+  Fichiers touchés: 3-4 (nouveau composant crop,
+  imageManager,
+    viewer)
+  Note: Canvas crop + UI modale, le plus gros UX
+  ────────────────────────────────────────
+  Tâche: Zones rectangulaires
+  Effort: ~250 lignes
+  Fichiers touchés: 3-4 (types, ImagePinViewer, overlay,
+    store)
+  Note: Extension du système pins
+  ────────────────────────────────────────
+  Tâche: Lier zones → composants
+  Effort: ~80 lignes
+  Fichiers touchés: 2-3 (types, UI select, overlay)
+  Note: Dépend des zones
+  ────────────────────────────────────────
+  Tâche: Zones dans le PDF
+  Effort: ~60 lignes
+  Fichiers touchés: 2 (imageHelpers.ts, pdfExport.tsx)
+  Note: Canvas rendering
+  ────────────────────────────────────────
+  Tâche: Export devis PDF
+  Effort: ~200 lignes
+  Fichiers touchés: 2-3 (nouveau document PDF, types)
+  Note: Dépend infos projet
+  ────────────────────────────────────────
+  Tâche: Snippets/templates
+  Effort: ~300 lignes
+  Fichiers touchés: 4-5 (store global, Rust, UI settings,
+    widget)
+  Note: Nouveau système complet
+  ────────────────────────────────────────
+  Tâche: Import documents externes
+  Effort: ~200 lignes
+  Fichiers touchés: 3-4 (Rust, types, UI, dossier documents/)
+  Note: Nouveau flux d'import
+  ────────────────────────────────────────
+  Tâche: Menu app + réglages
+  Effort: ~150 lignes
+  Fichiers touchés: 3-4 (Rust menu, settings store, UI
+  modale)
+  Note: Infrastructure
+
+  Par priorité (rapport valeur/effort) :
+
+  1. Quick wins (~20 min chacun) : supprimer estimations PDF,
+   images pleine largeur PDF, total HT, en-tête STORIES
+  2. Gains rapides (~1h) : dupliquer composant, recherche
+  sidebar, toutes les images dans PDF
+  3. Valeur métier (~2-3h) : infos projet + page de garde
+  PDF, zones sur images, export devis
+  4. Features lourdes (~4h+) : recadrage image, snippets,
+  import documents externes
