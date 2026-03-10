@@ -33,14 +33,6 @@ export default function InstanceItem({
     <Card className="group/item hover:shadow-sm transition-shadow h-full">
       <CardContent className="py-3 px-4">
         <div className="flex justify-between items-start gap-3">
-          {component.imageBase64 && (
-            <img
-              src={component.imageBase64}
-              alt={component.name}
-              className="w-12 h-12 object-cover rounded border flex-shrink-0"
-            />
-          )}
-
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1 flex-wrap">
               <div className="font-semibold cursor-pointer" onClick={onNavigate}>

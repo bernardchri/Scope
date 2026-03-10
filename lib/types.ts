@@ -51,11 +51,9 @@ export interface Component {
   description?: string;
   category: ScopeItemType;
 
-  imageBase64?: string; // @deprecated - kept for migration compat
   images?: ComponentImage[];
 
   estimatedHours?: number;
-  content?: string; // @deprecated - kept for migration compat
   notes?: NoteData[];
   widgets?: WidgetInstance[];
   instances: ComponentInstance[];

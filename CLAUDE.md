@@ -56,7 +56,7 @@ mon-projet/
 - **Close/switch**: `closeProject()` → back to `HomeScreen`.
 - **Recent files**: last 3 paths in `config.dat` (`recentFiles: Array<{name, path, openedAt}>`). Paths point to folders.
 - **No in-app deletion** — users delete project folders from Finder.
-- **Export/backup**: gzip archive wrapping `{ projects: [] }` via `lib/backup.ts`. `load_project_file` (Rust) handles both plain JSON and gzip.
+- **Auto-backup**: gzip archive wrapping `{ projects: [] }` via `lib/backup.ts` (`createAutoBackup` only). `load_project_file` (Rust) handles both plain JSON and gzip for legacy `.scope` files.
 - **Migration**: opening a `.scope` file prompts migration to folder format via `migrate_scope_to_folder` (Rust). Original file is preserved.
 
 ### Image management (`lib/imageManager.ts`)
@@ -69,11 +69,12 @@ Images are stored as files in `img/` and loaded on demand via Rust `read_image_a
 - `getImageBase64(folderPath, filename)` → alias for `loadImageSrc` (used by PDF/canvas)
 - `deleteImage(folderPath, filename)` → removes file from `img/` and evicts from cache
 
-**`useImageLoader` hook** (`lib/hooks/useImageLoader.ts`): takes `images[]` + `folderPath`, async-loads filename-based images from disk, returns `resolve(image)` for `<img src>`. Used by `ImagePinViewer`, `ZoomModal`, `ComponentCardImage`, `ImageCarousel`.
+**`useImageLoader` hook** (`lib/hooks/useImageLoader.ts`): takes `images[]` + `folderPath`, async-loads filename-based images from disk, returns `resolve(image)` for `<img src>`. Used by `ImagePinViewer`, `ZoomModal`.
 
 Rust commands (`src-tauri/src/main.rs`):
-- Legacy: `save_project_file`, `load_project_file`, `list_scope_files`, `delete_project_file`, `rename_project_file`, `write_pdf_file`
+- Legacy (read-only): `load_project_file` (for opening `.scope` files + migration)
 - Folder: `create_project_folder`, `save_project_to_folder`, `load_project_from_folder`, `save_image_file`, `read_image_as_base64`, `delete_image_file`, `is_project_folder`, `migrate_scope_to_folder`
+- Utility: `write_pdf_file`, `write_binary_file`, `write_text_file`, `create_auto_backup`
 
 Native macOS menu (`src-tauri/src/main.rs` `.setup()`):
 - `SCOPE` : Ouvrir un projet… (Cmd+O, folder picker), Fermer le projet (Cmd+W), Quitter. Menu events emit Tauri events to the frontend.
@@ -108,9 +109,9 @@ Widget toggle UI in `ScopeItemDetail.tsx` allows enabling/disabling widgets per 
 ### Data types (`lib/types.ts`)
 
 - `Project`: `{ id, name, description?, filename?, hourlyRate?, budgetCap?, components[], createdAt, formatVersion? }` — `formatVersion: 2` = folder format
-- `Component`: `{ category: ScopeItemType, tasks[], instances[], images[], content?, estimatedHours?, widgets? }`
+- `Component`: `{ category: ScopeItemType, tasks[], instances[], images[], estimatedHours?, widgets?, notes?, }`
 - `Task`: `{ id, name, completed, category: 'frontend'|'backend'|'seo'|'motion', pinRef? }` — `pinRef: { imageId, pinId, pinNumber }` links a task to an image pin
-- `ComponentImage`: `{ id, base64?, filename?, caption?, isPrimary, pins? }` — `filename` for folder format, `base64` for legacy. Supersedes legacy `imageBase64` field (migration in `lib/migrations.ts`)
+- `ComponentImage`: `{ id, base64?, filename?, caption?, isPrimary, pins? }` — `filename` for folder format, `base64` for legacy/migration
 - `ImagePin`: `{ id, number, x, y }` — x/y are percentages (0-100) relative to the image container
 - `ComponentInstance`: `{ id, componentId, pinRef? }` — `pinRef: { imageId, pinId, pinNumber }` links an instance to an image pin
 

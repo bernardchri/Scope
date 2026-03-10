@@ -178,23 +178,6 @@ fn migrate_scope_to_folder(scope_path: String, folder_path: String) -> Result<se
 }
 
 #[tauri::command]
-fn export_to_file(
-    data: serde_json::Value,
-    path: String,
-) -> Result<(), String> {
-    let path_buf = PathBuf::from(path);
-    backup::export_to_scope_file(data, path_buf)
-}
-
-#[tauri::command]
-fn import_from_file(
-    path: String,
-) -> Result<serde_json::Value, String> {
-    let path_buf = PathBuf::from(path);
-    backup::import_from_scope_file(path_buf)
-}
-
-#[tauri::command]
 fn create_auto_backup(
     app: tauri::AppHandle,
     data: serde_json::Value,
@@ -205,20 +188,6 @@ fn create_auto_backup(
         .join("backups");
 
     backup::create_auto_backup(data, backup_dir)
-}
-
-#[tauri::command]
-fn save_project_file(path: String, data: serde_json::Value) -> Result<(), String> {
-    let path_buf = PathBuf::from(&path);
-    if let Some(parent) = path_buf.parent() {
-        std::fs::create_dir_all(parent)
-            .map_err(|e| format!("Impossible de créer le dossier: {}", e))?;
-    }
-    let json = serde_json::to_string_pretty(&data)
-        .map_err(|e| format!("Erreur sérialisation: {}", e))?;
-    std::fs::write(&path_buf, json)
-        .map_err(|e| format!("Erreur écriture fichier: {}", e))?;
-    Ok(())
 }
 
 #[tauri::command]
@@ -234,37 +203,6 @@ fn load_project_file(path: String) -> Result<serde_json::Value, String> {
 
     // Fallback : format gzip (anciens exports/backups)
     backup::import_from_scope_file(path_buf)
-}
-
-#[tauri::command]
-fn list_scope_files(dir: String) -> Result<Vec<String>, String> {
-    let dir_path = PathBuf::from(&dir);
-    if !dir_path.exists() {
-        return Ok(vec![]);
-    }
-    let entries = std::fs::read_dir(&dir_path)
-        .map_err(|e| format!("Erreur lecture dossier: {}", e))?;
-    let mut files = Vec::new();
-    for entry in entries {
-        let entry = entry.map_err(|e| format!("Erreur entrée: {}", e))?;
-        let path = entry.path();
-        if path.extension().and_then(|s| s.to_str()) == Some("scope") {
-            if let Some(path_str) = path.to_str() {
-                files.push(path_str.to_string());
-            }
-        }
-    }
-    Ok(files)
-}
-
-#[tauri::command]
-fn delete_project_file(path: String) -> Result<(), String> {
-    let path_buf = PathBuf::from(&path);
-    if path_buf.exists() {
-        std::fs::remove_file(&path_buf)
-            .map_err(|e| format!("Erreur suppression fichier: {}", e))?;
-    }
-    Ok(())
 }
 
 #[tauri::command]
@@ -302,17 +240,6 @@ fn write_binary_file(path: String, base64_data: String) -> Result<(), String> {
 fn write_text_file(path: String, content: String) -> Result<(), String> {
     std::fs::write(&path, content.as_bytes())
         .map_err(|e| format!("Erreur écriture fichier: {}", e))
-}
-
-#[tauri::command]
-fn rename_project_file(old_path: String, new_path: String) -> Result<(), String> {
-    let old_buf = PathBuf::from(&old_path);
-    let new_buf = PathBuf::from(&new_path);
-    if old_buf.exists() {
-        std::fs::rename(&old_buf, &new_buf)
-            .map_err(|e| format!("Erreur renommage fichier: {}", e))?;
-    }
-    Ok(())
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -369,14 +296,8 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
-            export_to_file,
-            import_from_file,
             create_auto_backup,
-            save_project_file,
             load_project_file,
-            list_scope_files,
-            delete_project_file,
-            rename_project_file,
             write_pdf_file,
             write_binary_file,
             write_text_file,
