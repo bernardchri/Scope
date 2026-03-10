@@ -40,7 +40,6 @@ export default function ZoomModal({ open, image, tasks, folderPath, onUpdatePins
     const pins = image.pins ?? [];
     localPinsRef.current = pins;
     setLocalPins(pins);
-    setNaturalSize(null);
   }, [image.id]);
 
   function savePins(pins: ImagePin[]) {

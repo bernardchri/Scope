@@ -71,8 +71,9 @@ export default function ImagePinViewer({ images, tasks, folderPath, onUpdateImag
     handlePinClick,
   } = usePinEditor({ imageContainerRef, localImages, setLocalImages, currentIndex, onUpdateImages, crop: currentCrop });
 
-  // Reset naturalSize when image changes
-  useEffect(() => { setNaturalSize(null); }, [currentImage?.id]);
+  // Note: we intentionally do NOT reset naturalSize on image id change.
+  // If the filename is the same (same image reused), onLoad won't re-fire
+  // and naturalSize stays correct. For different files, onLoad updates it.
 
   const handleImgLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
     const img = e.currentTarget;
