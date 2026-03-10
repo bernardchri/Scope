@@ -218,6 +218,7 @@ export default function ImagePinViewer({ images, tasks, folderPath, onUpdateImag
                 style={showCropView ? {
                   position: 'absolute',
                   width: `${100 / (currentCrop!.width / 100)}%`,
+                  maxWidth: 'none',
                   left: `${-(currentCrop!.x / currentCrop!.width) * 100}%`,
                   top: `${-(currentCrop!.y / currentCrop!.height) * 100}%`,
                 } : undefined}

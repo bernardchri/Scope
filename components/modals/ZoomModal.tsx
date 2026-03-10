@@ -232,6 +232,7 @@ export default function ZoomModal({ open, image, tasks, folderPath, onUpdatePins
                 style={showCropView ? {
                   position: 'absolute',
                   width: `${100 / (crop!.width / 100)}%`,
+                  maxWidth: 'none',
                   left: `${-(crop!.x / crop!.width) * 100}%`,
                   top: `${-(crop!.y / crop!.height) * 100}%`,
                 } : undefined}
