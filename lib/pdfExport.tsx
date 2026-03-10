@@ -31,10 +31,10 @@ async function preparePdfProject(project: Project, folderPath: string): Promise<
             base64 = await getImageBase64(folderPath, img.filename);
           }
           const pins = img.pins ?? [];
-          if (pins.length > 0) {
-            base64 = await renderImageWithPins(base64, pins);
+          if (pins.length > 0 || img.crop) {
+            base64 = await renderImageWithPins(base64, pins, img.crop);
           }
-          return { ...img, base64, pins: [] };
+          return { ...img, base64, pins: [], crop: undefined };
         })
       );
       return { ...comp, images };

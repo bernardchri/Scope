@@ -187,10 +187,11 @@ async function collectImages(project: Project, dir: string, folderPath?: string)
       if (!base64) continue;
 
       const hasPins = (img.pins ?? []).length > 0;
-      const base64ToWrite = hasPins
-        ? await renderImageWithPins(base64, img.pins!)
+      const hasCrop = !!img.crop;
+      const base64ToWrite = (hasPins || hasCrop)
+        ? await renderImageWithPins(base64, img.pins ?? [], img.crop)
         : base64;
-      const ext = hasPins ? 'png' : getImageExtension(base64);
+      const ext = (hasPins || hasCrop) ? 'png' : getImageExtension(base64);
       const filename = `${compSlug}-${i}.${ext}`;
       const imgPath = `${dir}/stories-img/${filename}`;
       await invoke('write_binary_file', { path: imgPath, base64Data: base64ToWrite });

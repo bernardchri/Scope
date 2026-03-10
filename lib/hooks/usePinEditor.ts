@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ComponentImage, ImagePin } from '@/lib/types';
+import { ComponentImage, ImagePin, CropRect } from '@/lib/types';
+import { pinToFullSpace } from '@/lib/imageHelpers';
 
 interface UsePinEditorParams {
   imageContainerRef: React.RefObject<HTMLDivElement | null>;
@@ -9,6 +10,7 @@ interface UsePinEditorParams {
   setLocalImages: React.Dispatch<React.SetStateAction<ComponentImage[]>>;
   currentIndex: number;
   onUpdateImages: (images: ComponentImage[]) => void;
+  crop?: CropRect;
 }
 
 export function usePinEditor({
@@ -17,6 +19,7 @@ export function usePinEditor({
   setLocalImages,
   currentIndex,
   onUpdateImages,
+  crop,
 }: UsePinEditorParams) {
   const [selectedPinId, setSelectedPinId] = useState<string | null>(null);
   const [draggingPinId, setDraggingPinId] = useState<string | null>(null);
@@ -43,10 +46,12 @@ export function usePinEditor({
   function getCoords(clientX: number, clientY: number) {
     const rect = imageContainerRef.current?.getBoundingClientRect();
     if (!rect) return null;
-    return {
+    const containerCoords = {
       x: Math.max(0, Math.min(100, ((clientX - rect.left) / rect.width) * 100)),
       y: Math.max(0, Math.min(100, ((clientY - rect.top) / rect.height) * 100)),
     };
+    // If crop is active, map container coords (which are in cropped space) to full-image space
+    return crop ? pinToFullSpace(containerCoords, crop) : containerCoords;
   }
 
   function updatePins(pins: ImagePin[], save = false) {

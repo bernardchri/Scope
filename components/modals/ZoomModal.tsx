@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { ComponentImage, ImagePin, Task } from '@/lib/types';
+import { ComponentImage, ImagePin, Task, CropRect } from '@/lib/types';
 import { useImageLoader } from '@/lib/hooks/useImageLoader';
+import { pinToFullSpace } from '@/lib/imageHelpers';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Eye, EyeOff, ZoomIn, ZoomOut, X } from 'lucide-react';
@@ -30,6 +31,8 @@ export default function ZoomModal({ open, image, tasks, folderPath, onUpdatePins
   // Refs pour éviter les stale closures dans les handlers non-React
   const zoomRef = useRef(1);
   const localPinsRef = useRef<ImagePin[]>(image.pins ?? []);
+
+  const crop = image.crop;
 
   // Sync pins quand l'image change (changement de slide depuis l'extérieur)
   useEffect(() => {
@@ -99,10 +102,11 @@ export default function ZoomModal({ open, image, tasks, folderPath, onUpdatePins
     const inner = innerRef.current;
     if (!inner) return null;
     const rect = inner.getBoundingClientRect();
-    return {
+    const containerCoords = {
       x: Math.max(0, Math.min(100, (clientX - rect.left) / rect.width * 100)),
       y: Math.max(0, Math.min(100, (clientY - rect.top) / rect.height * 100)),
     };
+    return crop ? pinToFullSpace(containerCoords, crop) : containerCoords;
   }
 
   function handleInnerPointerDown(e: React.PointerEvent) {
@@ -150,6 +154,8 @@ export default function ZoomModal({ open, image, tasks, folderPath, onUpdatePins
     zoomRef.current = newZoom;
     setZoom(newZoom);
   }
+
+  const imgSrc = resolveImageSrc(image);
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
@@ -199,16 +205,25 @@ export default function ZoomModal({ open, image, tasks, folderPath, onUpdatePins
           <div
             ref={innerRef}
             className="relative select-none"
-            style={{ width: `${zoom * 100}%` }}
+            style={{
+              width: `${zoom * 100}%`,
+              ...(crop ? { overflow: 'hidden' } : {}),
+            }}
             onPointerDown={showPins ? handleInnerPointerDown : undefined}
             onPointerMove={handleInnerPointerMove}
             onPointerUp={handleInnerPointerUp}
           >
-            {resolveImageSrc(image) && (
+            {imgSrc && (
               <img
-                src={resolveImageSrc(image)}
+                src={imgSrc}
                 alt={image.caption || 'Image'}
-                className="w-full block pointer-events-none"
+                className={`block pointer-events-none ${!crop ? 'w-full' : ''}`}
+                style={crop ? {
+                  width: `${100 / (crop.width / 100)}%`,
+                  maxWidth: 'none',
+                  marginLeft: `${-(crop.x / crop.width) * 100}%`,
+                  marginTop: `${-(crop.y / crop.height) * 100}%`,
+                } : undefined}
                 draggable={false}
               />
             )}
@@ -219,6 +234,7 @@ export default function ZoomModal({ open, image, tasks, folderPath, onUpdatePins
                 selectedPinId={selectedPinId}
                 draggingPinId={draggingPinId}
                 zoom={zoom}
+                crop={crop}
                 onPinPointerDown={handlePinPointerDown}
                 onPinClick={handlePinClick}
               />

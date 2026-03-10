@@ -1,6 +1,7 @@
 'use client';
 
-import { ImagePin, Task } from '@/lib/types';
+import { ImagePin, Task, CropRect } from '@/lib/types';
+import { pinToCroppedSpace } from '@/lib/imageHelpers';
 
 interface PinsOverlayProps {
   pins: ImagePin[];
@@ -9,6 +10,7 @@ interface PinsOverlayProps {
   draggingPinId: string | null;
   /** Facteur de zoom inverse pour garder les badges à taille fixe (default: 1) */
   zoom?: number;
+  crop?: CropRect;
   onPinPointerDown: (e: React.PointerEvent, pinId: string) => void;
   onPinClick: (e: React.MouseEvent, pinId: string) => void;
 }
@@ -19,12 +21,17 @@ export default function PinsOverlay({
   selectedPinId,
   draggingPinId,
   zoom = 1,
+  crop,
   onPinPointerDown,
   onPinClick,
 }: PinsOverlayProps) {
+  const displayPins = crop
+    ? pins.map(p => pinToCroppedSpace(p, crop)).filter(p => p.visible)
+    : pins;
+
   return (
     <>
-      {pins.map(pin => {
+      {displayPins.map(pin => {
         const linkedTask = tasks.find(t => t.pinRef?.pinId === pin.id);
         const isSelected = pin.id === selectedPinId;
         return (

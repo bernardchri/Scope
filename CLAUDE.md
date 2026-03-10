@@ -111,8 +111,9 @@ Widget toggle UI in `ScopeItemDetail.tsx` allows enabling/disabling widgets per 
 - `Project`: `{ id, name, description?, filename?, hourlyRate?, budgetCap?, components[], createdAt, formatVersion? }` — `formatVersion: 2` = folder format
 - `Component`: `{ category: ScopeItemType, tasks[], instances[], images[], estimatedHours?, widgets?, notes?, }`
 - `Task`: `{ id, name, completed, category: 'frontend'|'backend'|'seo'|'motion', pinRef? }` — `pinRef: { imageId, pinId, pinNumber }` links a task to an image pin
-- `ComponentImage`: `{ id, base64?, filename?, caption?, isPrimary, pins? }` — `filename` for folder format, `base64` for legacy/migration
-- `ImagePin`: `{ id, number, x, y }` — x/y are percentages (0-100) relative to the image container
+- `CropRect`: `{ x, y, width, height }` — all percentages (0-100) of full image dimensions
+- `ComponentImage`: `{ id, base64?, filename?, caption?, isPrimary, pins?, crop? }` — `filename` for folder format, `base64` for legacy/migration, `crop` for interactive cropping
+- `ImagePin`: `{ id, number, x, y }` — x/y are percentages (0-100) relative to the **full** image (not the cropped view)
 - `ComponentInstance`: `{ id, componentId, pinRef? }` — `pinRef: { imageId, pinId, pinNumber }` links an instance to an image pin
 
 ### Detail view (`components/ScopeItemDetail.tsx`)
@@ -149,6 +150,8 @@ Le terme "Tâches" est remplacé par "Éléments" dans toute l'interface. Le cha
 - Delete key with selected pin → removes pin
 - Eye button → show/hide all pins
 - Pins saved in `ComponentImage.pins[]` via `onUpdateImages` → `updateComponent`
+
+**Image crop**: `CropOverlay` (`components/molecules/CropOverlay.tsx`) provides interactive rectangular selection. Crop stored as `ComponentImage.crop?: CropRect` (percentages). Display uses CSS (overflow-hidden + scaled/offset image), not canvas — pins are remapped via `pinToCroppedSpace`/`pinToFullSpace` (`lib/imageHelpers.ts`). Pins are always stored in full-image coordinates. Crop applies to main view, thumbnails, ZoomModal, PDF and Markdown exports (`renderImageWithPins` accepts optional `crop`).
 
 Pin ↔ element link: in `TaskItem` edit form, a `Select` for picking a pin. Stored in `Task.pinRef`. Badge `#N` displayed if linked.
 

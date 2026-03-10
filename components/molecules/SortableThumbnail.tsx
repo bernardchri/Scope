@@ -17,6 +17,8 @@ export default function SortableThumbnail({ image, index, isActive, src, onClick
     id: image.id,
   });
 
+  const crop = image.crop;
+
   return (
     <div
       ref={setNodeRef}
@@ -35,7 +37,14 @@ export default function SortableThumbnail({ image, index, isActive, src, onClick
           <img
             src={src}
             alt={image.caption || `Miniature ${index + 1}`}
-            className="w-full h-full object-cover pointer-events-none"
+            className={crop ? 'pointer-events-none' : 'w-full h-full object-cover pointer-events-none'}
+            style={crop ? {
+              position: 'absolute',
+              width: `${100 / (crop.width / 100)}%`,
+              maxWidth: 'none',
+              left: `${-(crop.x / crop.width) * 100}%`,
+              top: `${-(crop.y / crop.height) * 100}%`,
+            } : undefined}
             draggable={false}
           />
         )}

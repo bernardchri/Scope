@@ -36,6 +36,13 @@ export interface ImagePin {
   y: number; // % 0-100
 }
 
+export interface CropRect {
+  x: number;      // left edge, % (0-100) of total width
+  y: number;      // top edge, % (0-100) of total height
+  width: number;  // crop width, % (0-100)
+  height: number; // crop height, % (0-100)
+}
+
 export interface ComponentImage {
   id: string;
   base64?: string;
@@ -43,6 +50,7 @@ export interface ComponentImage {
   caption?: string;
   isPrimary: boolean;
   pins?: ImagePin[];
+  crop?: CropRect;
 }
 
 export interface Component {

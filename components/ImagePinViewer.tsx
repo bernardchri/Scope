@@ -1,16 +1,18 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
-import { ComponentImage, ImagePin, Task } from '@/lib/types';
+import { useState, useRef, useEffect } from 'react';
+import { ComponentImage, ImagePin, Task, CropRect } from '@/lib/types';
 import { usePinEditor } from '@/lib/hooks/usePinEditor';
-import { saveImage, deleteImage } from '@/lib/imageManager';
+import { open } from '@tauri-apps/plugin-dialog';
+import { saveImageFromPath, deleteImage } from '@/lib/imageManager';
 import { useImageLoader } from '@/lib/hooks/useImageLoader';
 import PinsOverlay from '@/components/molecules/PinsOverlay';
+import CropOverlay from '@/components/molecules/CropOverlay';
 import SortableThumbnail from '@/components/molecules/SortableThumbnail';
 import ZoomModal from '@/components/modals/ZoomModal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ChevronLeft, ChevronRight, Eye, EyeOff, Maximize2, Plus, Upload } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Crop, Eye, EyeOff, Maximize2, Plus, Upload } from 'lucide-react';
 import {
   DndContext,
   DragEndEvent,
@@ -28,6 +30,16 @@ interface ImagePinViewerProps {
   onUpdateImages: (images: ComponentImage[]) => void;
 }
 
+/** CSS inline styles for displaying a cropped image */
+function cropStyles(crop: CropRect) {
+  return {
+    width: `${100 / (crop.width / 100)}%`,
+    maxWidth: 'none' as const,
+    marginLeft: `${-(crop.x / crop.width) * 100}%`,
+    marginTop: `${-(crop.y / crop.height) * 100}%`,
+  };
+}
+
 export default function ImagePinViewer({ images, tasks, folderPath, onUpdateImages }: ImagePinViewerProps) {
   const thumbnailSensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
@@ -41,12 +53,8 @@ export default function ImagePinViewer({ images, tasks, folderPath, onUpdateImag
   const [imageError, setImageError] = useState<string | null>(null);
   const [editingCaption, setEditingCaption] = useState(false);
   const [captionDraft, setCaptionDraft] = useState('');
+  const [isCropping, setIsCropping] = useState(false);
   const imageContainerRef = useRef<HTMLDivElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const triggerFileInput = useCallback(() => {
-    fileInputRef.current?.click();
-  }, []);
 
   useEffect(() => { setLocalImages(images); }, [images]);
 
@@ -56,6 +64,9 @@ export default function ImagePinViewer({ images, tasks, folderPath, onUpdateImag
       setCurrentIndex(localImages.length - 1);
     }
   }, [localImages.length, currentIndex]);
+
+  const currentImage = localImages[currentIndex] as ComponentImage | undefined;
+  const currentCrop = currentImage?.crop;
 
   const {
     selectedPinId,
@@ -67,24 +78,20 @@ export default function ImagePinViewer({ images, tasks, folderPath, onUpdateImag
     handleContainerPointerUp,
     handlePinPointerDown,
     handlePinClick,
-  } = usePinEditor({ imageContainerRef, localImages, setLocalImages, currentIndex, onUpdateImages });
+  } = usePinEditor({ imageContainerRef, localImages, setLocalImages, currentIndex, onUpdateImages, crop: currentCrop });
 
   // ── Image management ────────────────────────────────────────────────
 
-  async function handleAddImage(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
+  async function handleAddImage() {
     setImageError(null);
-
-    if (!file.type.startsWith('image/')) {
-      setImageError('Le fichier doit être une image');
-      e.target.value = '';
-      return;
-    }
-
     try {
-      const filename = await saveImage(folderPath, file);
+      const filePath = await open({
+        multiple: false,
+        filters: [{ name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'gif', 'webp'] }],
+      });
+      if (!filePath || typeof filePath !== 'string') return;
+
+      const filename = await saveImageFromPath(folderPath, filePath);
       const newImage: ComponentImage = {
         id: crypto.randomUUID(),
         filename,
@@ -98,8 +105,6 @@ export default function ImagePinViewer({ images, tasks, folderPath, onUpdateImag
     } catch (err) {
       setImageError(err instanceof Error ? err.message : 'Erreur inconnue');
     }
-
-    e.target.value = '';
   }
 
   function handleRemoveImage(imageId: string) {
@@ -126,30 +131,41 @@ export default function ImagePinViewer({ images, tasks, folderPath, onUpdateImag
     setEditingCaption(false);
   }
 
+  function handleApplyCrop(crop: CropRect) {
+    const updated = localImages.map((img, i) =>
+      i === currentIndex ? { ...img, crop } : img
+    );
+    setLocalImages(updated);
+    onUpdateImages(updated);
+    setIsCropping(false);
+  }
+
+  function handleResetCrop() {
+    const updated = localImages.map((img, i) =>
+      i === currentIndex ? { ...img, crop: undefined } : img
+    );
+    setLocalImages(updated);
+    onUpdateImages(updated);
+    setIsCropping(false);
+  }
+
   // ── Empty state ─────────────────────────────────────────────────────
 
   if (!localImages || localImages.length === 0) {
     return (
       <div className="w-full border-2 border-dashed border-muted-foreground/25 rounded-lg p-8 text-center">
         <p className="text-muted-foreground mb-3">Aucune maquette</p>
-        <Button type="button" variant="outline" size="sm" onClick={triggerFileInput}>
+        <Button type="button" variant="outline" size="sm" onClick={handleAddImage}>
           <Upload className="h-4 w-4 mr-2" />
           Ajouter une image
         </Button>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          onChange={handleAddImage}
-          className="hidden"
-        />
         {imageError && <p className="text-destructive text-sm mt-2">{imageError}</p>}
         <p className="text-xs text-muted-foreground mt-2">Redimensionnement auto si &gt; 2048px</p>
       </div>
     );
   }
 
-  const currentImage = localImages[currentIndex];
+  if (!currentImage) return null;
   const currentPins = currentImage.pins ?? [];
 
   function handleThumbnailDragEnd(event: DragEndEvent) {
@@ -167,49 +183,59 @@ export default function ImagePinViewer({ images, tasks, folderPath, onUpdateImag
   function goToPrevious() {
     setCurrentIndex(prev => (prev === 0 ? localImages.length - 1 : prev - 1));
     clearSelection();
+    setIsCropping(false);
   }
 
   function goToNext() {
     setCurrentIndex(prev => (prev === localImages.length - 1 ? 0 : prev + 1));
     clearSelection();
+    setIsCropping(false);
   }
+
+  const imgSrc = resolveImageSrc(currentImage);
 
   return (
     <div className="space-y-4">
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        onChange={handleAddImage}
-        className="hidden"
-      />
       {/* ── Image principale avec overlay pins ─────────────────────────────── */}
       <div className="relative w-full bg-muted rounded-lg select-none p-5">
         <div className="flex flex-col justify-center items-center">
           <div
             ref={imageContainerRef}
             className="relative max-w-[840px]"
-            style={{ cursor: draggingPinId ? 'grabbing' : showPins ? 'crosshair' : 'default' }}
-            onPointerDown={showPins ? handleContainerPointerDown : undefined}
-            onPointerMove={showPins ? handleContainerPointerMove : undefined}
-            onPointerUp={showPins ? handleContainerPointerUp : undefined}
+            style={{
+              cursor: isCropping ? 'default' : draggingPinId ? 'grabbing' : showPins ? 'crosshair' : 'default',
+              ...(currentCrop && !isCropping ? { overflow: 'hidden' } : {}),
+            }}
+            onPointerDown={showPins && !isCropping ? handleContainerPointerDown : undefined}
+            onPointerMove={showPins && !isCropping ? handleContainerPointerMove : undefined}
+            onPointerUp={showPins && !isCropping ? handleContainerPointerUp : undefined}
           >
-            {resolveImageSrc(currentImage) && (
+            {imgSrc && (
               <img
-                src={resolveImageSrc(currentImage)}
+                src={imgSrc}
                 alt={currentImage.caption || `Image ${currentIndex + 1}`}
-                className="w-full block pointer-events-none"
+                className={`block pointer-events-none ${!currentCrop || isCropping ? 'w-full' : ''}`}
+                style={currentCrop && !isCropping ? cropStyles(currentCrop) : undefined}
                 draggable={false}
               />
             )}
-            {showPins && (
+            {showPins && !isCropping && (
               <PinsOverlay
                 pins={currentPins}
                 tasks={tasks}
                 selectedPinId={selectedPinId}
                 draggingPinId={draggingPinId}
+                crop={currentCrop}
                 onPinPointerDown={handlePinPointerDown}
                 onPinClick={handlePinClick}
+              />
+            )}
+            {isCropping && (
+              <CropOverlay
+                initialCrop={currentCrop}
+                onApply={handleApplyCrop}
+                onReset={handleResetCrop}
+                onCancel={() => setIsCropping(false)}
               />
             )}
           </div>
@@ -234,8 +260,13 @@ export default function ImagePinViewer({ images, tasks, folderPath, onUpdateImag
           {/* Controles haut-droit */}
           <div className="absolute top-2 right-2 flex gap-1">
             <Button variant="secondary" size="icon" className="rounded-full shadow opacity-80 hover:opacity-100"
-              onClick={(e) => { e.stopPropagation(); triggerFileInput(); }} title="Ajouter une image">
+              onClick={(e) => { e.stopPropagation(); handleAddImage(); }} title="Ajouter une image">
               <Upload className="h-4 w-4" />
+            </Button>
+            <Button variant="secondary" size="icon" className="rounded-full shadow opacity-80 hover:opacity-100"
+              onClick={(e) => { e.stopPropagation(); setIsCropping(v => !v); clearSelection(); }}
+              title={isCropping ? 'Annuler le recadrage' : 'Recadrer l\'image'}>
+              <Crop className="h-4 w-4" />
             </Button>
             <Button variant="secondary" size="icon" className="rounded-full shadow opacity-80 hover:opacity-100"
               onClick={(e) => { e.stopPropagation(); setZoomOpen(true); }} title="Ouvrir en plein ecran">
@@ -249,7 +280,7 @@ export default function ImagePinViewer({ images, tasks, folderPath, onUpdateImag
           </div>
 
           {/* Hint */}
-          {showPins && (currentPins.length === 0 || selectedPinId) && (
+          {showPins && !isCropping && (currentPins.length === 0 || selectedPinId) && (
             <div className="absolute bottom-2 right-2 text-xs text-white/70 pointer-events-none bg-black/30 px-2 py-1 rounded">
               {selectedPinId ? 'Suppr. pour effacer' : 'Cliquer pour ajouter un pin'}
             </div>
@@ -301,13 +332,13 @@ export default function ImagePinViewer({ images, tasks, folderPath, onUpdateImag
                   index={index}
                   isActive={index === currentIndex}
                   src={resolveImageSrc(image)}
-                  onClick={() => { setCurrentIndex(index); clearSelection(); }}
+                  onClick={() => { setCurrentIndex(index); clearSelection(); setIsCropping(false); }}
                   onDelete={() => handleRemoveImage(image.id)}
                 />
               ))}
               <button
                 type="button"
-                onClick={triggerFileInput}
+                onClick={handleAddImage}
                 className="w-20 h-20 flex-shrink-0 rounded-md border-2 border-dashed border-muted-foreground/30 flex items-center justify-center text-muted-foreground hover:border-muted-foreground/60 hover:text-foreground transition-colors cursor-pointer"
                 title="Ajouter une image"
               >
