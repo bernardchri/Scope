@@ -99,9 +99,14 @@ export async function loadImageSrc(folderPath: string, filename: string): Promis
   const cached = imageCache.get(key);
   if (cached) return cached;
 
-  const base64 = await invoke<string>('read_image_as_base64', { filePath: key });
-  imageCache.set(key, base64);
-  return base64;
+  try {
+    const base64 = await invoke<string>('read_image_as_base64', { filePath: key });
+    imageCache.set(key, base64);
+    return base64;
+  } catch (e) {
+    console.warn(`[imageManager] Fichier introuvable: ${key}`);
+    return '';
+  }
 }
 
 /**

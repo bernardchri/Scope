@@ -182,7 +182,11 @@ async function collectImages(project: Project, dir: string, folderPath?: string)
       // Load base64 from disk if using folder format
       let base64 = img.base64 || '';
       if (img.filename && folderPath) {
-        base64 = await getImageBase64(folderPath, img.filename);
+        try {
+          base64 = await getImageBase64(folderPath, img.filename);
+        } catch {
+          console.warn(`[STORIES] Image introuvable: ${img.filename}`);
+        }
       }
       if (!base64) continue;
 

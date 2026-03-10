@@ -28,7 +28,12 @@ async function preparePdfProject(project: Project, folderPath: string): Promise<
           // Load base64 from disk if using folder format
           let base64 = img.base64 || '';
           if (img.filename && folderPath) {
-            base64 = await getImageBase64(folderPath, img.filename);
+            try {
+              base64 = await getImageBase64(folderPath, img.filename);
+            } catch {
+              // File missing on disk — skip this image
+              console.warn(`[PDF] Image introuvable: ${img.filename}`);
+            }
           }
           const pins = img.pins ?? [];
           if (pins.length > 0 || img.crop) {
