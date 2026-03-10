@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
-import { ComponentImage, ImagePin, Task, CropRect } from '@/lib/types';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { ComponentImage, ImagePin, Task } from '@/lib/types';
 import { useImageLoader } from '@/lib/hooks/useImageLoader';
 import { pinToFullSpace } from '@/lib/imageHelpers';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
@@ -25,6 +25,7 @@ export default function ZoomModal({ open, image, tasks, folderPath, onUpdatePins
   const [localPins, setLocalPins] = useState<ImagePin[]>(image.pins ?? []);
   const [selectedPinId, setSelectedPinId] = useState<string | null>(null);
   const [draggingPinId, setDraggingPinId] = useState<string | null>(null);
+  const [naturalSize, setNaturalSize] = useState<{ w: number; h: number } | null>(null);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const innerRef = useRef<HTMLDivElement>(null);
@@ -39,12 +40,18 @@ export default function ZoomModal({ open, image, tasks, folderPath, onUpdatePins
     const pins = image.pins ?? [];
     localPinsRef.current = pins;
     setLocalPins(pins);
+    setNaturalSize(null);
   }, [image.id]);
 
   function savePins(pins: ImagePin[]) {
     localPinsRef.current = pins;
     setLocalPins(pins);
   }
+
+  const handleImgLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
+    const img = e.currentTarget;
+    setNaturalSize({ w: img.naturalWidth, h: img.naturalHeight });
+  }, []);
 
   // ── Wheel zoom centré sur le curseur ──────────────────────────────────────
   useEffect(() => {
@@ -156,6 +163,10 @@ export default function ZoomModal({ open, image, tasks, folderPath, onUpdatePins
   }
 
   const imgSrc = resolveImageSrc(image);
+  const showCropView = crop && naturalSize;
+  const cropAspectRatio = (showCropView && naturalSize)
+    ? `${crop!.width * naturalSize.w} / ${crop!.height * naturalSize.h}`
+    : undefined;
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
@@ -207,7 +218,7 @@ export default function ZoomModal({ open, image, tasks, folderPath, onUpdatePins
             className="relative select-none"
             style={{
               width: `${zoom * 100}%`,
-              ...(crop ? { overflow: 'hidden' } : {}),
+              ...(showCropView ? { overflow: 'hidden', aspectRatio: cropAspectRatio } : {}),
             }}
             onPointerDown={showPins ? handleInnerPointerDown : undefined}
             onPointerMove={handleInnerPointerMove}
@@ -217,14 +228,15 @@ export default function ZoomModal({ open, image, tasks, folderPath, onUpdatePins
               <img
                 src={imgSrc}
                 alt={image.caption || 'Image'}
-                className={`block pointer-events-none ${!crop ? 'w-full' : ''}`}
-                style={crop ? {
-                  width: `${100 / (crop.width / 100)}%`,
-                  maxWidth: 'none',
-                  marginLeft: `${-(crop.x / crop.width) * 100}%`,
-                  marginTop: `${-(crop.y / crop.height) * 100}%`,
+                className={`block pointer-events-none ${showCropView ? '' : 'w-full'}`}
+                style={showCropView ? {
+                  position: 'absolute',
+                  width: `${100 / (crop!.width / 100)}%`,
+                  left: `${-(crop!.x / crop!.width) * 100}%`,
+                  top: `${-(crop!.y / crop!.height) * 100}%`,
                 } : undefined}
                 draggable={false}
+                onLoad={handleImgLoad}
               />
             )}
             {showPins && (

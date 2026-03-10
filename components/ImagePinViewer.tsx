@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { ComponentImage, ImagePin, Task, CropRect } from '@/lib/types';
 import { usePinEditor } from '@/lib/hooks/usePinEditor';
 import { open } from '@tauri-apps/plugin-dialog';
@@ -30,16 +30,6 @@ interface ImagePinViewerProps {
   onUpdateImages: (images: ComponentImage[]) => void;
 }
 
-/** CSS inline styles for displaying a cropped image */
-function cropStyles(crop: CropRect) {
-  return {
-    width: `${100 / (crop.width / 100)}%`,
-    maxWidth: 'none' as const,
-    marginLeft: `${-(crop.x / crop.width) * 100}%`,
-    marginTop: `${-(crop.y / crop.height) * 100}%`,
-  };
-}
-
 export default function ImagePinViewer({ images, tasks, folderPath, onUpdateImages }: ImagePinViewerProps) {
   const thumbnailSensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
@@ -54,6 +44,7 @@ export default function ImagePinViewer({ images, tasks, folderPath, onUpdateImag
   const [editingCaption, setEditingCaption] = useState(false);
   const [captionDraft, setCaptionDraft] = useState('');
   const [isCropping, setIsCropping] = useState(false);
+  const [naturalSize, setNaturalSize] = useState<{ w: number; h: number } | null>(null);
   const imageContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => { setLocalImages(images); }, [images]);
@@ -79,6 +70,14 @@ export default function ImagePinViewer({ images, tasks, folderPath, onUpdateImag
     handlePinPointerDown,
     handlePinClick,
   } = usePinEditor({ imageContainerRef, localImages, setLocalImages, currentIndex, onUpdateImages, crop: currentCrop });
+
+  // Reset naturalSize when image changes
+  useEffect(() => { setNaturalSize(null); }, [currentImage?.id]);
+
+  const handleImgLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
+    const img = e.currentTarget;
+    setNaturalSize({ w: img.naturalWidth, h: img.naturalHeight });
+  }, []);
 
   // ── Image management ────────────────────────────────────────────────
 
@@ -194,6 +193,12 @@ export default function ImagePinViewer({ images, tasks, folderPath, onUpdateImag
 
   const imgSrc = resolveImageSrc(currentImage);
 
+  // Compute crop container aspect-ratio from natural image dimensions
+  const showCropView = currentCrop && !isCropping && naturalSize;
+  const cropAspectRatio = (showCropView && naturalSize)
+    ? `${currentCrop!.width * naturalSize.w} / ${currentCrop!.height * naturalSize.h}`
+    : undefined;
+
   return (
     <div className="space-y-4">
       {/* ── Image principale avec overlay pins ─────────────────────────────── */}
@@ -201,10 +206,10 @@ export default function ImagePinViewer({ images, tasks, folderPath, onUpdateImag
         <div className="flex flex-col justify-center items-center">
           <div
             ref={imageContainerRef}
-            className="relative max-w-[840px]"
+            className="relative max-w-[840px] w-full"
             style={{
               cursor: isCropping ? 'default' : draggingPinId ? 'grabbing' : showPins ? 'crosshair' : 'default',
-              ...(currentCrop && !isCropping ? { overflow: 'hidden' } : {}),
+              ...(showCropView ? { overflow: 'hidden', aspectRatio: cropAspectRatio } : {}),
             }}
             onPointerDown={showPins && !isCropping ? handleContainerPointerDown : undefined}
             onPointerMove={showPins && !isCropping ? handleContainerPointerMove : undefined}
@@ -214,9 +219,15 @@ export default function ImagePinViewer({ images, tasks, folderPath, onUpdateImag
               <img
                 src={imgSrc}
                 alt={currentImage.caption || `Image ${currentIndex + 1}`}
-                className={`block pointer-events-none ${!currentCrop || isCropping ? 'w-full' : ''}`}
-                style={currentCrop && !isCropping ? cropStyles(currentCrop) : undefined}
+                className={`block pointer-events-none ${showCropView ? '' : 'w-full'}`}
+                style={showCropView ? {
+                  position: 'absolute',
+                  width: `${100 / (currentCrop!.width / 100)}%`,
+                  left: `${-(currentCrop!.x / currentCrop!.width) * 100}%`,
+                  top: `${-(currentCrop!.y / currentCrop!.height) * 100}%`,
+                } : undefined}
                 draggable={false}
+                onLoad={handleImgLoad}
               />
             )}
             {showPins && !isCropping && (
