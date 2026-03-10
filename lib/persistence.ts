@@ -1,7 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { save } from '@tauri-apps/plugin-dialog';
 import { getStore, getConfigStore } from './store';
-import { Project } from './types';
+import { Project, ComponentImage } from './types';
 import { migrateProjectsToV2 } from './migrations';
 
 export function slugify(name: string): string {
@@ -16,18 +16,68 @@ export function slugify(name: string): string {
     .replace(/^-+|-+$/g, '');
 }
 
-// ─── Fichier courant ─────────────────────────────────────────────────────────
+// ─── Folder-based project (format v2) ────────────────────────────────────────
 
-export async function saveProjectToPath(path: string, project: Project): Promise<void> {
-  await invoke('save_project_file', { path, data: project });
+/**
+ * Save project to a folder. Strips base64 from images (they are already on disk).
+ */
+export async function saveProjectToPath(folderPath: string, project: Project): Promise<void> {
+  // Strip base64 from images — they live on disk as files
+  const cleanProject = stripBase64FromProject(project);
+  await invoke('save_project_to_folder', { folderPath, data: cleanProject });
 }
 
+/** Remove base64 data from all images before saving to scope.json */
+function stripBase64FromProject(project: Project): Project {
+  return {
+    ...project,
+    formatVersion: 2,
+    components: project.components.map(comp => ({
+      ...comp,
+      imageBase64: undefined,
+      images: (comp.images || []).map(img => {
+        const { base64, ...rest } = img;
+        return rest as ComponentImage;
+      }),
+    })),
+  };
+}
+
+/**
+ * Open a project from a folder (reads scope.json).
+ */
+export async function openProjectFolder(folderPath: string): Promise<Project | null> {
+  try {
+    const data = await invoke<any>('load_project_from_folder', { folderPath });
+    if (!data || !data.id) return null;
+    const project = migrateProjectsToV2([data as Project])[0];
+    project.formatVersion = 2;
+    return project;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Open a project — auto-detects folder vs legacy .scope file.
+ * For .scope files, returns the project but does NOT auto-migrate.
+ */
 export async function openProjectFile(path: string): Promise<Project | null> {
+  // Check if it's a folder with scope.json
+  try {
+    const isFolder = await invoke<boolean>('is_project_folder', { path });
+    if (isFolder) {
+      return openProjectFolder(path);
+    }
+  } catch {
+    // Not a folder, try as file
+  }
+
+  // Legacy .scope file
   try {
     const data = await invoke<any>('load_project_file', { path });
     let project: Project;
     if (data.projects && Array.isArray(data.projects)) {
-      // Ancien format gzip multi-projets : on prend le premier
       project = data.projects[0];
     } else if (data.id) {
       project = data as Project;
@@ -40,25 +90,56 @@ export async function openProjectFile(path: string): Promise<Project | null> {
   }
 }
 
-export async function createNewProjectFile(
+/**
+ * Create a new project in a folder.
+ */
+export async function createNewProjectFolder(
   name: string
 ): Promise<{ project: Project; path: string } | null> {
   const filePath = await save({
-    defaultPath: `${slugify(name)}.scope`,
-    filters: [{ name: 'SCOPE Files', extensions: ['scope'] }]
+    defaultPath: slugify(name),
   });
   if (!filePath) return null;
+
+  // Create folder structure
+  await invoke('create_project_folder', { folderPath: filePath });
 
   const project: Project = {
     id: crypto.randomUUID(),
     name,
     filename: slugify(name),
     components: [],
-    createdAt: new Date().toISOString()
+    createdAt: new Date().toISOString(),
+    formatVersion: 2,
   };
 
-  await invoke('save_project_file', { path: filePath, data: project });
+  await invoke('save_project_to_folder', { folderPath: filePath, data: project });
   return { project, path: filePath };
+}
+
+/**
+ * Migrate a .scope file to folder format.
+ * Returns the migrated project data.
+ */
+export async function migrateScopeToFolder(
+  scopePath: string,
+  folderPath: string
+): Promise<Project | null> {
+  try {
+    const data = await invoke<any>('migrate_scope_to_folder', { scopePath, folderPath });
+    if (!data || !data.id) return null;
+    return migrateProjectsToV2([data as Project])[0];
+  } catch (e) {
+    console.error('Erreur migration:', e);
+    return null;
+  }
+}
+
+// Keep legacy function for compat (unused but safe)
+export async function createNewProjectFile(
+  name: string
+): Promise<{ project: Project; path: string } | null> {
+  return createNewProjectFolder(name);
 }
 
 // ─── Fichiers récents ─────────────────────────────────────────────────────────

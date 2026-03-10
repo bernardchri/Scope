@@ -17,6 +17,7 @@ interface ComponentListProps {
 
 export default function ComponentList({ projectId }: ComponentListProps) {
   const projects = useProjectStore(state => state.projects);
+  const currentProjectPath = useProjectStore(state => state.currentProjectPath);
   const updateProject = useProjectStore(state => state.updateProject);
   const addComponent = useProjectStore(state => state.addComponent);
   const deleteComponent = useProjectStore(state => state.deleteComponent);
@@ -132,6 +133,7 @@ export default function ComponentList({ projectId }: ComponentListProps) {
                 projectId={projectId}
                 item={selectedItem}
                 allComponents={activeProject.components}
+                folderPath={currentProjectPath || ''}
                 onUpdate={handleUpdateComponent}
                 onDelete={() => handleDeleteComponent(selectedItem.id)}
                 onNavigate={navigateTo}
@@ -140,6 +142,7 @@ export default function ComponentList({ projectId }: ComponentListProps) {
           ) : (
             <ProjectDashboard
               project={activeProject}
+              folderPath={currentProjectPath || ''}
               onSelectComponent={(id) => setNavHistory([id])}
               onUpdateProject={(updates) => updateProject(activeProject.id, updates)}
             />

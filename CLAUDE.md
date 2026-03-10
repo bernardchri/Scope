@@ -25,7 +25,7 @@ No test suite.
 
 Tauri v2 desktop app wrapping a Next.js 15 static export. No backend/API. All data on local filesystem via Rust commands.
 
-**Document-centric**: one project open at a time, stored as a plain JSON `.scope` file.
+**Document-centric**: one project open at a time, stored as a folder containing `scope.json` + `img/` + `export/`. Legacy `.scope` files auto-migrate on open.
 
 ### Routing (`app/page.tsx`)
 
@@ -43,17 +43,40 @@ Zustand store split into 4 slices: `projectSlice`, `componentSlice`, `taskSlice`
 
 ### Persistence (`lib/persistence.ts` + `lib/projectStore.ts`)
 
-- **Open**: `openProjectFile(path)` → `openProject(project, path)`. Always call `initPreviousProject(project)` before `openProject` to avoid a spurious auto-save on load.
-- **Auto-save**: subscribe in `lib/projectStore.ts` compares `projects[0]` by reference → calls `saveProjectToPath` on any change.
-- **Close/switch**: `closeProject()` → back to `HomeScreen`.
-- **Recent files**: last 3 paths in `config.dat` (`recentFiles: Array<{name, path, openedAt}>`).
-- **No in-app deletion** — users delete `.scope` files from Finder.
-- **Export/backup**: gzip archive wrapping `{ projects: [] }` via `lib/backup.ts`. `load_project_file` (Rust) handles both plain JSON and gzip.
+**Folder format (v2)**: projects are stored as folders:
+```
+mon-projet/
+├── scope.json     # Project data (no base64 images)
+├── img/           # Image files (auto-resized to max 2048px wide)
+└── export/        # PDF/STORIES.md default output
+```
 
-Rust commands (`src-tauri/src/main.rs`): `save_project_file`, `load_project_file`, `list_scope_files`, `delete_project_file`, `rename_project_file`, `write_pdf_file`.
+- **Open**: `openProjectFile(path)` auto-detects folder vs legacy `.scope` file. Always call `initPreviousProject(project)` before `openProject` to avoid a spurious auto-save on load.
+- **Auto-save**: subscribe in `lib/projectStore.ts` compares `projects[0]` by reference → calls `saveProjectToPath` (writes `scope.json` without base64).
+- **Close/switch**: `closeProject()` → back to `HomeScreen`.
+- **Recent files**: last 3 paths in `config.dat` (`recentFiles: Array<{name, path, openedAt}>`). Paths point to folders.
+- **No in-app deletion** — users delete project folders from Finder.
+- **Export/backup**: gzip archive wrapping `{ projects: [] }` via `lib/backup.ts`. `load_project_file` (Rust) handles both plain JSON and gzip.
+- **Migration**: opening a `.scope` file prompts migration to folder format via `migrate_scope_to_folder` (Rust). Original file is preserved.
+
+### Image management (`lib/imageManager.ts`)
+
+Images are stored as files in `img/` and loaded on demand via Rust `read_image_as_base64` command. An in-memory cache (`imageCache` Map) avoids redundant disk reads. `closeProject()` clears the cache.
+
+- `saveImage(folderPath, file)` → resize if > 2048px via canvas, write to `img/{uuid}.{ext}`, populate cache, return filename
+- `loadImageSrc(folderPath, filename)` → async load from disk via Rust, cache, return `data:{mime};base64,...`
+- `getImageSrc(folderPath, filename)` → sync read from cache (returns `''` if not yet loaded)
+- `getImageBase64(folderPath, filename)` → alias for `loadImageSrc` (used by PDF/canvas)
+- `deleteImage(folderPath, filename)` → removes file from `img/` and evicts from cache
+
+**`useImageLoader` hook** (`lib/hooks/useImageLoader.ts`): takes `images[]` + `folderPath`, async-loads filename-based images from disk, returns `resolve(image)` for `<img src>`. Used by `ImagePinViewer`, `ZoomModal`, `ComponentCardImage`, `ImageCarousel`.
+
+Rust commands (`src-tauri/src/main.rs`):
+- Legacy: `save_project_file`, `load_project_file`, `list_scope_files`, `delete_project_file`, `rename_project_file`, `write_pdf_file`
+- Folder: `create_project_folder`, `save_project_to_folder`, `load_project_from_folder`, `save_image_file`, `read_image_as_base64`, `delete_image_file`, `is_project_folder`, `migrate_scope_to_folder`
 
 Native macOS menu (`src-tauri/src/main.rs` `.setup()`):
-- `SCOPE` : Ouvrir un fichier… (Cmd+O), Fermer le projet (Cmd+W), Quitter. Menu events emit Tauri events to the frontend.
+- `SCOPE` : Ouvrir un projet… (Cmd+O, folder picker), Fermer le projet (Cmd+W), Quitter. Menu events emit Tauri events to the frontend.
 - `Édition` : Annuler, Rétablir, Couper, Copier, Coller, Tout sélectionner — via `PredefinedMenuItem`. Requis pour activer les raccourcis texte natifs (Cmd+A etc.) dans les champs de l'app.
 
 **Recent files** : au clic sur un fichier récent manquant, une modale avertit l'utilisateur et l'entrée est retirée de la liste (`removeRecentFile` dans `lib/persistence.ts`).
@@ -84,10 +107,10 @@ Widget toggle UI in `ScopeItemDetail.tsx` allows enabling/disabling widgets per 
 
 ### Data types (`lib/types.ts`)
 
-- `Project`: `{ id, name, description?, filename?, hourlyRate?, budgetCap?, components[], createdAt }`
+- `Project`: `{ id, name, description?, filename?, hourlyRate?, budgetCap?, components[], createdAt, formatVersion? }` — `formatVersion: 2` = folder format
 - `Component`: `{ category: ScopeItemType, tasks[], instances[], images[], content?, estimatedHours?, widgets? }`
 - `Task`: `{ id, name, completed, category: 'frontend'|'backend'|'seo'|'motion', pinRef? }` — `pinRef: { imageId, pinId, pinNumber }` links a task to an image pin
-- `ComponentImage`: `{ id, base64, caption?, isPrimary, pins? }` — supersedes legacy `imageBase64` field (migration in `lib/migrations.ts`)
+- `ComponentImage`: `{ id, base64?, filename?, caption?, isPrimary, pins? }` — `filename` for folder format, `base64` for legacy. Supersedes legacy `imageBase64` field (migration in `lib/migrations.ts`)
 - `ImagePin`: `{ id, number, x, y }` — x/y are percentages (0-100) relative to the image container
 - `ComponentInstance`: `{ id, componentId, pinRef? }` — `pinRef: { imageId, pinId, pinNumber }` links an instance to an image pin
 
@@ -142,7 +165,7 @@ Pin ↔ instance link: in `InstanceItem`, a `MapPin` button opens inline `Select
 
 4 pages: overview → sommaire (with internal `#anchor` links) → component details (tasks + instances + markdown content if notes widget active + paragraph plain text) → bon pour accord. Dynamic import via `lib/pdfExport.tsx` to avoid SSR issues. PDF bytes transferred to Rust as base64.
 
-**Pins dans le PDF** : avant génération, `preparePdfProject` (dans `lib/pdfExport.tsx`) pré-cuit les pins dans les images via Canvas (`renderImageWithPins`, exportée depuis `lib/imageHelpers.ts`). Les images passées au renderer n'ont plus de `pins[]` — pas d'overlay dans `ProjectPDFDocument`.
+**Pins dans le PDF** : avant génération, `preparePdfProject` (dans `lib/pdfExport.tsx`) charge les images depuis le disque via `getImageBase64()` puis pré-cuit les pins via Canvas (`renderImageWithPins`, exportée depuis `lib/imageHelpers.ts`). Les images passées au renderer n'ont plus de `pins[]` — pas d'overlay dans `ProjectPDFDocument`.
 
 **Ordre dans les exports** : les types sont ordonnés selon `PDF_DISPLAY_ORDER` (document en premier).
 

@@ -7,11 +7,12 @@ interface SortableThumbnailProps {
   image: ComponentImage;
   index: number;
   isActive: boolean;
+  src: string;
   onClick: () => void;
   onDelete?: () => void;
 }
 
-export default function SortableThumbnail({ image, index, isActive, onClick, onDelete }: SortableThumbnailProps) {
+export default function SortableThumbnail({ image, index, isActive, src, onClick, onDelete }: SortableThumbnailProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: image.id,
   });
@@ -31,7 +32,7 @@ export default function SortableThumbnail({ image, index, isActive, onClick, onD
         }`}
       >
         <img
-          src={image.base64}
+          src={src}
           alt={image.caption || `Miniature ${index + 1}`}
           className="w-full h-full object-cover pointer-events-none"
           draggable={false}
@@ -41,7 +42,7 @@ export default function SortableThumbnail({ image, index, isActive, onClick, onD
         )}
         {image.pins && image.pins.length > 0 && (
           <div className="absolute bottom-0 right-0 bg-black/60 text-white text-[10px] px-1 rounded-tl">
-            {image.pins.length} 📍
+            {image.pins.length}
           </div>
         )}
       </button>

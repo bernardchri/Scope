@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { ComponentImage, ImagePin, Task } from '@/lib/types';
+import { useImageLoader } from '@/lib/hooks/useImageLoader';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Eye, EyeOff, ZoomIn, ZoomOut, X } from 'lucide-react';
@@ -11,11 +12,13 @@ interface ZoomModalProps {
   open: boolean;
   image: ComponentImage;
   tasks: Task[];
+  folderPath: string;
   onUpdatePins: (pins: ImagePin[]) => void;
   onClose: () => void;
 }
 
-export default function ZoomModal({ open, image, tasks, onUpdatePins, onClose }: ZoomModalProps) {
+export default function ZoomModal({ open, image, tasks, folderPath, onUpdatePins, onClose }: ZoomModalProps) {
+  const { resolve: resolveImageSrc } = useImageLoader([image], folderPath);
   const [zoom, setZoom] = useState(1);
   const [showPins, setShowPins] = useState(true);
   const [localPins, setLocalPins] = useState<ImagePin[]>(image.pins ?? []);
@@ -202,7 +205,7 @@ export default function ZoomModal({ open, image, tasks, onUpdatePins, onClose }:
             onPointerUp={handleInnerPointerUp}
           >
             <img
-              src={image.base64}
+              src={resolveImageSrc(image)}
               alt={image.caption || 'Image'}
               className="w-full block pointer-events-none"
               draggable={false}

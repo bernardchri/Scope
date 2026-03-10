@@ -8,13 +8,14 @@ import ImagePinViewer from '../ImagePinViewer';
 interface ComponentDetailHeaderProps {
   component: Component;
   tasks: Task[];
+  folderPath: string;
   onUpdateImages: (images: ComponentImage[]) => void;
   onBack?: () => void;
   onEdit: () => void;
   onDelete: () => void;
 }
 
-export default function ComponentDetailHeader({ component, tasks, onUpdateImages, onBack, onEdit, onDelete }: ComponentDetailHeaderProps) {
+export default function ComponentDetailHeader({ component, tasks, folderPath, onUpdateImages, onBack, onEdit, onDelete }: ComponentDetailHeaderProps) {
   // Convertir ancienne structure en nouvelle si nécessaire
   const images = component.images || (component.imageBase64 ? [{
     id: 'legacy',
@@ -62,7 +63,7 @@ export default function ComponentDetailHeader({ component, tasks, onUpdateImages
         </p>
       )}
 
-      <ImagePinViewer images={images} tasks={tasks} onUpdateImages={onUpdateImages} />
+      <ImagePinViewer images={images} tasks={tasks} folderPath={folderPath} onUpdateImages={onUpdateImages} />
     </div>
   );
 }

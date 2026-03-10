@@ -11,12 +11,14 @@ import { CATEGORY_SECTION_LABELS, COMPONENT_DISPLAY_ORDER } from '@/lib/category
 
 interface ProjectDashboardProps {
   project: Project;
+  folderPath: string;
   onSelectComponent: (id: string) => void;
   onUpdateProject: (updates: Partial<Project>) => void;
 }
 
 export default function ProjectDashboard({
   project,
+  folderPath,
   onSelectComponent,
   onUpdateProject,
 }: ProjectDashboardProps) {
@@ -32,7 +34,7 @@ export default function ProjectDashboard({
   async function handleExportPDF() {
     setIsExporting(true);
     try {
-      await exportProjectPDF(project);
+      await exportProjectPDF(project, folderPath);
     } finally {
       setIsExporting(false);
     }
@@ -41,7 +43,7 @@ export default function ProjectDashboard({
   async function handleExportMarkdown() {
     setIsExportingMd(true);
     try {
-      await exportProjectMarkdown(project);
+      await exportProjectMarkdown(project, folderPath);
     } finally {
       setIsExportingMd(false);
     }

@@ -3,7 +3,8 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { ComponentImage, ImagePin, Task } from '@/lib/types';
 import { usePinEditor } from '@/lib/hooks/usePinEditor';
-import { convertImageToBase64 } from '@/lib/imageHelpers';
+import { saveImage, deleteImage } from '@/lib/imageManager';
+import { useImageLoader } from '@/lib/hooks/useImageLoader';
 import PinsOverlay from '@/components/molecules/PinsOverlay';
 import SortableThumbnail from '@/components/molecules/SortableThumbnail';
 import ZoomModal from '@/components/modals/ZoomModal';
@@ -23,13 +24,15 @@ import { SortableContext, arrayMove, horizontalListSortingStrategy } from '@dnd-
 interface ImagePinViewerProps {
   images: ComponentImage[];
   tasks: Task[];
+  folderPath: string;
   onUpdateImages: (images: ComponentImage[]) => void;
 }
 
-export default function ImagePinViewer({ images, tasks, onUpdateImages }: ImagePinViewerProps) {
+export default function ImagePinViewer({ images, tasks, folderPath, onUpdateImages }: ImagePinViewerProps) {
   const thumbnailSensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
   );
+  const { resolve: resolveImageSrc } = useImageLoader(images, folderPath);
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showPins, setShowPins] = useState(true);
@@ -73,12 +76,18 @@ export default function ImagePinViewer({ images, tasks, onUpdateImages }: ImageP
     if (!file) return;
 
     setImageError(null);
-    const result = await convertImageToBase64(file);
 
-    if (result.valid && result.base64) {
+    if (!file.type.startsWith('image/')) {
+      setImageError('Le fichier doit être une image');
+      e.target.value = '';
+      return;
+    }
+
+    try {
+      const filename = await saveImage(folderPath, file);
       const newImage: ComponentImage = {
         id: crypto.randomUUID(),
-        base64: result.base64,
+        filename,
         caption: '',
         isPrimary: localImages.length === 0,
       };
@@ -86,20 +95,25 @@ export default function ImagePinViewer({ images, tasks, onUpdateImages }: ImageP
       setLocalImages(updated);
       setCurrentIndex(updated.length - 1);
       onUpdateImages(updated);
-    } else {
-      setImageError(result.error || 'Erreur inconnue');
+    } catch (err) {
+      setImageError(err instanceof Error ? err.message : 'Erreur inconnue');
     }
 
     e.target.value = '';
   }
 
   function handleRemoveImage(imageId: string) {
+    const removed = localImages.find(img => img.id === imageId);
     const newImages = localImages.filter(img => img.id !== imageId);
     if (newImages.length > 0 && !newImages.some(img => img.isPrimary)) {
       newImages[0].isPrimary = true;
     }
     setLocalImages(newImages);
     onUpdateImages(newImages);
+    // Delete file from disk
+    if (removed?.filename) {
+      deleteImage(folderPath, removed.filename).catch(console.error);
+    }
   }
 
   function handleSaveCaption() {
@@ -130,7 +144,7 @@ export default function ImagePinViewer({ images, tasks, onUpdateImages }: ImageP
           className="hidden"
         />
         {imageError && <p className="text-destructive text-sm mt-2">{imageError}</p>}
-        <p className="text-xs text-muted-foreground mt-2">Maximum 1 Mo par image</p>
+        <p className="text-xs text-muted-foreground mt-2">Redimensionnement auto si &gt; 2048px</p>
       </div>
     );
   }
@@ -181,7 +195,7 @@ export default function ImagePinViewer({ images, tasks, onUpdateImages }: ImageP
             onPointerUp={showPins ? handleContainerPointerUp : undefined}
           >
             <img
-              src={currentImage.base64}
+              src={resolveImageSrc(currentImage)}
               alt={currentImage.caption || `Image ${currentIndex + 1}`}
               className="w-full block pointer-events-none"
               draggable={false}
@@ -284,6 +298,7 @@ export default function ImagePinViewer({ images, tasks, onUpdateImages }: ImageP
                   image={image}
                   index={index}
                   isActive={index === currentIndex}
+                  src={resolveImageSrc(image)}
                   onClick={() => { setCurrentIndex(index); clearSelection(); }}
                   onDelete={() => handleRemoveImage(image.id)}
                 />
@@ -306,6 +321,7 @@ export default function ImagePinViewer({ images, tasks, onUpdateImages }: ImageP
         open={zoomOpen}
         image={localImages[currentIndex]}
         tasks={tasks}
+        folderPath={folderPath}
         onUpdatePins={(pins: ImagePin[]) => updatePins(pins, true)}
         onClose={() => setZoomOpen(false)}
       />

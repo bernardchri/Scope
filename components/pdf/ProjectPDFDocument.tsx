@@ -83,7 +83,7 @@ function ComponentDetailBlock({
 }) {
   const images = (component.images ?? []).map(img => ({
     ...img,
-    src: normalizeBase64(img.base64),
+    src: normalizeBase64(img.base64 || ''),
   }));
 
   const tasksByCategory = TASK_CATEGORY_ORDER.reduce<Partial<Record<TaskCategory, typeof component.tasks>>>(

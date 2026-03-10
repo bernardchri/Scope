@@ -1,6 +1,7 @@
 import { StateCreator } from 'zustand';
 import { Project } from '../types';
 import { slugify } from '../persistence';
+import { clearImageCache } from '../imageManager';
 
 export interface ProjectSlice {
   projects: Project[];
@@ -22,8 +23,10 @@ export const createProjectSlice = (set: any) => ({
   openProject: (project: Project, path: string) =>
     set({ projects: [project], activeProjectId: project.id, currentProjectPath: path }),
 
-  closeProject: () =>
-    set({ projects: [], activeProjectId: null, currentProjectPath: null }),
+  closeProject: () => {
+    clearImageCache();
+    set({ projects: [], activeProjectId: null, currentProjectPath: null });
+  },
 
   setActiveProject: (projectId: string | null) => set({ activeProjectId: projectId }),
 

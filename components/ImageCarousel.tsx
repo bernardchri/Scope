@@ -2,14 +2,17 @@
 
 import { useState } from 'react';
 import { ComponentImage } from '@/lib/types';
+import { useImageLoader } from '@/lib/hooks/useImageLoader';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface ImageCarouselProps {
   images: ComponentImage[];
+  folderPath?: string;
 }
 
-export default function ImageCarousel({ images }: ImageCarouselProps) {
+export default function ImageCarousel({ images, folderPath }: ImageCarouselProps) {
+  const { resolve: resolveImageSrc } = useImageLoader(images, folderPath || '');
   const [currentIndex, setCurrentIndex] = useState(0);
 
   if (!images || images.length === 0) {
@@ -35,7 +38,7 @@ export default function ImageCarousel({ images }: ImageCarouselProps) {
       {/* Image principale */}
       <div className="relative w-full bg-gray-100 rounded-lg overflow-hidden">
         <img
-          src={currentImage.base64}
+          src={resolveImageSrc(currentImage)}
           alt={currentImage.caption || `Image ${currentIndex + 1}`}
           className="w-full max-h-96 object-contain"
         />
@@ -93,7 +96,7 @@ export default function ImageCarousel({ images }: ImageCarouselProps) {
               }`}
             >
               <img
-                src={image.base64}
+                src={resolveImageSrc(image)}
                 alt={image.caption || `Miniature ${index + 1}`}
                 className="w-full h-full object-cover"
               />

@@ -2,12 +2,14 @@
 
 import { useState, useEffect } from 'react';
 import { open } from '@tauri-apps/plugin-dialog';
+import { invoke } from '@tauri-apps/api/core';
 import {
   getRecentFiles,
   addRecentFile,
   removeRecentFile,
   openProjectFile,
-  createNewProjectFile,
+  createNewProjectFolder,
+  migrateScopeToFolder,
   RecentFile
 } from '@/lib/persistence';
 import { createAutoBackup } from '@/lib/backup';
@@ -23,6 +25,7 @@ export default function HomeScreen() {
   const [isCreating, setIsCreating] = useState(false);
   const [newProjectName, setNewProjectName] = useState('');
   const [missingFile, setMissingFile] = useState<RecentFile | null>(null);
+  const [migrationPending, setMigrationPending] = useState<{ scopePath: string; folderPath: string } | null>(null);
 
   useEffect(() => {
     getRecentFiles().then(setRecentFiles);
@@ -39,6 +42,13 @@ export default function HomeScreen() {
       return;
     }
 
+    // If this is a legacy .scope file (no formatVersion), propose migration
+    if (!project.formatVersion && path.endsWith('.scope')) {
+      const folderPath = path.replace(/\.scope$/, '');
+      setMigrationPending({ scopePath: path, folderPath });
+      return;
+    }
+
     await createAutoBackup([project]);
     await addRecentFile(project.name, path);
     setRecentFiles(await getRecentFiles());
@@ -47,20 +57,63 @@ export default function HomeScreen() {
     openProject(project, path);
   }
 
-  async function handleOpenFile() {
-    const filePath = await open({
+  async function handleMigrate() {
+    if (!migrationPending) return;
+    const { scopePath, folderPath } = migrationPending;
+    const project = await migrateScopeToFolder(scopePath, folderPath);
+    if (!project) {
+      setMigrationPending(null);
+      return;
+    }
+
+    // Update recent files to point to folder
+    await removeRecentFile(scopePath);
+    await addRecentFile(project.name, folderPath);
+    setRecentFiles(await getRecentFiles());
+
+    initPreviousProject(project);
+    openProject(project, folderPath);
+    setMigrationPending(null);
+  }
+
+  async function handleSkipMigration() {
+    if (!migrationPending) return;
+    const { scopePath } = migrationPending;
+    // Open as-is (legacy mode)
+    const project = await openProjectFile(scopePath);
+    if (project) {
+      await addRecentFile(project.name, scopePath);
+      setRecentFiles(await getRecentFiles());
+      initPreviousProject(project);
+      openProject(project, scopePath);
+    }
+    setMigrationPending(null);
+  }
+
+  async function handleOpenFolder() {
+    const folderPath = await open({
       multiple: false,
-      filters: [{ name: 'SCOPE Files', extensions: ['scope'] }]
+      directory: true,
     });
-    if (!filePath || typeof filePath !== 'string') return;
-    await handleOpenPath(filePath);
+    if (!folderPath || typeof folderPath !== 'string') return;
+
+    // Check if it's a project folder
+    const isFolder = await invoke<boolean>('is_project_folder', { path: folderPath });
+    if (isFolder) {
+      await handleOpenPath(folderPath);
+      return;
+    }
+
+    // Check if there's a .scope file in the folder (suggest migration)
+    // Otherwise, it's not a valid project
+    alert('Ce dossier ne contient pas de projet SCOPE (scope.json introuvable).');
   }
 
   async function handleCreate() {
     const name = newProjectName.trim();
     if (!name) return;
 
-    const result = await createNewProjectFile(name);
+    const result = await createNewProjectFolder(name);
     if (!result) return;
 
     await addRecentFile(result.project.name, result.path);
@@ -136,9 +189,9 @@ export default function HomeScreen() {
               <Plus className="w-4 h-4 mr-2" />
               Nouveau projet
             </Button>
-            <Button size="lg" variant="outline" className="w-full" onClick={handleOpenFile}>
+            <Button size="lg" variant="outline" className="w-full" onClick={handleOpenFolder}>
               <FolderOpen className="w-4 h-4 mr-2" />
-              Ouvrir un fichier .scope
+              Ouvrir un projet
             </Button>
           </div>
         )}
@@ -146,6 +199,7 @@ export default function HomeScreen() {
 
     </div>
 
+    {/* Modal fichier introuvable */}
     <Dialog open={!!missingFile} onOpenChange={() => setMissingFile(null)}>
       <DialogContent>
         <DialogHeader>
@@ -160,6 +214,28 @@ export default function HomeScreen() {
         </DialogHeader>
         <DialogFooter>
           <Button onClick={() => setMissingFile(null)}>OK</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
+    {/* Modal migration .scope → dossier */}
+    <Dialog open={!!migrationPending} onOpenChange={() => setMigrationPending(null)}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Migrer vers le format dossier ?</DialogTitle>
+          <DialogDescription>
+            Ce projet utilise l'ancien format <code>.scope</code>. Le nouveau format stocke les images comme fichiers séparés pour de meilleures performances.
+            <br /><br />
+            Le fichier original sera conservé comme sauvegarde.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button variant="outline" onClick={handleSkipMigration}>
+            Ouvrir sans migrer
+          </Button>
+          <Button onClick={handleMigrate}>
+            Migrer
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

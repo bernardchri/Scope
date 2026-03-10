@@ -43,6 +43,7 @@ interface ScopeItemDetailProps {
   projectId: string;
   item: Component;
   allComponents: Component[];
+  folderPath: string;
   onUpdate: (id: string, updates: Partial<Component>) => void;
   onDelete: () => void;
   onNavigate: (componentId: string) => void;
@@ -52,6 +53,7 @@ export default function ScopeItemDetail({
   projectId,
   item,
   allComponents,
+  folderPath,
   onUpdate,
   onDelete,
   onNavigate,
@@ -152,6 +154,7 @@ export default function ScopeItemDetail({
             key={widget.id}
             images={images}
             tasks={item.tasks}
+            folderPath={folderPath}
             onUpdateImages={(imgs) => onUpdate(item.id, { images: imgs })}
           />
         );

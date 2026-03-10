@@ -5,6 +5,7 @@ import { CATEGORY_SECTION_LABELS, PDF_DISPLAY_ORDER, getActiveWidgets } from './
 import { TASK_CATEGORY_ORDER, TASK_CATEGORY_PLAIN_LABELS } from './taskCategoryHelpers';
 import { slugify } from './persistence';
 import { renderImageWithPins } from './imageHelpers';
+import { getImageBase64 } from './imageManager';
 
 const CATEGORY_ORDER = PDF_DISPLAY_ORDER;
 
@@ -166,7 +167,7 @@ export function generateStoriesMd(project: Project, imageMap: ImageMap = new Map
   return sections.join('\n\n');
 }
 
-async function collectImages(project: Project, dir: string): Promise<ImageMap> {
+async function collectImages(project: Project, dir: string, folderPath?: string): Promise<ImageMap> {
   const imageMap: ImageMap = new Map();
 
   for (const comp of project.components) {
@@ -178,11 +179,18 @@ async function collectImages(project: Project, dir: string): Promise<ImageMap> {
 
     for (let i = 0; i < compImages.length; i++) {
       const img = compImages[i];
+      // Load base64 from disk if using folder format
+      let base64 = img.base64 || '';
+      if (img.filename && folderPath) {
+        base64 = await getImageBase64(folderPath, img.filename);
+      }
+      if (!base64) continue;
+
       const hasPins = (img.pins ?? []).length > 0;
       const base64ToWrite = hasPins
-        ? await renderImageWithPins(img.base64, img.pins!)
-        : img.base64;
-      const ext = hasPins ? 'png' : getImageExtension(img.base64);
+        ? await renderImageWithPins(base64, img.pins!)
+        : base64;
+      const ext = hasPins ? 'png' : getImageExtension(base64);
       const filename = `${compSlug}-${i}.${ext}`;
       const imgPath = `${dir}/stories-img/${filename}`;
       await invoke('write_binary_file', { path: imgPath, base64Data: base64ToWrite });
@@ -195,16 +203,21 @@ async function collectImages(project: Project, dir: string): Promise<ImageMap> {
   return imageMap;
 }
 
-export async function exportProjectMarkdown(project: Project): Promise<void> {
+export async function exportProjectMarkdown(project: Project, folderPath?: string): Promise<void> {
   const slug = project.filename ?? slugify(project.name);
+  const defaultDir = folderPath ? `${folderPath}/export` : undefined;
+  const defaultPath = defaultDir
+    ? `${defaultDir}/${slug}-stories.md`
+    : `${slug}-stories.md`;
+
   const filePath = await save({
-    defaultPath: `${slug}-stories.md`,
+    defaultPath,
     filters: [{ name: 'Markdown', extensions: ['md'] }],
   });
   if (!filePath) return;
 
   const dir = filePath.substring(0, filePath.lastIndexOf('/'));
-  const imageMap = await collectImages(project, dir);
+  const imageMap = await collectImages(project, dir, folderPath);
   const content = generateStoriesMd(project, imageMap);
   await invoke('write_text_file', { path: filePath, content });
 }

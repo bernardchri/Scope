@@ -38,7 +38,8 @@ export interface ImagePin {
 
 export interface ComponentImage {
   id: string;
-  base64: string;
+  base64?: string;
+  filename?: string;
   caption?: string;
   isPrimary: boolean;
   pins?: ImagePin[];
@@ -70,4 +71,5 @@ export interface Project {
   budgetCap?: number;
   components: Component[];
   createdAt: string;
+  formatVersion?: number; // 2 = folder format
 }

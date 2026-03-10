@@ -3,6 +3,7 @@ import { save } from '@tauri-apps/plugin-dialog';
 import { slugify } from './persistence';
 import { Project } from './types';
 import { renderImageWithPins } from './imageHelpers';
+import { getImageBase64 } from './imageManager';
 
 function toBase64(bytes: Uint8Array): string {
   let binary = '';
@@ -15,20 +16,25 @@ function toBase64(bytes: Uint8Array): string {
 
 /**
  * Pré-cuit les pins dans les images via Canvas avant la génération PDF.
- * Les coordonnées relatives (%) sont ainsi intégrées directement dans le pixel
- * de l'image, ce qui évite tout problème de ratio avec objectFit: contain.
+ * Charge les images depuis le disque si elles utilisent le format dossier (filename).
  */
-async function preparePdfProject(project: Project): Promise<Project> {
+async function preparePdfProject(project: Project, folderPath: string): Promise<Project> {
   const components = await Promise.all(
     project.components.map(async (comp) => {
       const compImages = comp.images ?? [];
       if (compImages.length === 0) return comp;
       const images = await Promise.all(
         compImages.map(async (img) => {
+          // Load base64 from disk if using folder format
+          let base64 = img.base64 || '';
+          if (img.filename && folderPath) {
+            base64 = await getImageBase64(folderPath, img.filename);
+          }
           const pins = img.pins ?? [];
-          if (pins.length === 0) return img;
-          const bakedBase64 = await renderImageWithPins(img.base64, pins);
-          return { ...img, base64: bakedBase64, pins: [] };
+          if (pins.length > 0) {
+            base64 = await renderImageWithPins(base64, pins);
+          }
+          return { ...img, base64, pins: [] };
         })
       );
       return { ...comp, images };
@@ -37,14 +43,19 @@ async function preparePdfProject(project: Project): Promise<Project> {
   return { ...project, components };
 }
 
-export async function exportProjectPDF(project: Project): Promise<void> {
+export async function exportProjectPDF(project: Project, folderPath?: string): Promise<void> {
+  const defaultDir = folderPath ? `${folderPath}/export` : undefined;
+  const defaultPath = defaultDir
+    ? `${defaultDir}/${slugify(project.name)}-cahier-des-charges.pdf`
+    : `${slugify(project.name)}-cahier-des-charges.pdf`;
+
   const filePath = await save({
-    defaultPath: `${slugify(project.name)}-cahier-des-charges.pdf`,
+    defaultPath,
     filters: [{ name: 'PDF', extensions: ['pdf'] }]
   });
   if (!filePath) return;
 
-  const preparedProject = await preparePdfProject(project);
+  const preparedProject = await preparePdfProject(project, folderPath || '');
 
   // Import dynamique pour éviter les problèmes SSR avec @react-pdf/renderer
   const { pdf } = await import('@react-pdf/renderer');
