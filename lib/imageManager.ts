@@ -10,57 +10,75 @@ function cacheKey(folderPath: string, filename: string): string {
   return `${folderPath}/img/${filename}`;
 }
 
+const EXT_TO_MIME: Record<string, string> = {
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  png: 'image/png',
+  gif: 'image/gif',
+  webp: 'image/webp',
+};
+
 /**
  * Resize image if wider than MAX_WIDTH, convert to target format.
+ * Accepts a data URI and file extension (no FileReader needed).
  * Returns { base64DataUri, ext }.
  */
-async function processImage(file: File): Promise<{ base64DataUri: string; ext: string }> {
+async function processImage(dataUri: string, ext: string): Promise<{ base64DataUri: string; ext: string }> {
+  const mimeOut = EXT_TO_MIME[ext] || 'image/png';
   return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const dataUri = reader.result as string;
-      const img = new window.Image();
-      img.onload = () => {
-        const ext = file.type === 'image/jpeg' ? 'jpg'
-          : file.type === 'image/gif' ? 'gif'
-          : file.type === 'image/webp' ? 'webp'
-          : 'png';
-        const mimeOut = file.type.startsWith('image/') ? file.type : 'image/png';
-
-        if (img.naturalWidth <= MAX_WIDTH) {
-          resolve({ base64DataUri: dataUri, ext });
-          return;
-        }
-
-        // Resize via canvas
-        const scale = MAX_WIDTH / img.naturalWidth;
-        const canvas = document.createElement('canvas');
-        canvas.width = MAX_WIDTH;
-        canvas.height = Math.round(img.naturalHeight * scale);
-        const ctx = canvas.getContext('2d');
-        if (!ctx) { resolve({ base64DataUri: dataUri, ext }); return; }
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        resolve({ base64DataUri: canvas.toDataURL(mimeOut, 0.9), ext });
-      };
-      img.onerror = () => reject(new Error('Impossible de charger l\'image'));
-      img.src = dataUri;
+    const img = new window.Image();
+    img.onload = () => {
+      if (img.naturalWidth <= MAX_WIDTH) {
+        resolve({ base64DataUri: dataUri, ext });
+        return;
+      }
+      // Resize via canvas
+      const scale = MAX_WIDTH / img.naturalWidth;
+      const canvas = document.createElement('canvas');
+      canvas.width = MAX_WIDTH;
+      canvas.height = Math.round(img.naturalHeight * scale);
+      const ctx = canvas.getContext('2d');
+      if (!ctx) { resolve({ base64DataUri: dataUri, ext }); return; }
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      resolve({ base64DataUri: canvas.toDataURL(mimeOut, 0.9), ext });
     };
-    reader.onerror = () => reject(new Error('Erreur lecture fichier'));
-    reader.readAsDataURL(file);
+    img.onerror = () => reject(new Error('Impossible de charger l\'image'));
+    img.src = dataUri;
   });
 }
 
+function normalizePath(p: string): string {
+  return p.replace(/\\/g, '/').replace(/\/+$/, '');
+}
+
 /**
- * Process, resize and save an image file to the project folder.
- * Returns the filename (e.g. "a1b2c3d4.png").
- * Also populates the cache so the image displays immediately.
+ * Save an image from an absolute file path.
+ * If the file is already inside `img/`, reuse it (invalidate cache to pick up external edits).
+ * Otherwise, read the file via Rust, resize if needed, and save with a UUID filename.
  */
-export async function saveImage(folderPath: string, file: File): Promise<string> {
-  const { base64DataUri, ext } = await processImage(file);
-  const filename = `${crypto.randomUUID()}.${ext}`;
-  await invoke('save_image_file', { folderPath, filename, base64Data: base64DataUri });
-  // Cache the base64 so it's immediately available for display
-  imageCache.set(cacheKey(folderPath, filename), base64DataUri);
+export async function saveImageFromPath(folderPath: string, filePath: string): Promise<string> {
+  const nFolder = normalizePath(folderPath);
+  const nFile = normalizePath(filePath);
+  const imgDir = `${nFolder}/img/`;
+
+  if (nFile.startsWith(imgDir)) {
+    // File already in project img/ — reuse it
+    const filename = nFile.slice(imgDir.length);
+    // Invalidate cache so external edits are picked up
+    imageCache.delete(cacheKey(folderPath, filename));
+    // Re-load from disk into cache
+    await loadImageSrc(folderPath, filename);
+    return filename;
+  }
+
+  // External file — read via Rust, resize, save with UUID
+  const base64DataUri = await invoke<string>('read_image_as_base64', { filePath: nFile });
+  const rawExt = nFile.split('.').pop()?.toLowerCase() || 'png';
+  const ext = rawExt === 'jpeg' ? 'jpg' : rawExt;
+  const processed = await processImage(base64DataUri, ext);
+  const filename = `${crypto.randomUUID()}.${processed.ext}`;
+  await invoke('save_image_file', { folderPath, filename, base64Data: processed.base64DataUri });
+  imageCache.set(cacheKey(folderPath, filename), processed.base64DataUri);
   return filename;
 }
 
