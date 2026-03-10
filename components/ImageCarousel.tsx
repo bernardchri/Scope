@@ -37,11 +37,13 @@ export default function ImageCarousel({ images, folderPath }: ImageCarouselProps
     <div className="space-y-4">
       {/* Image principale */}
       <div className="relative w-full bg-gray-100 rounded-lg overflow-hidden">
-        <img
-          src={resolveImageSrc(currentImage)}
-          alt={currentImage.caption || `Image ${currentIndex + 1}`}
-          className="w-full max-h-96 object-contain"
-        />
+        {resolveImageSrc(currentImage) && (
+          <img
+            src={resolveImageSrc(currentImage)}
+            alt={currentImage.caption || `Image ${currentIndex + 1}`}
+            className="w-full max-h-96 object-contain"
+          />
+        )}
 
         {/* Navigation gauche/droite */}
         {images.length > 1 && (
@@ -95,11 +97,13 @@ export default function ImageCarousel({ images, folderPath }: ImageCarouselProps
                   : 'border-gray-300 hover:border-gray-400'
               }`}
             >
-              <img
-                src={resolveImageSrc(image)}
-                alt={image.caption || `Miniature ${index + 1}`}
-                className="w-full h-full object-cover"
-              />
+              {resolveImageSrc(image) && (
+                <img
+                  src={resolveImageSrc(image)}
+                  alt={image.caption || `Miniature ${index + 1}`}
+                  className="w-full h-full object-cover"
+                />
+              )}
               {image.isPrimary && (
                 <div className="absolute top-0 left-0 bg-blue-500 text-white text-[10px] px-1">
                   ★

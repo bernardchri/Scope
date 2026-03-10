@@ -40,9 +40,9 @@ export function useImageLoader(images: ComponentImage[], folderPath: string) {
     return () => { cancelled = true; };
   }, [images, folderPath]);
 
-  /** Resolve src for a single image (sync, returns empty string if not yet loaded) */
-  function resolve(image: ComponentImage): string {
-    return srcMap.get(image.id) || image.base64 || '';
+  /** Resolve src for a single image (sync, returns undefined if not yet loaded) */
+  function resolve(image: ComponentImage): string | undefined {
+    return srcMap.get(image.id) || image.base64 || undefined;
   }
 
   return { resolve, srcMap };

@@ -204,12 +204,14 @@ export default function ZoomModal({ open, image, tasks, folderPath, onUpdatePins
             onPointerMove={handleInnerPointerMove}
             onPointerUp={handleInnerPointerUp}
           >
-            <img
-              src={resolveImageSrc(image)}
-              alt={image.caption || 'Image'}
-              className="w-full block pointer-events-none"
-              draggable={false}
-            />
+            {resolveImageSrc(image) && (
+              <img
+                src={resolveImageSrc(image)}
+                alt={image.caption || 'Image'}
+                className="w-full block pointer-events-none"
+                draggable={false}
+              />
+            )}
             {showPins && (
               <PinsOverlay
                 pins={localPins}

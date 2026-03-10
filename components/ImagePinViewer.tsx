@@ -194,12 +194,14 @@ export default function ImagePinViewer({ images, tasks, folderPath, onUpdateImag
             onPointerMove={showPins ? handleContainerPointerMove : undefined}
             onPointerUp={showPins ? handleContainerPointerUp : undefined}
           >
-            <img
-              src={resolveImageSrc(currentImage)}
-              alt={currentImage.caption || `Image ${currentIndex + 1}`}
-              className="w-full block pointer-events-none"
-              draggable={false}
-            />
+            {resolveImageSrc(currentImage) && (
+              <img
+                src={resolveImageSrc(currentImage)}
+                alt={currentImage.caption || `Image ${currentIndex + 1}`}
+                className="w-full block pointer-events-none"
+                draggable={false}
+              />
+            )}
             {showPins && (
               <PinsOverlay
                 pins={currentPins}

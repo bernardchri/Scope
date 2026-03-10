@@ -7,7 +7,7 @@ interface SortableThumbnailProps {
   image: ComponentImage;
   index: number;
   isActive: boolean;
-  src: string;
+  src?: string;
   onClick: () => void;
   onDelete?: () => void;
 }
@@ -31,12 +31,14 @@ export default function SortableThumbnail({ image, index, isActive, src, onClick
           isActive ? 'border-primary ring-2 ring-primary/30' : 'border-border hover:border-muted-foreground'
         }`}
       >
-        <img
-          src={src}
-          alt={image.caption || `Miniature ${index + 1}`}
-          className="w-full h-full object-cover pointer-events-none"
-          draggable={false}
-        />
+        {src && (
+          <img
+            src={src}
+            alt={image.caption || `Miniature ${index + 1}`}
+            className="w-full h-full object-cover pointer-events-none"
+            draggable={false}
+          />
+        )}
         {image.isPrimary && (
           <div className="absolute top-0 left-0 bg-primary text-primary-foreground text-[10px] px-1">★</div>
         )}
