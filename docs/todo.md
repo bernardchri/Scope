@@ -46,7 +46,7 @@ Les pins permettent de marquer un point précis sur une maquette. Les **zones** 
 
 - [ ] Recherche / filtre de composants dans la sidebar
 - [ ] Dupliquer un composant existant
-- [ ] Recadrage d'image : crop interactif dans l'interface, export du recadrage (remplace l'image originale ou crée une variante)
+- [x] Recadrage d'image : crop interactif dans l'interface, export du recadrage
 
 ## Réglages & préférences
 
@@ -56,12 +56,16 @@ Les pins permettent de marquer un point précis sur une maquette. Les **zones** 
 - [ ] Snippets/templates de contenu réutilisables (navigateurs supportés, textes récurrents, todo-listes) — stockés au niveau global de l'app
 - [ ] Export/import des préférences et snippets
 
+## Maintenance projet
+
+- [ ] Réduire le projet : fonction qui supprime les fichiers `img/` non référencés par un composant et compresse les images restantes — permet de nettoyer l'espace disque sans supprimer manuellement
+
 ## Documents & fichiers
 
 - [ ] Importer d'autres types de documents (Excel, PDF, etc.) et les lier au projet — stockés dans un dossier `documents/`
 
 
-## estimation
+## estimation claude très rapide
 Tâche: Supprimer estimations du PDF
   Effort: ~20 lignes
   Fichiers touchés: 1 (ProjectPDFDocument.tsx)
@@ -183,3 +187,6 @@ Tâche: Supprimer estimations du PDF
   PDF, zones sur images, export devis
   4. Features lourdes (~4h+) : recadrage image, snippets,
   import documents externes
+
+
+## Import d'image

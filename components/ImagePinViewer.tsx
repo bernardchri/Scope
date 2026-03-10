@@ -4,7 +4,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { ComponentImage, ImagePin, Task, CropRect } from '@/lib/types';
 import { usePinEditor } from '@/lib/hooks/usePinEditor';
 import { open } from '@tauri-apps/plugin-dialog';
-import { saveImageFromPath, deleteImage } from '@/lib/imageManager';
+import { saveImageFromPath } from '@/lib/imageManager';
 import { useImageLoader } from '@/lib/hooks/useImageLoader';
 import PinsOverlay from '@/components/molecules/PinsOverlay';
 import CropOverlay from '@/components/molecules/CropOverlay';
@@ -107,17 +107,12 @@ export default function ImagePinViewer({ images, tasks, folderPath, onUpdateImag
   }
 
   function handleRemoveImage(imageId: string) {
-    const removed = localImages.find(img => img.id === imageId);
     const newImages = localImages.filter(img => img.id !== imageId);
     if (newImages.length > 0 && !newImages.some(img => img.isPrimary)) {
       newImages[0].isPrimary = true;
     }
     setLocalImages(newImages);
     onUpdateImages(newImages);
-    // Delete file from disk
-    if (removed?.filename) {
-      deleteImage(folderPath, removed.filename).catch(console.error);
-    }
   }
 
   function handleSaveCaption() {
