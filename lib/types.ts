@@ -79,3 +79,15 @@ export interface Project {
   createdAt: string;
   formatVersion?: number; // 2 = folder format
 }
+
+export interface AppSettings {
+  studioName?: string;
+  pdf: {
+    showEstimations: boolean;
+  };
+}
+
+export const DEFAULT_APP_SETTINGS: AppSettings = {
+  studioName: '',
+  pdf: { showEstimations: true },
+};

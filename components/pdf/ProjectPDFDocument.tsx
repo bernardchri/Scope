@@ -51,22 +51,27 @@ function PageHeader({ projectName, date }: { projectName: string; date: string }
   );
 }
 
-function PageNum() {
+function PageFooter({ studioName }: { studioName?: string }) {
   return (
-    <Text
-      style={s.pageNumber}
-      render={({ pageNumber, totalPages }) => `${pageNumber} / ${totalPages}`}
-      fixed
-    />
+    <>
+      {studioName ? (
+        <Text style={s.footerStudioName} fixed>{studioName}</Text>
+      ) : null}
+      <Text
+        style={s.pageNumber}
+        render={({ pageNumber, totalPages }) => `${pageNumber} / ${totalPages}`}
+        fixed
+      />
+    </>
   );
 }
 
-function TocRow({ component }: { component: Component }) {
+function TocRow({ component, showEstimations = true }: { component: Component; showEstimations?: boolean }) {
   return (
     <Link src={`#${componentAnchorId(component)}`}>
       <View style={s.tocRow}>
         <Text style={s.tocName}>{component.name}</Text>
-        {component.estimatedHours != null && component.estimatedHours > 0 && (
+        {showEstimations && component.estimatedHours != null && component.estimatedHours > 0 && (
           <Text style={s.tocHours}>{component.estimatedHours}h</Text>
         )}
       </View>
@@ -77,9 +82,11 @@ function TocRow({ component }: { component: Component }) {
 function ComponentDetailBlock({
   component,
   allComponents,
+  showEstimations = true,
 }: {
   component: Component;
   allComponents: Component[];
+  showEstimations?: boolean;
 }) {
   const images = (component.images ?? []).map(img => ({
     ...img,
@@ -110,9 +117,9 @@ function ComponentDetailBlock({
         {component.description && (
           <Text style={s.componentDetailDesc}>{component.description}</Text>
         )}
-        {/* {component.estimatedHours != null && component.estimatedHours > 0 && (
-          <Text style={s.componentDetailHours}> {component.estimatedHours}h estimées</Text>
-        )} */}
+        {showEstimations && component.estimatedHours != null && component.estimatedHours > 0 && (
+          <Text style={s.componentDetailHours}>{component.estimatedHours}h estimées</Text>
+        )}
       </View>
 
       {/* Toutes les images, pleine largeur (pins pré-cuits dans le pixel par pdfExport) */}
@@ -210,9 +217,13 @@ function ComponentDetailBlock({
 
 // ─── Document principal ───────────────────────────────────────────────────────
 
-interface Props { project: Project }
+interface Props {
+  project: Project;
+  showEstimations?: boolean;
+  studioName?: string;
+}
 
-export function ProjectPDFDocument({ project }: Props) {
+export function ProjectPDFDocument({ project, showEstimations = true, studioName }: Props) {
   const today = formatDate(new Date().toISOString());
 
   // Dédupliquer par ID (sécurité contre les données corrompues)
@@ -252,10 +263,12 @@ export function ProjectPDFDocument({ project }: Props) {
 
         <Text style={s.sectionLabel}>Vue d'ensemble</Text>
         <View style={s.statsRow}>
-          {/* <View style={s.statBox}>
-            <Text style={s.statNumber}>{totalHours}h</Text>
-            <Text style={s.statDesc}>estimées</Text>
-          </View> */}
+          {showEstimations && totalHours > 0 && (
+            <View style={s.statBox}>
+              <Text style={s.statNumber}>{totalHours}h</Text>
+              <Text style={s.statDesc}>estimées</Text>
+            </View>
+          )}
           <View style={s.statBox}>
             <Text style={s.statNumber}>{project.components.length}</Text>
             <Text style={s.statDesc}>composants</Text>
@@ -266,7 +279,7 @@ export function ProjectPDFDocument({ project }: Props) {
           </View>
         </View>
 
-        <PageNum />
+        <PageFooter studioName={studioName} />
       </Page>
 
       {/* ── Page 2 : Sommaire ────────────────────────────────────────────────── */}
@@ -279,12 +292,12 @@ export function ProjectPDFDocument({ project }: Props) {
           <View key={cat} style={s.tocCategorySection}>
             <Text style={s.tocCategoryHeader}>{CATEGORY_SECTION_LABELS[cat]}</Text>
             {catComponents.map(component => (
-              <TocRow key={component.id} component={component} />
+              <TocRow key={component.id} component={component} showEstimations={showEstimations} />
             ))}
           </View>
         ))}
 
-        <PageNum />
+        <PageFooter studioName={studioName} />
       </Page>
 
       {/* ── Pages composants (détail) — une page par catégorie ─────────────── */}
@@ -300,10 +313,11 @@ export function ProjectPDFDocument({ project }: Props) {
               key={component.id}
               component={component}
               allComponents={components}
+              showEstimations={showEstimations}
             />
           ))}
 
-          <PageNum />
+          <PageFooter studioName={studioName} />
         </Page>
       ))}
 
@@ -333,7 +347,7 @@ export function ProjectPDFDocument({ project }: Props) {
           <View style={s.signatureBox} />
         </View>
 
-        <PageNum />
+        <PageFooter studioName={studioName} />
       </Page>
     </Document>
   );

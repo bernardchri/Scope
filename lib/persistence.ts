@@ -1,7 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { save } from '@tauri-apps/plugin-dialog';
 import { getConfigStore } from './store';
-import { Project, ComponentImage } from './types';
+import { Project, ComponentImage, AppSettings, DEFAULT_APP_SETTINGS } from './types';
 import { migrateProjectsToV2 } from './migrations';
 
 export function slugify(name: string): string {
@@ -162,6 +162,24 @@ export async function removeRecentFile(path: string): Promise<void> {
   const store = await getConfigStore();
   const recent = (await store.get<RecentFile[]>('recentFiles')) || [];
   await store.set('recentFiles', recent.filter(r => r.path !== path));
+  await store.save();
+}
+
+// ─── App Settings ─────────────────────────────────────────────────────────────
+
+export async function getAppSettings(): Promise<AppSettings> {
+  const store = await getConfigStore();
+  const saved = await store.get<Partial<AppSettings>>('appSettings');
+  return {
+    ...DEFAULT_APP_SETTINGS,
+    ...saved,
+    pdf: { ...DEFAULT_APP_SETTINGS.pdf, ...saved?.pdf },
+  };
+}
+
+export async function saveAppSettings(settings: AppSettings): Promise<void> {
+  const store = await getConfigStore();
+  await store.set('appSettings', settings);
   await store.save();
 }
 

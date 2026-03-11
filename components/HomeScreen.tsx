@@ -17,7 +17,8 @@ import { useProjectStore, initPreviousProject } from '@/lib/projectStore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { FolderOpen, Plus, Clock, ChevronRight } from 'lucide-react';
+import { FolderOpen, Plus, Clock, ChevronRight, Settings } from 'lucide-react';
+import SettingsDialog from '@/components/SettingsDialog';
 
 export default function HomeScreen() {
   const openProject = useProjectStore(state => state.openProject);
@@ -26,6 +27,7 @@ export default function HomeScreen() {
   const [newProjectName, setNewProjectName] = useState('');
   const [missingFile, setMissingFile] = useState<RecentFile | null>(null);
   const [migrationPending, setMigrationPending] = useState<{ scopePath: string; folderPath: string } | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   useEffect(() => {
     getRecentFiles().then(setRecentFiles);
@@ -127,7 +129,17 @@ export default function HomeScreen() {
 
   return (
     <>
-    <div className="flex flex-col items-center justify-center min-h-screen gap-10 p-8">
+    <div className="flex flex-col items-center justify-center min-h-screen gap-10 p-8 relative">
+
+      {/* Bouton paramètres */}
+      <Button
+        variant="ghost"
+        size="icon"
+        className="absolute top-4 right-4"
+        onClick={() => setSettingsOpen(true)}
+      >
+        <Settings className="w-5 h-5" />
+      </Button>
 
       {/* Titre */}
       <div className="text-center">
@@ -239,6 +251,8 @@ export default function HomeScreen() {
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+    <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
     </>
   );
 }

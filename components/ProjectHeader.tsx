@@ -1,8 +1,10 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Plus } from 'lucide-react';
+import { Plus, Settings } from 'lucide-react';
+import { useState } from 'react';
+import SettingsDialog from '@/components/SettingsDialog';
 
 interface ProjectHeaderProps {
   projectName: string;
@@ -17,6 +19,7 @@ export default function ProjectHeader({
 }: ProjectHeaderProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [draft, setDraft] = useState(projectName);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -73,8 +76,13 @@ export default function ProjectHeader({
             <Plus className="h-4 w-4 mr-1" />
             Nouvel element
           </Button>
+          <Button size="sm" variant="ghost" onClick={() => setSettingsOpen(true)}>
+            <Settings className="h-4 w-4" />
+          </Button>
         </div>
       </div>
+
+      <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
     </div>
   );
 }

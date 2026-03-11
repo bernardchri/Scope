@@ -275,6 +275,13 @@ export const s = StyleSheet.create({
     fontSize: 8,
     color: '#ccc',
   },
+  footerStudioName: {
+    position: 'absolute' as const,
+    bottom: 28,
+    left: 56,
+    fontSize: 8,
+    color: '#ccc',
+  },
 
   // ─── Bon pour accord ─────────────────────────────────────────────────────────
   approvalSection: {

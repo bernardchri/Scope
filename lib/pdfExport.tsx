@@ -1,7 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { save } from '@tauri-apps/plugin-dialog';
 import { Font } from '@react-pdf/renderer';
-import { slugify } from './persistence';
+import { slugify, getAppSettings } from './persistence';
 import { Project } from './types';
 import { renderImageWithPins } from './imageHelpers';
 import { getImageBase64 } from './imageManager';
@@ -71,12 +71,19 @@ export async function exportProjectPDF(project: Project, folderPath?: string): P
   if (!filePath) return;
 
   const preparedProject = await preparePdfProject(project, folderPath || '');
+  const appSettings = await getAppSettings();
 
   // Import dynamique pour éviter les problèmes SSR avec @react-pdf/renderer
   const { pdf } = await import('@react-pdf/renderer');
   const { ProjectPDFDocument } = await import('@/components/pdf/ProjectPDFDocument');
 
-  const element = <ProjectPDFDocument project={preparedProject} />;
+  const element = (
+    <ProjectPDFDocument
+      project={preparedProject}
+      showEstimations={appSettings.pdf.showEstimations}
+      studioName={appSettings.studioName}
+    />
+  );
   const blob = await pdf(element).toBlob();
 
   const bytes = new Uint8Array(await blob.arrayBuffer());
