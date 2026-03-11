@@ -7,13 +7,13 @@ import type { Root, RootContent, PhrasingContent } from 'mdast';
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const t = {
-  h1: { fontSize: 18, fontFamily: 'Helvetica-Bold', marginBottom: 6, marginTop: 16, color: '#1a1a1a' },
-  h2: { fontSize: 15, fontFamily: 'Helvetica-Bold', marginBottom: 5, marginTop: 14, color: '#1a1a1a' },
-  h3: { fontSize: 12, fontFamily: 'Helvetica-Bold', marginBottom: 4, marginTop: 10, color: '#1a1a1a' },
-  h4: { fontSize: 11, fontFamily: 'Helvetica-Bold', marginBottom: 3, marginTop: 8,  color: '#333' },
-  h5: { fontSize: 10, fontFamily: 'Helvetica-Bold', marginBottom: 3, marginTop: 6,  color: '#333' },
-  h6: { fontSize: 9,  fontFamily: 'Helvetica-Bold', marginBottom: 3, marginTop: 6,  color: '#555' },
-  p:  { fontSize: 10, lineHeight: 1.7, marginBottom: 8, color: '#333' },
+  h1: { fontSize: 18, fontWeight: 700, marginBottom: 6, marginTop: 16, color: '#1a1a1a' },
+  h2: { fontSize: 15, fontWeight: 700, marginBottom: 5, marginTop: 14, color: '#1a1a1a' },
+  h3: { fontSize: 12, fontWeight: 700, marginBottom: 4, marginTop: 10, color: '#1a1a1a' },
+  h4: { fontSize: 11, fontWeight: 700, marginBottom: 3, marginTop: 8,  color: '#333' },
+  h5: { fontSize: 10, fontWeight: 700, marginBottom: 3, marginTop: 6,  color: '#333' },
+  h6: { fontSize: 9,  fontWeight: 700, marginBottom: 3, marginTop: 6,  color: '#555' },
+  p:  { fontSize: 8, lineHeight: 1.7, marginBottom: 8, color: '#333' },
   blockquote: {
     borderLeftWidth: 3, borderLeftColor: '#ddd', borderLeftStyle: 'solid',
     paddingLeft: 12, marginBottom: 8,
@@ -24,7 +24,7 @@ const t = {
   },
   code: { fontFamily: 'Courier', fontSize: 9, color: '#d4d4d4', lineHeight: 1.5 },
   list:            { marginBottom: 8 },
-  listItem:        { flexDirection: 'row', marginBottom: 3 } as const,
+  listItem:        { flexDirection: 'row', marginBottom: 0 } as const,
   bullet:          { fontSize: 10, width: 16, color: '#555', flexShrink: 0 },
   listItemContent: { flex: 1 },
   hr: {
@@ -40,7 +40,7 @@ const t = {
     flexDirection: 'row',
     borderBottomWidth: 1, borderBottomColor: '#f0f0f0', borderBottomStyle: 'solid',
   } as const,
-  tableCellHeader: { flex: 1, padding: 6, fontSize: 9, fontFamily: 'Helvetica-Bold', color: '#1a1a1a' },
+  tableCellHeader: { flex: 1, padding: 6, fontSize: 9, fontWeight: 700, color: '#1a1a1a' },
   tableCell:       { flex: 1, padding: 6, fontSize: 9, color: '#333' },
 };
 
@@ -54,7 +54,7 @@ function renderInline(nodes: PhrasingContent[]): React.ReactElement[] {
       case 'text':
         return <Text key={i}>{node.value}</Text>;
       case 'strong':
-        return <Text key={i} style={{ fontFamily: 'Helvetica-Bold' }}>
+        return <Text key={i} style={{ fontWeight: 700 }}>
           {renderInline(node.children as PhrasingContent[])}
         </Text>;
       case 'emphasis':
@@ -84,7 +84,7 @@ function renderInline(nodes: PhrasingContent[]): React.ReactElement[] {
 
 // ─── Block renderer ───────────────────────────────────────────────────────────
 
-function renderBlock(node: RootContent, key: number): React.ReactElement | null {
+function renderBlock(node: RootContent, key: number, isInList: boolean = false): React.ReactElement | null {
   switch (node.type) {
 
     case 'heading':
@@ -96,7 +96,7 @@ function renderBlock(node: RootContent, key: number): React.ReactElement | null 
 
     case 'paragraph':
       return (
-        <Text key={key} style={t.p}>
+        <Text key={key} style={{ ...t.p, marginBottom: isInList ? 0 : t.p.marginBottom }}>
           {renderInline(node.children as PhrasingContent[])}
         </Text>
       );
@@ -111,7 +111,7 @@ function renderBlock(node: RootContent, key: number): React.ReactElement | null 
     case 'blockquote':
       return (
         <View key={key} style={t.blockquote}>
-          {node.children.map((child, i) => renderBlock(child, i))}
+          {node.children.map((child, i) => renderBlock(child, i, false))}
         </View>
       );
 
@@ -123,7 +123,7 @@ function renderBlock(node: RootContent, key: number): React.ReactElement | null 
             <View key={i} style={t.listItem}>
               <Text style={t.bullet}>{ordered ? `${i + 1}.` : '•'}</Text>
               <View style={t.listItemContent}>
-                {item.children.map((child, j) => renderBlock(child, j))}
+                {item.children.map((child, j) => renderBlock(child, j, true))}
               </View>
             </View>
           ))}
@@ -169,7 +169,7 @@ export function renderMarkdown(content: string): React.ReactElement {
   const tree = unified().use(remarkParse).use(remarkGfm).parse(content) as Root;
   return (
     <View>
-      {tree.children.map((node, i) => renderBlock(node, i))}
+      {tree.children.map((node, i) => renderBlock(node, i, false))}
     </View>
   );
 }
