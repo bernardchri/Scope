@@ -108,6 +108,7 @@ Widget toggle UI in `ScopeItemDetail.tsx` allows enabling/disabling widgets per 
 
 ### Data types (`lib/types.ts`)
 
+- `AppSettings`: `{ studioName?, pdf: { showEstimations }, markdown: { multiFile } }` — stored in `config.dat`, deep-merged with `DEFAULT_APP_SETTINGS` on load
 - `Project`: `{ id, name, description?, filename?, hourlyRate?, budgetCap?, components[], createdAt, formatVersion? }` — `formatVersion: 2` = folder format
 - `Component`: `{ category: ScopeItemType, tasks[], instances[], images[], estimatedHours?, widgets?, notes?, }`
 - `Task`: `{ id, name, completed, category: 'frontend'|'backend'|'seo'|'motion', pinRef? }` — `pinRef: { imageId, pinId, pinNumber }` links a task to an image pin
@@ -161,6 +162,12 @@ Pin ↔ instance link: in `InstanceItem`, a `MapPin` button opens inline `Select
 
 **Task category badge**: clicking the badge in view mode directly saves the new category to the store (via `onDirectCategoryChange`).
 
+### Dashboard (`components/ProjectDashboard.tsx`)
+
+Project overview with description, hourly rate, budget cap, stats, and component listing by category. Export buttons (PDF + Markdown) are in a **static footer** pinned at the bottom, centered. The dashboard content scrolls independently above the footer.
+
+Element deletion uses an `AlertDialog` (shadcn/ui) for confirmation — not `window.confirm()` which is unreliable in Tauri webview.
+
 ### Navigation (`components/ComponentList.tsx`)
 
 `navHistory: string[]` stack — last item is active component. Sidebar click resets stack, instance link pushes to stack, back button pops. `onGoHome` resets to `[]` (shows dashboard).
@@ -172,6 +179,17 @@ Pin ↔ instance link: in `InstanceItem`, a `MapPin` button opens inline `Select
 **Pins dans le PDF** : avant génération, `preparePdfProject` (dans `lib/pdfExport.tsx`) charge les images depuis le disque via `getImageBase64()` puis pré-cuit les pins via Canvas (`renderImageWithPins`, exportée depuis `lib/imageHelpers.ts`). Les images passées au renderer n'ont plus de `pins[]` — pas d'overlay dans `ProjectPDFDocument`.
 
 **Ordre dans les exports** : les types sont ordonnés selon `PDF_DISPLAY_ORDER` (document en premier).
+
+### Markdown export (`lib/markdownExport.ts`)
+
+Two modes controlled by `AppSettings.markdown.multiFile`:
+
+- **Single file** (default): saves one `STORIES.md` via a file-save dialog. Tasks listed with category prefix inline.
+- **Multi-file**: opens a folder picker, writes one `.md` per component + `index.md` + `stories-img/`. Filenames follow the pattern `{nn}_{type}_{slug}.md` (e.g. `01_document_general.md`, `05_template_nos-gites.md`).
+
+Tasks in markdown are grouped by category under `###` sub-headings (Front-end, Back-end, SEO, Motion) — empty categories are skipped.
+
+`exportProjectMarkdown` reads settings and branches to `exportProjectMarkdownMulti` when multi-file is enabled.
 
 ### Styling
 

@@ -29,12 +29,12 @@ Sans outil dédié, cette phase de cadrage se passe dans des Google Docs approxi
 
 ## Fonctionnalités
 
-- **Projets locaux** — stockés en fichiers `.scope` (JSON), aucune donnée en ligne
+- **Projets locaux** — stockés en dossiers (JSON + images), aucune donnée en ligne
 - **Composants organisés par catégorie** — Templates, Navigation, Sections, Formulaires, Médias, Documents…
 - **Mockups annotés** — ajoutez des images, posez des pins numérotés, liez chaque pin à un élément ou un composant
 - **Estimations** — temps par composant, total automatique, taux horaire, budget plafond
 - **Export PDF** — cahier des charges A4 avec sommaire, détail des composants, zone de signature
-- **Export STORIES.md** — pont vers [Story-compiler](https://github.com/bernardchri/Story-compiler) pour le suivi de développement
+- **Export STORIES.md** — fichier unique ou **un fichier .md par élément** (configurable dans les paramètres), pont vers [Story-compiler](https://github.com/bernardchri/Story-compiler) pour le suivi de développement
 - **Documents** — section dédiée pour rédiger les contenus en Markdown (briefs, spécifications, notes)
 - **Drag & drop** — réordonner les composants dans la sidebar, réordonner les images
 
@@ -69,7 +69,7 @@ Story-compiler protège contre la **désorganisation** côté dev.
 | Frontend | Next.js 15 + TypeScript (export statique) |
 | UI | shadcn/ui + Tailwind CSS 4 |
 | State | Zustand |
-| Storage | Fichiers `.scope` locaux via Tauri |
+| Storage | Dossiers locaux (JSON + images) via Tauri |
 
 Aucun serveur. Aucun compte. Aucune télémétrie.
 
@@ -102,7 +102,7 @@ Les builds multiplateformes (macOS arm64, macOS x64, Windows x64) sont produits 
 
 ## Format de fichier
 
-Les projets sont sauvegardés en JSON dans des fichiers `.scope` que vous contrôlez entièrement. Vous pouvez les versionner, les partager ou les sauvegarder comme n'importe quel fichier.
+Les projets sont sauvegardés en dossiers contenant un fichier `scope.json` et un dossier `img/`. Vous pouvez les versionner, les partager ou les sauvegarder comme n'importe quel dossier. Les anciens fichiers `.scope` sont automatiquement migrés à l'ouverture.
 
 ---
 
