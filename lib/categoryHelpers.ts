@@ -95,7 +95,7 @@ export function getCategoryColor(category: ScopeItemType): string {
 // --- Display orders ---
 
 export const COMPONENT_DISPLAY_ORDER: ScopeItemType[] = [
-  'template', 'section', 'component', 'document',
+  'document', 'template', 'section', 'component',
 ];
 
 export const PDF_DISPLAY_ORDER: ScopeItemType[] = [
