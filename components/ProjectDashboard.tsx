@@ -8,12 +8,14 @@ import { ChevronRight, Clock, CheckSquare, FileText, FileCode, Euro, TriangleAle
 import { exportProjectPDF } from '@/lib/pdfExport';
 import { exportProjectMarkdown } from '@/lib/markdownExport';
 import { CATEGORY_SECTION_LABELS, COMPONENT_DISPLAY_ORDER } from '@/lib/categoryHelpers';
+import { cn } from '@/lib/utils';
 
 interface ProjectDashboardProps {
   project: Project;
   folderPath: string;
   onSelectComponent: (id: string) => void;
   onUpdateProject: (updates: Partial<Project>) => void;
+  className?: string;
 }
 
 export default function ProjectDashboard({
@@ -21,6 +23,7 @@ export default function ProjectDashboard({
   folderPath,
   onSelectComponent,
   onUpdateProject,
+  className,
 }: ProjectDashboardProps) {
   const [isEditingDesc, setIsEditingDesc] = useState(false);
   const [descDraft, setDescDraft] = useState(project.description ?? '');
@@ -90,6 +93,8 @@ export default function ProjectDashboard({
   );
 
   return (
+    <div className={cn("flex flex-col", className)}>
+    <div className="flex-1 overflow-y-auto">
     <div className="max-w-3xl mx-auto py-10 px-4 space-y-10">
 
       {/* Description */}
@@ -303,8 +308,12 @@ export default function ProjectDashboard({
         </section>
       )}
 
-         {/* Exports */}
-      <div className="flex justify-end gap-2 -mt-4">
+    </div>
+    </div>
+
+    {/* Footer exports */}
+    <div className="shrink-0 border-t bg-background py-3 px-4">
+      <div className="flex justify-center gap-2">
         <Button variant="outline" size="sm" onClick={handleExportMarkdown} disabled={isExportingMd}>
           <FileCode className="w-4 h-4 mr-2" />
           {isExportingMd ? 'Génération…' : 'Exporter STORIES.md'}
@@ -314,6 +323,7 @@ export default function ProjectDashboard({
           {isExporting ? 'Génération…' : 'Exporter en PDF'}
         </Button>
       </div>
+    </div>
     </div>
   );
 }

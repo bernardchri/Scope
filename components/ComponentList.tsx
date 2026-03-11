@@ -125,9 +125,8 @@ export default function ComponentList({ projectId }: ComponentListProps) {
           </Button>
         )}
 
-        <div className="flex-1 overflow-y-auto">
-          {selectedItem ? (
-            <div className="p-8">
+        {selectedItem ? (
+          <div className="flex-1 overflow-y-auto p-8">
               <ScopeItemDetail
                 key={selectedItem.id}
                 projectId={projectId}
@@ -138,16 +137,16 @@ export default function ComponentList({ projectId }: ComponentListProps) {
                 onDelete={() => handleDeleteComponent(selectedItem.id)}
                 onNavigate={navigateTo}
               />
-            </div>
-          ) : (
-            <ProjectDashboard
-              project={activeProject}
-              folderPath={currentProjectPath || ''}
-              onSelectComponent={(id) => setNavHistory([id])}
-              onUpdateProject={(updates) => updateProject(activeProject.id, updates)}
-            />
-          )}
-        </div>
+          </div>
+        ) : (
+          <ProjectDashboard
+            project={activeProject}
+            folderPath={currentProjectPath || ''}
+            onSelectComponent={(id) => setNavHistory([id])}
+            onUpdateProject={(updates) => updateProject(activeProject.id, updates)}
+            className="flex-1 min-h-0"
+          />
+        )}
       </div>
     </div>
   );

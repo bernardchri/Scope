@@ -61,6 +61,7 @@ export default function ScopeItemDetail({
   const [isEditing, setIsEditing] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [pendingRemove, setPendingRemove] = useState<WidgetInstance | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [autoFocusWidgetId, setAutoFocusWidgetId] = useState<string | null>(null);
   const [slashMenu, setSlashMenu] = useState<{
     position: { top: number; left: number };
@@ -343,7 +344,7 @@ export default function ScopeItemDetail({
           variant="ghost"
           size="sm"
           className="text-destructive hover:text-destructive"
-          onClick={() => { if (confirm(`Supprimer "${item.name}" ?`)) onDelete(); }}
+          onClick={() => setShowDeleteConfirm(true)}
         >
           <Trash2 className="h-4 w-4" />
         </Button>
@@ -428,6 +429,22 @@ export default function ScopeItemDetail({
           <AlertDialogFooter>
             <AlertDialogCancel>Annuler</AlertDialogCancel>
             <AlertDialogAction onClick={confirmRemove}>Supprimer</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* AlertDialog for deleting the element */}
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Supprimer &laquo;&nbsp;{item.name}&nbsp;&raquo; ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Cet &eacute;l&eacute;ment sera d&eacute;finitivement supprim&eacute;.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction onClick={onDelete}>Supprimer</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
