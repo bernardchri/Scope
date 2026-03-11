@@ -37,14 +37,9 @@ export default function SortableThumbnail({ image, index, isActive, src, onClick
           <img
             src={src}
             alt={image.caption || `Miniature ${index + 1}`}
-            className={crop ? 'pointer-events-none' : 'w-full h-full object-cover pointer-events-none'}
+            className="w-full h-full object-cover pointer-events-none"
             style={crop ? {
-              position: 'absolute',
-              width: `${100 / (crop.width / 100)}%`,
-              maxWidth: 'none',
-              height: 'auto',
-              left: `${-(crop.x / crop.width) * 100}%`,
-              top: `${-(crop.y / crop.height) * 100}%`,
+              objectPosition: `${crop.x + crop.width / 2}% ${crop.y + crop.height / 2}%`,
             } : undefined}
             draggable={false}
           />
