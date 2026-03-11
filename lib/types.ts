@@ -85,9 +85,13 @@ export interface AppSettings {
   pdf: {
     showEstimations: boolean;
   };
+  markdown: {
+    multiFile: boolean;
+  };
 }
 
 export const DEFAULT_APP_SETTINGS: AppSettings = {
   studioName: '',
   pdf: { showEstimations: true },
+  markdown: { multiFile: false },
 };

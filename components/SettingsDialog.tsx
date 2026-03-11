@@ -81,6 +81,25 @@ export default function SettingsDialog({ open, onOpenChange }: Props) {
                 </Label>
               </div>
             </div>
+
+            <div className="space-y-3">
+              <Label className="text-sm font-semibold">Export Markdown</Label>
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="markdownMultiFile"
+                  checked={settings.markdown.multiFile}
+                  onCheckedChange={(checked: boolean) =>
+                    setSettings({
+                      ...settings,
+                      markdown: { ...settings.markdown, multiFile: !!checked },
+                    })
+                  }
+                />
+                <Label htmlFor="markdownMultiFile" className="font-normal cursor-pointer">
+                  Exporter un fichier par élément
+                </Label>
+              </div>
+            </div>
           </div>
         )}
 

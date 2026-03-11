@@ -174,6 +174,7 @@ export async function getAppSettings(): Promise<AppSettings> {
     ...DEFAULT_APP_SETTINGS,
     ...saved,
     pdf: { ...DEFAULT_APP_SETTINGS.pdf, ...saved?.pdf },
+    markdown: { ...DEFAULT_APP_SETTINGS.markdown, ...saved?.markdown },
   };
 }
 

@@ -1,11 +1,12 @@
 import { invoke } from '@tauri-apps/api/core';
-import { save } from '@tauri-apps/plugin-dialog';
+import { save, open } from '@tauri-apps/plugin-dialog';
 import { Project, Component } from './types';
 import { CATEGORY_SECTION_LABELS, PDF_DISPLAY_ORDER, getActiveWidgets } from './categoryHelpers';
 import { TASK_CATEGORY_ORDER, TASK_CATEGORY_PLAIN_LABELS } from './taskCategoryHelpers';
 import { slugify } from './persistence';
 import { renderImageWithPins } from './imageHelpers';
 import { getImageBase64 } from './imageManager';
+import { getAppSettings } from './persistence';
 
 const CATEGORY_ORDER = PDF_DISPLAY_ORDER;
 
@@ -48,10 +49,13 @@ function generateComponentBlock(component: Component, imageMap: ImageMap, allCom
     const taskLines = ['## Tâches', ''];
     for (const cat of TASK_CATEGORY_ORDER) {
       const catTasks = component.tasks.filter(t => t.category === cat);
+      if (catTasks.length === 0) continue;
+      taskLines.push(`### ${TASK_CATEGORY_PLAIN_LABELS[cat]}`, '');
       for (const task of catTasks) {
         const pinSuffix = task.pinRef ? ` [Pin #${task.pinRef.pinNumber}]` : '';
-        taskLines.push(`- [ ] (${TASK_CATEGORY_PLAIN_LABELS[cat]}) ${task.name}${pinSuffix}`);
+        taskLines.push(`- [ ] ${task.name}${pinSuffix}`);
       }
+      taskLines.push('');
     }
     parts.push(taskLines.join('\n'));
   }
@@ -209,6 +213,11 @@ async function collectImages(project: Project, dir: string, folderPath?: string)
 }
 
 export async function exportProjectMarkdown(project: Project, folderPath?: string): Promise<void> {
+  const settings = await getAppSettings();
+  if (settings.markdown.multiFile) {
+    return exportProjectMarkdownMulti(project, folderPath);
+  }
+
   const slug = project.filename ?? slugify(project.name);
   const defaultDir = folderPath ? `${folderPath}/export` : undefined;
   const defaultPath = defaultDir
@@ -225,4 +234,59 @@ export async function exportProjectMarkdown(project: Project, folderPath?: strin
   const imageMap = await collectImages(project, dir, folderPath);
   const content = generateStoriesMd(project, imageMap);
   await invoke('write_text_file', { path: filePath, content });
+}
+
+async function exportProjectMarkdownMulti(project: Project, folderPath?: string): Promise<void> {
+  const defaultDir = folderPath ? `${folderPath}/export` : undefined;
+
+  const destDir = await open({
+    directory: true,
+    defaultPath: defaultDir,
+    title: 'Choisir le dossier de destination',
+  });
+  if (!destDir) return;
+
+  const imageMap = await collectImages(project, destDir as string, folderPath);
+
+  const date = new Date().toLocaleDateString('fr-FR', {
+    day: 'numeric', month: 'long', year: 'numeric',
+  });
+
+  const indexLines: string[] = [];
+  indexLines.push(`# ${project.name}`);
+  if (project.description) indexLines.push(`> ${project.description}`);
+  indexLines.push(`Exporté le ${date} · ${project.components.length} élément${project.components.length > 1 ? 's' : ''}`);
+  indexLines.push('---');
+  indexLines.push('');
+
+  let fileIndex = 1;
+
+  for (const category of CATEGORY_ORDER) {
+    const group = project.components.filter(c => c.category === category);
+    if (group.length === 0) continue;
+
+    indexLines.push(`## ${CATEGORY_SECTION_LABELS[category] ?? category}`);
+    indexLines.push('');
+
+    for (const comp of group) {
+      const nn = String(fileIndex).padStart(2, '0');
+      const compSlug = slugify(comp.name);
+      const filename = `${nn}_${comp.category}_${compSlug}.md`;
+
+      const widgets = getActiveWidgets(comp);
+      const hasNotes = widgets.some(w => w.type === 'notes') && comp.notes?.some(n => n.content);
+      const block = hasNotes
+        ? generateDocumentBlock(comp, imageMap)
+        : generateComponentBlock(comp, imageMap, project.components);
+
+      await invoke('write_text_file', { path: `${destDir}/${filename}`, content: block });
+
+      indexLines.push(`- [${comp.name}](./${filename})`);
+      fileIndex++;
+    }
+
+    indexLines.push('');
+  }
+
+  await invoke('write_text_file', { path: `${destDir}/index.md`, content: indexLines.join('\n') });
 }
