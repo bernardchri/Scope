@@ -79,7 +79,7 @@ export default function NoteWidget({ content, onSave }: NoteWidgetProps) {
           </div>
         </>
       ) : (
-        <div className="prose prose-slate prose-lg dark:prose-invert max-w-none border rounded-lg p-8 bg-card shadow-sm">
+        <div className="prose prose-slate prose-normal dark:prose-invert max-w-none border rounded-lg p-8 bg-card shadow-sm">
           {content ? (
             <ReactMarkdown remarkPlugins={[remarkGfm]}>
               {content}
