@@ -2,14 +2,14 @@ import { StyleSheet } from '@react-pdf/renderer';
 
 // Largeur de contenu A4 : 595.28pt − 2 × 56pt de padding
 export const CONTENT_WIDTH = 483;
-export const IMG_MAX_HEIGHT = 320;
+export const IMG_MAX_HEIGHT = 620;
 
 export const s = StyleSheet.create({
   page: {
     paddingTop: 52,
     paddingBottom: 52,
     paddingHorizontal: 56,
-    fontFamily: 'Helvetica',
+    fontFamily: 'Inter',
     fontSize: 10,
     color: '#1a1a1a',
     backgroundColor: '#ffffff',
@@ -20,7 +20,7 @@ export const s = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 40,
+    marginBottom: 20,
     paddingBottom: 14,
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
@@ -32,7 +32,7 @@ export const s = StyleSheet.create({
   // Titre projet (page 1)
   projectName: {
     fontSize: 30,
-    fontFamily: 'Helvetica-Bold',
+    fontFamily: 'Inter', fontWeight: 700,
     marginBottom: 6,
     color: '#1a1a1a',
   },
@@ -46,7 +46,7 @@ export const s = StyleSheet.create({
   // Label de section
   sectionLabel: {
     fontSize: 8,
-    fontFamily: 'Helvetica-Bold',
+    fontFamily: 'Inter', fontWeight: 700,
     letterSpacing: 1.5,
     color: '#999',
     marginBottom: 8,
@@ -79,7 +79,7 @@ export const s = StyleSheet.create({
   },
   statNumber: {
     fontSize: 22,
-    fontFamily: 'Helvetica-Bold',
+    fontFamily: 'Inter', fontWeight: 700,
     color: '#1a1a1a',
     marginBottom: 3,
   },
@@ -92,7 +92,7 @@ export const s = StyleSheet.create({
   // ─── Sommaire ────────────────────────────────────────────────────────────────
   tocPageTitle: {
     fontSize: 22,
-    fontFamily: 'Helvetica-Bold',
+    fontFamily: 'Inter', fontWeight: 700,
     marginBottom: 28,
     color: '#1a1a1a',
   },
@@ -101,7 +101,7 @@ export const s = StyleSheet.create({
   },
   tocCategoryHeader: {
     fontSize: 7,
-    fontFamily: 'Helvetica-Bold',
+    fontFamily: 'Inter', fontWeight: 700,
     letterSpacing: 2,
     color: '#aaa',
     textTransform: 'uppercase',
@@ -144,7 +144,7 @@ export const s = StyleSheet.create({
   },
   categoryTitle: {
     fontSize: 8,
-    fontFamily: 'Helvetica-Bold',
+    fontFamily: 'Inter', fontWeight: 700,
     letterSpacing: 2,
     color: '#888',
     textTransform: 'uppercase',
@@ -163,7 +163,7 @@ export const s = StyleSheet.create({
   },
   componentDetailName: {
     fontSize: 13,
-    fontFamily: 'Helvetica-Bold',
+    fontFamily: 'Inter', fontWeight: 700,
     color: '#1a1a1a',
     marginBottom: 4,
   },
@@ -203,7 +203,7 @@ export const s = StyleSheet.create({
   },
   taskSectionLabel: {
     fontSize: 7,
-    fontFamily: 'Helvetica-Bold',
+    fontFamily: 'Inter', fontWeight: 700,
     letterSpacing: 1.5,
     color: '#bbb',
     textTransform: 'uppercase',
@@ -214,7 +214,7 @@ export const s = StyleSheet.create({
   },
   taskCategoryTitle: {
     fontSize: 7,
-    fontFamily: 'Helvetica-Bold',
+    fontFamily: 'Inter', fontWeight: 700,
     color: '#ccc',
     letterSpacing: 0.5,
     textTransform: 'uppercase',
@@ -254,7 +254,7 @@ export const s = StyleSheet.create({
   },
   instancesSectionLabel: {
     fontSize: 7,
-    fontFamily: 'Helvetica-Bold',
+    fontFamily: 'Inter', fontWeight: 700,
     letterSpacing: 1.5,
     color: '#bbb',
     textTransform: 'uppercase',
@@ -283,7 +283,7 @@ export const s = StyleSheet.create({
   },
   approvalTitle: {
     fontSize: 22,
-    fontFamily: 'Helvetica-Bold',
+    fontFamily: 'Inter', fontWeight: 700,
     marginBottom: 4,
     color: '#1a1a1a',
   },
@@ -299,7 +299,7 @@ export const s = StyleSheet.create({
   },
   approvalFieldLabel: {
     fontSize: 10,
-    fontFamily: 'Helvetica-Bold',
+    fontFamily: 'Inter', fontWeight: 700,
     width: 110,
     paddingBottom: 4,
   },
@@ -318,7 +318,7 @@ export const s = StyleSheet.create({
   },
   signatureLabel: {
     fontSize: 10,
-    fontFamily: 'Helvetica-Bold',
+    fontFamily: 'Inter', fontWeight: 700,
     marginBottom: 8,
   },
   signatureBox: {

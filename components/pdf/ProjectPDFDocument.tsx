@@ -110,9 +110,9 @@ function ComponentDetailBlock({
         {component.description && (
           <Text style={s.componentDetailDesc}>{component.description}</Text>
         )}
-        {component.estimatedHours != null && component.estimatedHours > 0 && (
-          <Text style={s.componentDetailHours}>⏱ {component.estimatedHours}h estimées</Text>
-        )}
+        {/* {component.estimatedHours != null && component.estimatedHours > 0 && (
+          <Text style={s.componentDetailHours}> {component.estimatedHours}h estimées</Text>
+        )} */}
       </View>
 
       {/* Toutes les images, pleine largeur (pins pré-cuits dans le pixel par pdfExport) */}
@@ -136,7 +136,7 @@ function ComponentDetailBlock({
               <View key={cat} style={s.taskCategoryGroup}>
                 <Text style={s.taskCategoryTitle}>{TASK_CATEGORY_LABELS[cat]}</Text>
                 {tasks.map(task => (
-                  <View key={task.id} style={s.taskRow}>
+                  <View key={task.id} style={s.taskRow} wrap={false}>
                     <View style={[s.taskCheckbox, ...(task.completed ? [s.taskCheckboxDone] : [])]} />
                     <Text style={task.completed ? s.taskNameDone : s.taskName}>
                       {task.name}
@@ -147,7 +147,7 @@ function ComponentDetailBlock({
                         backgroundColor: '#dbeafe', alignItems: 'center', justifyContent: 'center',
                         marginLeft: 3,
                       }}>
-                        <Text style={{ fontSize: 6, color: '#1d4ed8', fontFamily: 'Helvetica-Bold' }}>
+                        <Text style={{ fontSize: 6, color: '#1d4ed8' }}>
                           {task.pinRef.pinNumber}
                         </Text>
                       </View>
@@ -169,7 +169,7 @@ function ComponentDetailBlock({
           if (w.type === 'paragraph') {
             return (
               <View key={w.id} style={{ marginTop: 8 }}>
-                <Text style={{ fontSize: 10, lineHeight: 1.5 }}>{note.content}</Text>
+                <Text style={{ fontSize: 10, lineHeight: 1 }}>{note.content}</Text>
               </View>
             );
           }
@@ -194,7 +194,7 @@ function ComponentDetailBlock({
                     width: 13, height: 13, borderRadius: 6.5,
                     backgroundColor: '#dbeafe', alignItems: 'center', justifyContent: 'center',
                   }}>
-                    <Text style={{ fontSize: 6, color: '#1d4ed8', fontFamily: 'Helvetica-Bold' }}>
+                    <Text style={{ fontSize: 6, color: '#1d4ed8'}}>
                       {instance.pinRef.pinNumber}
                     </Text>
                   </View>
@@ -252,10 +252,10 @@ export function ProjectPDFDocument({ project }: Props) {
 
         <Text style={s.sectionLabel}>Vue d'ensemble</Text>
         <View style={s.statsRow}>
-          <View style={s.statBox}>
+          {/* <View style={s.statBox}>
             <Text style={s.statNumber}>{totalHours}h</Text>
             <Text style={s.statDesc}>estimées</Text>
-          </View>
+          </View> */}
           <View style={s.statBox}>
             <Text style={s.statNumber}>{project.components.length}</Text>
             <Text style={s.statDesc}>composants</Text>
@@ -275,10 +275,10 @@ export function ProjectPDFDocument({ project }: Props) {
 
         <Text style={s.tocPageTitle}>Sommaire</Text>
 
-        {grouped.map(({ cat, components }) => (
+        {grouped.map(({ cat, components: catComponents }) => (
           <View key={cat} style={s.tocCategorySection}>
             <Text style={s.tocCategoryHeader}>{CATEGORY_SECTION_LABELS[cat]}</Text>
-            {components.map(component => (
+            {catComponents.map(component => (
               <TocRow key={component.id} component={component} />
             ))}
           </View>
@@ -287,27 +287,25 @@ export function ProjectPDFDocument({ project }: Props) {
         <PageNum />
       </Page>
 
-      {/* ── Pages composants (détail) ────────────────────────────────────────── */}
-      <Page size="A4" style={s.page}>
-        <PageHeader projectName={project.name} date={today} />
+      {/* ── Pages composants (détail) — une page par catégorie ─────────────── */}
+      {grouped.map(({ cat, components: catComponents }) => (
+        <Page key={cat} size="A4" style={s.page}>
+          <PageHeader projectName={project.name} date={today} />
 
-        {grouped.map(({ cat, components }) => (
-          <View key={cat}>
-            <View style={s.categoryHeader} wrap={false}>
-              <Text style={s.categoryTitle}>{CATEGORY_SECTION_LABELS[cat]}</Text>
-            </View>
-            {components.map(component => (
-              <ComponentDetailBlock
-                key={component.id}
-                component={component}
-                allComponents={components}
-              />
-            ))}
+          <View style={s.categoryHeader} wrap={false}>
+            <Text style={s.categoryTitle}>{CATEGORY_SECTION_LABELS[cat]}</Text>
           </View>
-        ))}
+          {catComponents.map(component => (
+            <ComponentDetailBlock
+              key={component.id}
+              component={component}
+              allComponents={components}
+            />
+          ))}
 
-        <PageNum />
-      </Page>
+          <PageNum />
+        </Page>
+      ))}
 
       {/* ── Bon pour accord ─────────────────────────────────────────────────── */}
       <Page size="A4" style={s.page}>
@@ -328,7 +326,7 @@ export function ProjectPDFDocument({ project }: Props) {
 
           <Text style={s.approvalNote}>
             En signant ce document, le client reconnaît avoir pris connaissance du cahier des charges
-            et approuve l'ensemble des composants et estimations présentés.
+            et approuve l'ensemble des composants et des solutions techniques présentés.
           </Text>
 
           <Text style={s.signatureLabel}>Signature</Text>

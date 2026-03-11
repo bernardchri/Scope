@@ -1,9 +1,19 @@
 import { invoke } from '@tauri-apps/api/core';
 import { save } from '@tauri-apps/plugin-dialog';
+import { Font } from '@react-pdf/renderer';
 import { slugify } from './persistence';
 import { Project } from './types';
 import { renderImageWithPins } from './imageHelpers';
 import { getImageBase64 } from './imageManager';
+
+Font.register({
+  family: 'Inter',
+  fonts: [
+    { src: '/fonts/inter/Inter-VariableFont_opsz,wght.ttf' },
+    { src: '/fonts/inter/Inter-VariableFont_opsz,wght.ttf', fontWeight: 700 },
+    { src: '/fonts/inter/Inter-Italic-VariableFont_opsz,wght.ttf', fontStyle: 'italic' },
+  ],
+});
 
 function toBase64(bytes: Uint8Array): string {
   let binary = '';
