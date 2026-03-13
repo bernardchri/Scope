@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Component, ScopeItemType, WidgetType, WidgetInstance } from '@/lib/types';
-import { getCategoryLabel, getCategoryColor, getActiveWidgets, getAvailableWidgetTypes, WIDGET_LABELS, WIDGET_ICONS, widgetHasContent } from '@/lib/categoryHelpers';
+import { getCategoryLabel, getCategoryColor, getActiveWidgets, getAvailableWidgetTypes, WIDGET_LABELS, WIDGET_ICONS, widgetHasContent, isTextWidget } from '@/lib/categoryHelpers';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Trash2, Clock } from 'lucide-react';
@@ -39,6 +39,22 @@ import TaskList from './TaskList';
 import ComponentInstanceList from './ComponentInstanceList';
 import SortableWidget from './molecules/SortableWidget';
 import SlashCommandMenu from './molecules/SlashCommandMenu';
+
+/**
+ * Component mapping for text widgets (storage: "notes").
+ * To add a new text widget: create the component, add it here, and register it in scope.config.json.
+ */
+const TEXT_WIDGET_COMPONENTS: Partial<Record<WidgetType, React.ComponentType<{
+  content: string;
+  onSave: (content: string) => void;
+  autoFocus?: boolean;
+  onSlashCommand?: (caretRect: DOMRect, textBefore: string, textAfter: string) => void;
+  onDelete?: () => void;
+  onSplit?: (textBefore: string, textAfter: string) => void;
+}>>> = {
+  paragraph: ParagraphWidget,
+  comment: CommentWidget,
+};
 
 interface ScopeItemDetailProps {
   projectId: string;
@@ -97,7 +113,7 @@ export default function ScopeItemDetail({
 
   function addWidget(widgetType: WidgetType, position: number): string {
     const current = [...activeWidgets];
-    if (widgetType === 'notes' || widgetType === 'paragraph' || widgetType === 'comment') {
+    if (isTextWidget(widgetType)) {
       const noteId = crypto.randomUUID();
       current.splice(position, 0, { id: noteId, type: widgetType });
       const notes = [...(item.notes || []), { id: noteId, content: '' }];
@@ -122,13 +138,14 @@ export default function ScopeItemDetail({
     const updates: Partial<Component> = {
       widgets: activeWidgets.filter(w => w.id !== widget.id),
     };
-    switch (widget.type) {
-      case 'images':    updates.images = []; break;
-      case 'notes':     updates.notes = (item.notes || []).filter(n => n.id !== widget.id); break;
-      case 'paragraph': updates.notes = (item.notes || []).filter(n => n.id !== widget.id); break;
-      case 'comment':   updates.notes = (item.notes || []).filter(n => n.id !== widget.id); break;
-      case 'tasks':     updates.tasks = []; break;
-      case 'instances': updates.instances = []; break;
+    if (isTextWidget(widget.type)) {
+      updates.notes = (item.notes || []).filter(n => n.id !== widget.id);
+    } else {
+      switch (widget.type) {
+        case 'images':    updates.images = []; break;
+        case 'tasks':     updates.tasks = []; break;
+        case 'instances': updates.instances = []; break;
+      }
     }
     onUpdate(item.id, updates);
   }
@@ -202,14 +219,15 @@ export default function ScopeItemDetail({
             onNavigate={onNavigate}
           />
         );
-      case 'paragraph':
-      case 'comment': {
-        const para = item.notes?.find(n => n.id === widget.id);
-        const WidgetComp = widget.type === 'comment' ? CommentWidget : ParagraphWidget;
+      default: {
+        // Text widgets (paragraph, comment, etc.) — rendered via TEXT_WIDGET_COMPONENTS mapping
+        const TextComp = TEXT_WIDGET_COMPONENTS[widget.type];
+        if (!TextComp) return null;
+        const note = item.notes?.find(n => n.id === widget.id);
         return (
-          <WidgetComp
+          <TextComp
             key={widget.id}
-            content={para?.content || ''}
+            content={note?.content || ''}
             autoFocus={autoFocusWidgetId === widget.id}
             onSave={(content) => {
               const notes = [...(item.notes || [])];
@@ -253,8 +271,6 @@ export default function ScopeItemDetail({
           />
         );
       }
-      default:
-        return null;
     }
   }
 
@@ -306,7 +322,7 @@ export default function ScopeItemDetail({
     }
 
     // Insert the chosen widget
-    if (widgetType === 'notes' || widgetType === 'paragraph' || widgetType === 'comment') {
+    if (isTextWidget(widgetType)) {
       const newId = crypto.randomUUID();
       currentWidgets.splice(insertPos, 0, { id: newId, type: widgetType });
       (updates.notes as typeof notes) = [...(updates.notes || notes), { id: newId, content: '' }];

@@ -8,7 +8,7 @@ import {
 } from '@react-pdf/renderer';
 import { Project, Component, TaskCategory, ComponentCategory } from '@/lib/types';
 import { renderMarkdown } from './renderMarkdown';
-import { CATEGORY_SECTION_LABELS, PDF_DISPLAY_ORDER, getActiveWidgets } from '@/lib/categoryHelpers';
+import { CATEGORY_SECTION_LABELS, PDF_DISPLAY_ORDER, getActiveWidgets, isTextWidget } from '@/lib/categoryHelpers';
 import { TASK_CATEGORY_ORDER } from '@/lib/taskCategoryHelpers';
 import { s, CONTENT_WIDTH, IMG_MAX_HEIGHT } from './pdfStyles';
 
@@ -171,7 +171,7 @@ function ComponentDetailBlock({
 
       {/* Contenu markdown (notes), paragraphes et commentaires */}
       {getActiveWidgets(component)
-        .filter(w => w.type === 'notes' || w.type === 'paragraph' || (w.type === 'comment' && exportComments))
+        .filter(w => isTextWidget(w.type) && (w.type !== 'comment' || exportComments))
         .map(w => {
           const note = component.notes?.find(n => n.id === w.id);
           if (!note?.content) return null;

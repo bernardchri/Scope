@@ -25,8 +25,23 @@ export const WIDGET_LABELS: Record<WidgetType, string> =
 export const ALL_WIDGET_TYPES: WidgetType[] =
   scopeConfig.widgets.map(w => w.id as WidgetType);
 
-/** Singleton widget types — only one instance allowed */
-export const SINGLETON_WIDGETS: WidgetType[] = ['images', 'tasks', 'instances'];
+// --- Widget classification (derived from config "storage" field) ---
+
+/** Text widgets store their content in Component.notes[]. Multiple instances allowed. */
+const TEXT_WIDGET_SET = new Set<WidgetType>(
+  scopeConfig.widgets
+    .filter(w => (w as { storage?: string }).storage === 'notes')
+    .map(w => w.id as WidgetType)
+);
+
+/** Returns true if the widget type stores content in notes[] (multi-instance, text-based). */
+export function isTextWidget(type: WidgetType): boolean {
+  return TEXT_WIDGET_SET.has(type);
+}
+
+/** Singleton widget types — only one instance allowed (all non-text widgets) */
+export const SINGLETON_WIDGETS: WidgetType[] =
+  ALL_WIDGET_TYPES.filter(t => !isTextWidget(t));
 
 export const WIDGET_ICONS: Record<WidgetType, LucideIcon> = {
   notes: FileText,
@@ -38,19 +53,14 @@ export const WIDGET_ICONS: Record<WidgetType, LucideIcon> = {
 };
 
 export function widgetHasContent(item: Component, widget: WidgetInstance): boolean {
+  if (isTextWidget(widget.type)) {
+    const note = item.notes?.find(n => n.id === widget.id);
+    return !!note?.content?.trim();
+  }
   switch (widget.type) {
     case 'images':    return (item.images?.length ?? 0) > 0;
-    case 'notes': {
-      const note = item.notes?.find(n => n.id === widget.id);
-      return !!note?.content?.trim();
-    }
     case 'tasks':     return item.tasks.length > 0;
     case 'instances': return item.instances.length > 0;
-    case 'paragraph':
-    case 'comment': {
-      const para = item.notes?.find(n => n.id === widget.id);
-      return !!para?.content?.trim();
-    }
     default: return false;
   }
 }
@@ -73,12 +83,12 @@ export function getActiveWidgets(item: Component): WidgetInstance[] {
   return item.widgets ?? buildDefaultWidgets(item.category, item.notes);
 }
 
-/** Widget types available to add — singletons only if not present, notes always */
+/** Widget types available to add — singletons only if not present, text widgets always */
 export function getAvailableWidgetTypes(activeWidgets: WidgetInstance[]): WidgetType[] {
   const result: WidgetType[] = [];
   for (const type of ALL_WIDGET_TYPES) {
-    if (type === 'notes' || type === 'paragraph' || type === 'comment') {
-      result.push(type); // notes, paragraph & comment always available (multiple allowed)
+    if (isTextWidget(type)) {
+      result.push(type); // text widgets always available (multiple allowed)
     } else if (!activeWidgets.some(w => w.type === type)) {
       result.push(type);
     }

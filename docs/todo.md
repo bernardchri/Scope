@@ -4,33 +4,40 @@
 
 _(aucun bug connu)_
 
+
+## Widgets
+### Maquettes
+- [ ] pouvoir modifier une image par une autre
+
+### Notes
+
+### Commentaire
+- [ ] création d'un nouveau widget Commentaire 
+
 ## Export PDF
 
-- [ ] Toutes les images sont rendues dans le PDF
-- [ ] Les images prennent la largeur de la page
+- [x] Toutes les images sont rendues dans le PDF
+- [x] Les images prennent la largeur de la page
 - [ ] Page de garde : nom projet, date, version, nom du créateur/studio
-- [ ] Supprimer les estimations de temps du rendu PDF (heures, coûts)
+- [x] Supprimer les estimations de temps du rendu PDF (heures, coûts)
 - [ ] Section "Hors périmètre" : lister les tâches marquées `v2`
 
 ## Export Devis (nouveau document PDF)
 
-- [ ] Tableau composants × estimation × coût (taux horaire × heures)
-- [ ] Total HT + mention TVA
+- [x] Tableau composants × estimation × coût (taux horaire × heures)
 - [ ] Conditions : délais, acompte, hors périmètre
-- [ ] Réutilise l'infrastructure `@react-pdf/renderer` existante
+- [x] Réutilise l'infrastructure `@react-pdf/renderer` existante
 
 ## Export STORIES.md
 
-- [ ] En-tête d'export : nombre d'éléments, composants, heures estimées
-- [ ] Export par composant (un fichier `.md` par composant)
-- [ ] Tâches marquées v2 → préfixe `v2:` dans l'export
+- [x] Export par composant (un fichier `.md` par composant)
+- [x] Tâches marquées v2 → préfixe `v2:` dans l'export
 
 ## Informations projet
 
-- [ ] Nom du créateur / studio (ex : "Studio Bergall") — utilisé dans PDF et export
-- [ ] Numéro de version du projet (ex : v1.0) pour le PDF
-- [ ] Total HT affiché
 - [ ] Informations client : nom, lien internet, etc.
+- [x] Nom du créateur / studio (ex : "Studio Bergall") — utilisé dans PDF et export
+- [x] Numéro de version du projet (ex : v1.0) pour le PDF
 
 ## Annotations images
 
@@ -39,8 +46,8 @@ Les pins permettent de marquer un point précis sur une maquette. Les **zones** 
 - [ ] Zones rectangulaires : cliquer-glisser sur une image pour dessiner une zone (stockée en `{ x, y, width, height }` en %)
 - [ ] Lier une zone à un composant existant du projet (ex : zone "header" → composant "Hero")
 - [ ] Affichage : overlay semi-transparent avec le nom du composant lié
-- [ ] Rendu PDF : zones dessinées sur les images de templates avec légende
 - [ ] Cohabitation pins + zones sur la même image (toggle séparé ou mode unique)
+- [x] Rendu PDF : zones dessinées sur les images de templates avec légende
 
 ## UX / Navigation
 
@@ -50,9 +57,11 @@ Les pins permettent de marquer un point précis sur une maquette. Les **zones** 
 
 ## Réglages & préférences
 
-- [ ] Menu application pour les options générales
+- [x] Menu application pour les options générales
 - [ ] Réglages généraux du projet (visibilité taux horaire, etc.)
-- [ ] Pouvoir masquer certaines informations (taux horaire, etc.) — utile en présentation client
+- [x] Pouvoir masquer certaines informations (taux horaire, etc.) — utile en présentation client
+
+### Snippets
 - [ ] Snippets/templates de contenu réutilisables (navigateurs supportés, textes récurrents, todo-listes) — stockés au niveau global de l'app
 - [ ] Export/import des préférences et snippets
 
@@ -188,5 +197,3 @@ Tâche: Supprimer estimations du PDF
   4. Features lourdes (~4h+) : recadrage image, snippets,
   import documents externes
 
-
-## Import d'image
