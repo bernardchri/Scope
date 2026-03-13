@@ -34,6 +34,7 @@ import ComponentEditForm from './forms/ComponentEditForm';
 import ImagePinViewer from './ImagePinViewer';
 import NoteWidget from './NoteWidget';
 import ParagraphWidget from './ParagraphWidget';
+import CommentWidget from './CommentWidget';
 import TaskList from './TaskList';
 import ComponentInstanceList from './ComponentInstanceList';
 import SortableWidget from './molecules/SortableWidget';
@@ -96,7 +97,7 @@ export default function ScopeItemDetail({
 
   function addWidget(widgetType: WidgetType, position: number): string {
     const current = [...activeWidgets];
-    if (widgetType === 'notes' || widgetType === 'paragraph') {
+    if (widgetType === 'notes' || widgetType === 'paragraph' || widgetType === 'comment') {
       const noteId = crypto.randomUUID();
       current.splice(position, 0, { id: noteId, type: widgetType });
       const notes = [...(item.notes || []), { id: noteId, content: '' }];
@@ -125,6 +126,7 @@ export default function ScopeItemDetail({
       case 'images':    updates.images = []; break;
       case 'notes':     updates.notes = (item.notes || []).filter(n => n.id !== widget.id); break;
       case 'paragraph': updates.notes = (item.notes || []).filter(n => n.id !== widget.id); break;
+      case 'comment':   updates.notes = (item.notes || []).filter(n => n.id !== widget.id); break;
       case 'tasks':     updates.tasks = []; break;
       case 'instances': updates.instances = []; break;
     }
@@ -200,10 +202,12 @@ export default function ScopeItemDetail({
             onNavigate={onNavigate}
           />
         );
-      case 'paragraph': {
+      case 'paragraph':
+      case 'comment': {
         const para = item.notes?.find(n => n.id === widget.id);
+        const WidgetComp = widget.type === 'comment' ? CommentWidget : ParagraphWidget;
         return (
-          <ParagraphWidget
+          <WidgetComp
             key={widget.id}
             content={para?.content || ''}
             autoFocus={autoFocusWidgetId === widget.id}
@@ -229,7 +233,6 @@ export default function ScopeItemDetail({
             }}
             onDelete={() => removeWidget(widget)}
             onSplit={(textBefore, textAfter) => {
-              // Save current paragraph with text before cursor
               const notes = [...(item.notes || [])];
               const idx = notes.findIndex(n => n.id === widget.id);
               if (idx >= 0) {
@@ -238,11 +241,10 @@ export default function ScopeItemDetail({
                 notes.push({ id: widget.id, content: textBefore });
               }
 
-              // Create new paragraph after current one
               const widgetIdx = activeWidgets.findIndex(w => w.id === widget.id);
               const newId = crypto.randomUUID();
               const newWidgets = [...activeWidgets];
-              newWidgets.splice(widgetIdx + 1, 0, { type: 'paragraph', id: newId });
+              newWidgets.splice(widgetIdx + 1, 0, { type: widget.type, id: newId });
               notes.push({ id: newId, content: textAfter });
 
               onUpdate(item.id, { widgets: newWidgets, notes });
@@ -304,7 +306,7 @@ export default function ScopeItemDetail({
     }
 
     // Insert the chosen widget
-    if (widgetType === 'notes' || widgetType === 'paragraph') {
+    if (widgetType === 'notes' || widgetType === 'paragraph' || widgetType === 'comment') {
       const newId = crypto.randomUUID();
       currentWidgets.splice(insertPos, 0, { id: newId, type: widgetType });
       (updates.notes as typeof notes) = [...(updates.notes || notes), { id: newId, content: '' }];

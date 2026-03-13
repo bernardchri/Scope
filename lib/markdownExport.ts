@@ -28,7 +28,7 @@ function imagesSection(refs: ImageRef[], fallbackAlt: string): string {
   return lines.join('\n');
 }
 
-function generateComponentBlock(component: Component, imageMap: ImageMap, allComponents: Component[] = []): string {
+function generateComponentBlock(component: Component, imageMap: ImageMap, allComponents: Component[] = [], exportComments = false): string {
   const parts: string[] = [];
   parts.push(`# ${component.name}`);
 
@@ -60,13 +60,17 @@ function generateComponentBlock(component: Component, imageMap: ImageMap, allCom
     parts.push(taskLines.join('\n'));
   }
 
-  // Paragraphs
-  const paragraphs = getActiveWidgets(component)
-    .filter(w => w.type === 'paragraph')
-    .map(w => component.notes?.find(n => n.id === w.id))
-    .filter((n): n is { id: string; content: string } => !!n?.content);
-  for (const para of paragraphs) {
-    parts.push(para.content);
+  // Paragraphs & comments
+  const textWidgets = getActiveWidgets(component)
+    .filter(w => w.type === 'paragraph' || (w.type === 'comment' && exportComments));
+  for (const w of textWidgets) {
+    const note = component.notes?.find(n => n.id === w.id);
+    if (!note?.content) continue;
+    if (w.type === 'comment') {
+      parts.push(note.content.split('\n').map(line => `> ${line}`).join('\n'));
+    } else {
+      parts.push(note.content);
+    }
   }
 
   // Légende des pins (une section par image qui a des pins)
@@ -100,7 +104,7 @@ function generateComponentBlock(component: Component, imageMap: ImageMap, allCom
   return parts.join('\n\n');
 }
 
-function generateDocumentBlock(component: Component, imageMap: ImageMap): string {
+function generateDocumentBlock(component: Component, imageMap: ImageMap, exportComments = false): string {
   const parts: string[] = [];
   parts.push(`# ${component.name}`);
 
@@ -125,18 +129,23 @@ function generateDocumentBlock(component: Component, imageMap: ImageMap): string
     if (note?.content) parts.push(`## Contenu\n\n${note.content}`);
   }
 
-  // Paragraphs (plain text)
-  const paraWidgets = widgets.filter(w => w.type === 'paragraph');
+  // Paragraphs & comments (plain text)
+  const paraWidgets = widgets.filter(w => w.type === 'paragraph' || (w.type === 'comment' && exportComments));
   for (const w of paraWidgets) {
-    const para = component.notes?.find(n => n.id === w.id);
-    if (para?.content) parts.push(para.content);
+    const note = component.notes?.find(n => n.id === w.id);
+    if (!note?.content) continue;
+    if (w.type === 'comment') {
+      parts.push(note.content.split('\n').map(line => `> ${line}`).join('\n'));
+    } else {
+      parts.push(note.content);
+    }
   }
 
   parts.push('---');
   return parts.join('\n\n');
 }
 
-export function generateStoriesMd(project: Project, imageMap: ImageMap = new Map()): string {
+export function generateStoriesMd(project: Project, imageMap: ImageMap = new Map(), exportComments = false): string {
   const date = new Date().toLocaleDateString('fr-FR', {
     day: 'numeric', month: 'long', year: 'numeric',
   });
@@ -161,9 +170,9 @@ export function generateStoriesMd(project: Project, imageMap: ImageMap = new Map
       const widgets = getActiveWidgets(comp);
       const hasNotes = widgets.some(w => w.type === 'notes') && comp.notes?.some(n => n.content);
       if (hasNotes) {
-        sections.push(generateDocumentBlock(comp, imageMap));
+        sections.push(generateDocumentBlock(comp, imageMap, exportComments));
       } else {
-        sections.push(generateComponentBlock(comp, imageMap, project.components));
+        sections.push(generateComponentBlock(comp, imageMap, project.components, exportComments));
       }
     }
   }
@@ -215,7 +224,7 @@ async function collectImages(project: Project, dir: string, folderPath?: string)
 export async function exportProjectMarkdown(project: Project, folderPath?: string): Promise<void> {
   const settings = await getAppSettings();
   if (settings.markdown.multiFile) {
-    return exportProjectMarkdownMulti(project, folderPath);
+    return exportProjectMarkdownMulti(project, folderPath, settings.comment.exportComments);
   }
 
   const slug = project.filename ?? slugify(project.name);
@@ -232,11 +241,11 @@ export async function exportProjectMarkdown(project: Project, folderPath?: strin
 
   const dir = filePath.substring(0, filePath.lastIndexOf('/'));
   const imageMap = await collectImages(project, dir, folderPath);
-  const content = generateStoriesMd(project, imageMap);
+  const content = generateStoriesMd(project, imageMap, settings.comment.exportComments);
   await invoke('write_text_file', { path: filePath, content });
 }
 
-async function exportProjectMarkdownMulti(project: Project, folderPath?: string): Promise<void> {
+async function exportProjectMarkdownMulti(project: Project, folderPath?: string, exportComments = false): Promise<void> {
   const defaultDir = folderPath ? `${folderPath}/export` : undefined;
 
   const destDir = await open({
@@ -276,8 +285,8 @@ async function exportProjectMarkdownMulti(project: Project, folderPath?: string)
       const widgets = getActiveWidgets(comp);
       const hasNotes = widgets.some(w => w.type === 'notes') && comp.notes?.some(n => n.content);
       const block = hasNotes
-        ? generateDocumentBlock(comp, imageMap)
-        : generateComponentBlock(comp, imageMap, project.components);
+        ? generateDocumentBlock(comp, imageMap, exportComments)
+        : generateComponentBlock(comp, imageMap, project.components, exportComments);
 
       await invoke('write_text_file', { path: `${destDir}/${filename}`, content: block });
 

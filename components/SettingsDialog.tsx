@@ -100,6 +100,25 @@ export default function SettingsDialog({ open, onOpenChange }: Props) {
                 </Label>
               </div>
             </div>
+
+            <div className="space-y-3">
+              <Label className="text-sm font-semibold">Commentaires</Label>
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="exportComments"
+                  checked={settings.comment.exportComments}
+                  onCheckedChange={(checked: boolean) =>
+                    setSettings({
+                      ...settings,
+                      comment: { ...settings.comment, exportComments: !!checked },
+                    })
+                  }
+                />
+                <Label htmlFor="exportComments" className="font-normal cursor-pointer">
+                  Inclure les commentaires dans les exports
+                </Label>
+              </div>
+            </div>
           </div>
         )}
 

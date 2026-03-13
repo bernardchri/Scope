@@ -1,7 +1,7 @@
 export type ScopeItemType = 'document' | 'component' | 'template' | 'section';
 export type ComponentCategory = ScopeItemType;
 
-export type WidgetType = 'notes' | 'images' | 'tasks' | 'instances' | 'paragraph';
+export type WidgetType = 'notes' | 'images' | 'tasks' | 'instances' | 'paragraph' | 'comment';
 
 export interface WidgetInstance {
   id: string;
@@ -88,10 +88,14 @@ export interface AppSettings {
   markdown: {
     multiFile: boolean;
   };
+  comment: {
+    exportComments: boolean;
+  };
 }
 
 export const DEFAULT_APP_SETTINGS: AppSettings = {
   studioName: '',
   pdf: { showEstimations: true },
   markdown: { multiFile: false },
+  comment: { exportComments: false },
 };

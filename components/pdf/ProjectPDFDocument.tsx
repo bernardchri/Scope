@@ -83,10 +83,12 @@ function ComponentDetailBlock({
   component,
   allComponents,
   showEstimations = true,
+  exportComments = false,
 }: {
   component: Component;
   allComponents: Component[];
   showEstimations?: boolean;
+  exportComments?: boolean;
 }) {
   const images = (component.images ?? []).map(img => ({
     ...img,
@@ -167,9 +169,9 @@ function ComponentDetailBlock({
         </View>
       )}
 
-      {/* Contenu markdown (notes) et paragraphes */}
+      {/* Contenu markdown (notes), paragraphes et commentaires */}
       {getActiveWidgets(component)
-        .filter(w => w.type === 'notes' || w.type === 'paragraph')
+        .filter(w => w.type === 'notes' || w.type === 'paragraph' || (w.type === 'comment' && exportComments))
         .map(w => {
           const note = component.notes?.find(n => n.id === w.id);
           if (!note?.content) return null;
@@ -177,6 +179,13 @@ function ComponentDetailBlock({
             return (
               <View key={w.id} style={{ marginTop: 8 }}>
                 <Text style={{ fontSize: 10, lineHeight: 1 }}>{note.content}</Text>
+              </View>
+            );
+          }
+          if (w.type === 'comment') {
+            return (
+              <View key={w.id} style={{ marginTop: 8, paddingLeft: 8, borderLeft: '2px solid #9ca3af' }}>
+                <Text style={{ fontSize: 10, lineHeight: 1, color: '#6b7280' }}>{note.content}</Text>
               </View>
             );
           }
@@ -220,10 +229,11 @@ function ComponentDetailBlock({
 interface Props {
   project: Project;
   showEstimations?: boolean;
+  exportComments?: boolean;
   studioName?: string;
 }
 
-export function ProjectPDFDocument({ project, showEstimations = true, studioName }: Props) {
+export function ProjectPDFDocument({ project, showEstimations = true, exportComments = false, studioName }: Props) {
   const today = formatDate(new Date().toISOString());
 
   // Dédupliquer par ID (sécurité contre les données corrompues)
@@ -314,6 +324,7 @@ export function ProjectPDFDocument({ project, showEstimations = true, studioName
               component={component}
               allComponents={components}
               showEstimations={showEstimations}
+              exportComments={exportComments}
             />
           ))}
 

@@ -81,6 +81,7 @@ export async function exportProjectPDF(project: Project, folderPath?: string): P
     <ProjectPDFDocument
       project={preparedProject}
       showEstimations={appSettings.pdf.showEstimations}
+      exportComments={appSettings.comment.exportComments}
       studioName={appSettings.studioName}
     />
   );
