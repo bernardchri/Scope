@@ -4,7 +4,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { ComponentImage, ImagePin, Task, CropRect } from '@/lib/types';
 import { usePinEditor } from '@/lib/hooks/usePinEditor';
 import { open } from '@tauri-apps/plugin-dialog';
-import { saveImageFromPath } from '@/lib/imageManager';
+import { saveImageFromPath, deleteImage } from '@/lib/imageManager';
 import { useImageLoader } from '@/lib/hooks/useImageLoader';
 import PinsOverlay from '@/components/molecules/PinsOverlay';
 import CropOverlay from '@/components/molecules/CropOverlay';
@@ -12,7 +12,7 @@ import SortableThumbnail from '@/components/molecules/SortableThumbnail';
 import ZoomModal from '@/components/modals/ZoomModal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ChevronLeft, ChevronRight, Crop, Eye, EyeOff, Maximize2, Plus, Upload } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Crop, Eye, EyeOff, Maximize2, Plus, RefreshCw, Upload } from 'lucide-react';
 import {
   DndContext,
   DragEndEvent,
@@ -102,6 +102,36 @@ export default function ImagePinViewer({ images, tasks, folderPath, onUpdateImag
       setLocalImages(updated);
       setCurrentIndex(updated.length - 1);
       onUpdateImages(updated);
+    } catch (err) {
+      setImageError(err instanceof Error ? err.message : 'Erreur inconnue');
+    }
+  }
+
+  async function handleReplaceImage() {
+    if (!currentImage) return;
+    setImageError(null);
+    try {
+      const filePath = await open({
+        multiple: false,
+        filters: [{ name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'gif', 'webp'] }],
+      });
+      if (!filePath || typeof filePath !== 'string') return;
+
+      const oldFilename = currentImage.filename;
+      const filename = await saveImageFromPath(folderPath, filePath);
+      const updated = localImages.map((img, i) =>
+        i === currentIndex ? { ...img, filename, pins: undefined, crop: undefined } : img
+      );
+      setLocalImages(updated);
+      setNaturalSize(null);
+      clearSelection();
+      setIsCropping(false);
+      onUpdateImages(updated);
+
+      // Delete old file from disk (best effort)
+      if (oldFilename) {
+        deleteImage(folderPath, oldFilename).catch(() => {});
+      }
     } catch (err) {
       setImageError(err instanceof Error ? err.message : 'Erreur inconnue');
     }
@@ -270,6 +300,10 @@ export default function ImagePinViewer({ images, tasks, folderPath, onUpdateImag
             <Button variant="secondary" size="icon" className="rounded-full shadow opacity-80 hover:opacity-100"
               onClick={(e) => { e.stopPropagation(); handleAddImage(); }} title="Ajouter une image">
               <Upload className="h-4 w-4" />
+            </Button>
+            <Button variant="secondary" size="icon" className="rounded-full shadow opacity-80 hover:opacity-100"
+              onClick={(e) => { e.stopPropagation(); handleReplaceImage(); }} title="Remplacer l'image">
+              <RefreshCw className="h-4 w-4" />
             </Button>
             <Button variant="secondary" size="icon" className="rounded-full shadow opacity-80 hover:opacity-100"
               onClick={(e) => { e.stopPropagation(); setIsCropping(v => !v); clearSelection(); }}
