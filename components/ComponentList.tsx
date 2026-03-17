@@ -23,6 +23,7 @@ export default function ComponentList({ projectId }: ComponentListProps) {
   const deleteComponent = useProjectStore(state => state.deleteComponent);
   const updateComponent = useProjectStore(state => state.updateComponent);
   const reorderComponents = useProjectStore(state => state.reorderComponents);
+  const duplicateComponent = useProjectStore(state => state.duplicateComponent);
   const canDeleteComponent = useProjectStore(state => state.canDeleteComponent);
 
   const [navHistory, setNavHistory] = useState<string[]>([]);
@@ -81,6 +82,12 @@ export default function ComponentList({ projectId }: ComponentListProps) {
     deleteComponent(activeProject.id, componentId);
   }
 
+  function handleDuplicateComponent(componentId: string) {
+    if (!activeProject) return;
+    const newId = duplicateComponent(activeProject.id, componentId);
+    if (newId) setNavHistory([newId]);
+  }
+
   function handleUpdateComponent(componentId: string, updates: Partial<Component>) {
     if (!activeProject) return;
     updateComponent(activeProject.id, componentId, updates);
@@ -135,6 +142,7 @@ export default function ComponentList({ projectId }: ComponentListProps) {
                 folderPath={currentProjectPath || ''}
                 onUpdate={handleUpdateComponent}
                 onDelete={() => handleDeleteComponent(selectedItem.id)}
+                onDuplicate={() => handleDuplicateComponent(selectedItem.id)}
                 onNavigate={navigateTo}
               />
           </div>

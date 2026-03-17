@@ -5,7 +5,7 @@ import { Component, ScopeItemType, WidgetType, WidgetInstance } from '@/lib/type
 import { getCategoryLabel, getCategoryColor, getActiveWidgets, getAvailableWidgetTypes, WIDGET_LABELS, WIDGET_ICONS, widgetHasContent, isTextWidget } from '@/lib/categoryHelpers';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Trash2, Clock } from 'lucide-react';
+import { Trash2, Clock, Copy, Pencil } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -63,6 +63,7 @@ interface ScopeItemDetailProps {
   folderPath: string;
   onUpdate: (id: string, updates: Partial<Component>) => void;
   onDelete: () => void;
+  onDuplicate: () => void;
   onNavigate: (componentId: string) => void;
 }
 
@@ -73,6 +74,7 @@ export default function ScopeItemDetail({
   folderPath,
   onUpdate,
   onDelete,
+  onDuplicate,
   onNavigate,
 }: ScopeItemDetailProps) {
   const [isEditing, setIsEditing] = useState(false);
@@ -142,8 +144,8 @@ export default function ScopeItemDetail({
       updates.notes = (item.notes || []).filter(n => n.id !== widget.id);
     } else {
       switch (widget.type) {
-        case 'images':    updates.images = []; break;
-        case 'tasks':     updates.tasks = []; break;
+        case 'images': updates.images = []; break;
+        case 'tasks': updates.tasks = []; break;
         case 'instances': updates.instances = []; break;
       }
     }
@@ -348,15 +350,19 @@ export default function ScopeItemDetail({
   const activeWidget = activeId ? activeWidgets.find(w => w.id === activeId) : null;
 
   return (
-    <div className="space-y-2 max-w-4xl mx-auto">
+    <div className="space-y-6 max-w-6xl mx-auto">
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <h1 className="text-2xl font-bold flex-1">{item.name}</h1>
-        <Badge className={getCategoryColor(item.category)}>
-          {getCategoryLabel(item.category)}
-        </Badge>
-        <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
-          Modifier
+      <div className="flex items-center gap-4 ">
+        <div className='flex gap-1 w-full'>
+          <h1 className="text-2xl font-bold flex-1">{item.name}</h1>
+        </div>
+
+        <Button variant="ghost" size="sm" onClick={() => setIsEditing(true)} title="Modifier">
+          <Pencil className="h-4 w-4" />
+        </Button>
+
+        <Button variant="ghost" size="sm" onClick={onDuplicate}>
+          <Copy className="h-4 w-4 mr-1" />
         </Button>
         <Button
           variant="ghost"
@@ -368,19 +374,27 @@ export default function ScopeItemDetail({
         </Button>
       </div>
 
-      {item.description && (
-        <p className="text-muted-foreground italic">{item.description}</p>
-      )}
+      <div className='flex flex-col items-start gap-6 '>
+        <div>
+          <Badge className={`${getCategoryColor(item.category)}`}>
+            {getCategoryLabel(item.category)}
+          </Badge>
+        </div>
+        {item.description && (
+          <p className="text-muted-foreground italic">{item.description}</p>
+        )}
 
-      {item.estimatedHours !== undefined && (
-        <p className="text-sm font-medium text-orange-600 flex items-center gap-1">
-          <Clock className="h-4 w-4" />
-          Estimation : {item.estimatedHours}h
-        </p>
-      )}
+        {item.estimatedHours !== undefined && (
+          <p className="text-sm font-medium text-orange-600 flex items-center gap-1">
+            <Clock className="h-4 w-4" />
+            Estimation : {item.estimatedHours}h
+          </p>
+        )}
+      </div>
+
 
       {/* Widgets */}
-      <br/>
+      <br />
 
       <DndContext
         sensors={sensors}
@@ -390,18 +404,18 @@ export default function ScopeItemDetail({
       >
         <SortableContext items={activeWidgets.map(w => w.id)} strategy={verticalListSortingStrategy}>
           <div className="space-y-8">
-          {activeWidgets.map((widget, i) => (
-            <div key={widget.id}>
-              <SortableWidget
-                id={widget.id}
-                label={WIDGET_LABELS[widget.type]}
-                icon={WIDGET_ICONS[widget.type]}
-                onRemove={() => removeWidget(widget)}
-              >
-                {renderWidget(widget)}
-              </SortableWidget>
-            </div>
-          ))}
+            {activeWidgets.map((widget, i) => (
+              <div key={widget.id}>
+                <SortableWidget
+                  id={widget.id}
+                  label={WIDGET_LABELS[widget.type]}
+                  icon={WIDGET_ICONS[widget.type]}
+                  onRemove={() => removeWidget(widget)}
+                >
+                  {renderWidget(widget)}
+                </SortableWidget>
+              </div>
+            ))}
           </div>
         </SortableContext>
         <button
