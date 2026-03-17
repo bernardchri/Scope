@@ -32,5 +32,8 @@
     { "id": "instances", "label": "Composants utilisés" },
     { "id": "paragraph", "label": "Paragraphe",         "storage": "notes" },
     { "id": "comment",   "label": "Commentaire",        "storage": "notes" }
+  ],
+  "shortcuts": [
+    { "key": "n", "mod": true, "action": "new-element" }
   ]
 }

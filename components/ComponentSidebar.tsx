@@ -177,15 +177,6 @@ export default function ComponentSidebar({
     <div className="flex flex-col h-full">
       <div className="flex items-center gap-1 p-2 border-b">
         <Button
-          variant="ghost"
-          size="icon"
-          onClick={onToggleSidebar}
-          title="Masquer la sidebar"
-          className="shrink-0"
-        >
-          <PanelLeftClose className="h-4 w-4" />
-        </Button>
-        <Button
           variant={showingDashboard ? 'secondary' : 'ghost'}
           size="sm"
           className="flex-1 justify-start gap-2"

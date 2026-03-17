@@ -35,14 +35,12 @@ export default function CreateComponentModal({
     onSubmit(name, description, category);
     setName('');
     setDescription('');
-    setCategory('component');
   }
 
   function handleCancel() {
     onOpenChange(false);
     setName('');
     setDescription('');
-    setCategory('component');
   }
 
   return (

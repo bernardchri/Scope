@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useProjectStore } from '@/lib/projectStore';
 import { Component, ScopeItemType } from '@/lib/types';
+import { useShortcuts } from '@/lib/hooks/useShortcuts';
 import ComponentSidebar from './ComponentSidebar';
 import ScopeItemDetail from './ScopeItemDetail';
 import ProjectHeader from './ProjectHeader';
@@ -31,6 +32,11 @@ export default function ComponentList({ projectId }: ComponentListProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const activeProject = projects.find(p => p.id === projectId);
+
+  useShortcuts({
+    'new-element': useCallback(() => setIsModalOpen(true), []),
+  });
+
   if (!activeProject) return null;
 
   const selectedComponentId = navHistory.length > 0 ? navHistory[navHistory.length - 1] : null;
