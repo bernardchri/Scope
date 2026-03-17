@@ -259,9 +259,11 @@ pub fn run() {
                 &PredefinedMenuItem::separator(app)?,
                 &PredefinedMenuItem::quit(app, Some("Quitter"))?,
             ])?;
+            let undo_item = MenuItem::with_id(app, "undo", "Annuler", true, Some("CmdOrCtrl+Z"))?;
+            let redo_item = MenuItem::with_id(app, "redo", "Rétablir", true, Some("CmdOrCtrl+Shift+Z"))?;
             let edit_menu = Submenu::with_items(app, "Édition", true, &[
-                &PredefinedMenuItem::undo(app, Some("Annuler"))?,
-                &PredefinedMenuItem::redo(app, Some("Rétablir"))?,
+                &undo_item,
+                &redo_item,
                 &PredefinedMenuItem::separator(app)?,
                 &PredefinedMenuItem::cut(app, Some("Couper"))?,
                 &PredefinedMenuItem::copy(app, Some("Copier"))?,
@@ -288,6 +290,12 @@ pub fn run() {
                     }
                     "close-project" => {
                         app_handle.emit("menu-close-project", ()).ok();
+                    }
+                    "undo" => {
+                        app_handle.emit("menu-undo", ()).ok();
+                    }
+                    "redo" => {
+                        app_handle.emit("menu-redo", ()).ok();
                     }
                     _ => {}
                 }

@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import { listen } from '@tauri-apps/api/event';
 import { invoke } from '@tauri-apps/api/core';
-import { useProjectStore, initPreviousProject } from '@/lib/projectStore';
+import { useProjectStore, initPreviousProject, undo, redo } from '@/lib/projectStore';
 import { openProjectFile, openProjectFolder, addRecentFile } from '@/lib/persistence';
 import { createAutoBackup } from '@/lib/backup';
 import HomeScreen from '@/components/HomeScreen';
@@ -45,6 +45,9 @@ export default function Home() {
     listen('menu-close-project', () => {
       closeProject();
     }).then(fn => unlisteners.push(fn));
+
+    listen('menu-undo', () => undo()).then(fn => unlisteners.push(fn));
+    listen('menu-redo', () => redo()).then(fn => unlisteners.push(fn));
 
     return () => { unlisteners.forEach(fn => fn()); };
   }, [openProject, closeProject]);

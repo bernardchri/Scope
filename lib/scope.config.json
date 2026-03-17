@@ -34,6 +34,8 @@
     { "id": "comment",   "label": "Commentaire",        "storage": "notes" }
   ],
   "shortcuts": [
-    { "key": "n", "mod": true, "action": "new-element" }
+    { "key": "n", "mod": true, "action": "new-element" },
+    { "key": "z", "mod": true, "action": "undo" },
+    { "key": "z", "mod": true, "shift": true, "action": "redo" }
   ]
 }

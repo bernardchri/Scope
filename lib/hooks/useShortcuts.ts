@@ -16,7 +16,9 @@ export function useShortcuts(handlers: ShortcutHandlers) {
 
       for (const shortcut of scopeConfig.shortcuts) {
         const modPressed = shortcut.mod ? (e.metaKey || e.ctrlKey) : true;
-        if (modPressed && e.key.toLowerCase() === shortcut.key.toLowerCase()) {
+        const shiftRequired = 'shift' in shortcut && shortcut.shift;
+        const shiftMatch = shiftRequired ? e.shiftKey : !e.shiftKey;
+        if (modPressed && shiftMatch && e.key.toLowerCase() === shortcut.key.toLowerCase()) {
           const handler = handlers[shortcut.action];
           if (handler) {
             e.preventDefault();

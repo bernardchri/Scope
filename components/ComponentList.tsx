@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useState } from 'react';
-import { useProjectStore } from '@/lib/projectStore';
+import { useProjectStore, undo, redo } from '@/lib/projectStore';
 import { Component, ScopeItemType } from '@/lib/types';
 import { useShortcuts } from '@/lib/hooks/useShortcuts';
 import ComponentSidebar from './ComponentSidebar';
@@ -35,6 +35,8 @@ export default function ComponentList({ projectId }: ComponentListProps) {
 
   useShortcuts({
     'new-element': useCallback(() => setIsModalOpen(true), []),
+    'undo': useCallback(() => undo(), []),
+    'redo': useCallback(() => redo(), []),
   });
 
   if (!activeProject) return null;
