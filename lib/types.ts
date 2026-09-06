@@ -68,6 +68,12 @@ export interface Component {
   tasks: Task[];
 }
 
+export interface ClientInfo {
+  name?: string;
+  url?: string;
+  contact?: string; // email ou nom du contact
+}
+
 export interface Project {
   id: string;
   name: string;
@@ -75,6 +81,8 @@ export interface Project {
   filename?: string;
   hourlyRate?: number;
   budgetCap?: number;
+  version?: string; // ex : "v1.0" — affiché sur la page de garde PDF
+  client?: ClientInfo;
   components: Component[];
   createdAt: string;
   formatVersion?: number; // 2 = folder format

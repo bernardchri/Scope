@@ -106,6 +106,14 @@ const projectSchema = z.object({
   filename: z.string().optional(),
   hourlyRate: z.number().optional(),
   budgetCap: z.number().optional(),
+  version: z.string().optional(),
+  client: z
+    .object({
+      name: z.string().optional(),
+      url: z.string().optional(),
+      contact: z.string().optional(),
+    })
+    .optional(),
   components: resilientArray(componentSchema),
   createdAt: z.string().catch(() => new Date().toISOString()),
   formatVersion: z.number().optional(),

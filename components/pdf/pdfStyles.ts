@@ -89,6 +89,76 @@ export const s = StyleSheet.create({
     textAlign: 'center',
   },
 
+  // ─── Page de garde ───────────────────────────────────────────────────────────
+  coverPage: {
+    paddingTop: 52,
+    paddingBottom: 52,
+    paddingHorizontal: 56,
+    fontFamily: 'Inter',
+    fontSize: 10,
+    color: '#1a1a1a',
+    backgroundColor: '#ffffff',
+    flexDirection: 'column',
+    justifyContent: 'space-between',
+  },
+  coverStudio: {
+    fontSize: 9,
+    letterSpacing: 2,
+    color: '#999',
+    textTransform: 'uppercase',
+  },
+  coverMiddle: {
+    marginTop: 'auto',
+    marginBottom: 'auto',
+  },
+  coverDocKind: {
+    fontSize: 10,
+    letterSpacing: 1,
+    color: '#999',
+    textTransform: 'uppercase',
+    marginBottom: 12,
+  },
+  coverProjectName: {
+    fontSize: 34,
+    fontFamily: 'Inter', fontWeight: 700,
+    color: '#1a1a1a',
+    lineHeight: 1.15,
+  },
+  coverMeta: {
+    marginTop: 24,
+    fontSize: 10,
+    color: '#555',
+    lineHeight: 1.7,
+  },
+  coverMetaLabel: {
+    color: '#aaa',
+  },
+  coverClientBlock: {
+    marginTop: 28,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#e8e8e8',
+    borderTopStyle: 'solid',
+  },
+  coverClientLabel: {
+    fontSize: 8,
+    fontFamily: 'Inter', fontWeight: 700,
+    letterSpacing: 1.5,
+    color: '#aaa',
+    textTransform: 'uppercase',
+    marginBottom: 6,
+  },
+  coverClientName: {
+    fontSize: 13,
+    fontFamily: 'Inter', fontWeight: 700,
+    color: '#1a1a1a',
+  },
+  coverClientDetail: {
+    fontSize: 10,
+    color: '#666',
+    marginTop: 2,
+  },
+
   // ─── Sommaire ────────────────────────────────────────────────────────────────
   tocPageTitle: {
     fontSize: 22,

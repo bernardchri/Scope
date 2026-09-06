@@ -4,7 +4,8 @@ import { useState } from 'react';
 import { Project, Component, ComponentCategory } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ChevronRight, Clock, CheckSquare, FileText, FileCode, Euro, TriangleAlert } from 'lucide-react';
+import { ChevronRight, Clock, CheckSquare, FileText, FileCode, Euro, TriangleAlert, Building2, Pencil } from 'lucide-react';
+import ProjectInfoDialog from './ProjectInfoDialog';
 import { exportProjectPDF } from '@/lib/pdfExport';
 import { exportProjectMarkdown } from '@/lib/markdownExport';
 import { CATEGORY_SECTION_LABELS, COMPONENT_DISPLAY_ORDER } from '@/lib/categoryHelpers';
@@ -33,6 +34,7 @@ export default function ProjectDashboard({
   const [capDraft, setCapDraft] = useState(project.budgetCap?.toString() ?? '');
   const [isExporting, setIsExporting] = useState(false);
   const [isExportingMd, setIsExportingMd] = useState(false);
+  const [isInfoOpen, setIsInfoOpen] = useState(false);
 
   async function handleExportPDF() {
     setIsExporting(true);
@@ -145,6 +147,40 @@ export default function ProjectDashboard({
             )}
           </button>
         )}
+      </section>
+
+      {/* Infos projet & client */}
+      <section className="flex items-start gap-3 text-sm">
+        <Building2 className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
+        <div className="flex-1 min-w-0">
+          {project.client?.name || project.version ? (
+            <div className="space-y-0.5">
+              {project.client?.name && (
+                <p className="font-medium">
+                  {project.client.name}
+                  {project.client.url && (
+                    <span className="text-muted-foreground font-normal"> · {project.client.url}</span>
+                  )}
+                </p>
+              )}
+              {project.client?.contact && (
+                <p className="text-muted-foreground text-xs">{project.client.contact}</p>
+              )}
+              {project.version && (
+                <p className="text-muted-foreground text-xs">Version {project.version}</p>
+              )}
+            </div>
+          ) : (
+            <span className="text-muted-foreground/50 italic">Aucune info client</span>
+          )}
+        </div>
+        <button
+          onClick={() => setIsInfoOpen(true)}
+          className="text-muted-foreground hover:text-foreground transition-colors shrink-0"
+          title="Modifier les infos projet & client"
+        >
+          <Pencil className="w-3.5 h-3.5" />
+        </button>
       </section>
 
          {/* Taux horaire */}
@@ -310,6 +346,13 @@ export default function ProjectDashboard({
 
     </div>
     </div>
+
+    <ProjectInfoDialog
+      open={isInfoOpen}
+      onOpenChange={setIsInfoOpen}
+      project={project}
+      onUpdateProject={onUpdateProject}
+    />
 
     {/* Footer exports */}
     <div className="shrink-0 border-t bg-background py-3 px-4">

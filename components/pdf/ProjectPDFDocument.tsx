@@ -10,7 +10,7 @@ import { Project, Component, TaskCategory, ComponentCategory } from '@/lib/types
 import { renderMarkdown } from './renderMarkdown';
 import { CATEGORY_SECTION_LABELS, PDF_DISPLAY_ORDER, getActiveWidgets, isTextWidget } from '@/lib/categoryHelpers';
 import { TASK_CATEGORY_ORDER } from '@/lib/taskCategoryHelpers';
-import { s, CONTENT_WIDTH, IMG_MAX_HEIGHT } from './pdfStyles';
+import { s } from './pdfStyles';
 
 // ─── Données ──────────────────────────────────────────────────────────────────
 
@@ -224,6 +224,53 @@ function ComponentDetailBlock({
   );
 }
 
+function CoverPage({
+  project,
+  date,
+  studioName,
+  docKind,
+}: {
+  project: Project;
+  date: string;
+  studioName?: string;
+  docKind: string;
+}) {
+  const client = project.client;
+  const hasClient = !!(client?.name || client?.url || client?.contact);
+  return (
+    <Page size="A4" style={s.coverPage}>
+      <Text style={s.coverStudio}>{studioName || 'SCOPE'}</Text>
+
+      <View style={s.coverMiddle}>
+        <Text style={s.coverDocKind}>{docKind}</Text>
+        <Text style={s.coverProjectName}>{project.name}</Text>
+
+        <View style={s.coverMeta}>
+          <Text>
+            <Text style={s.coverMetaLabel}>Date : </Text>{date}
+          </Text>
+          {project.version && (
+            <Text>
+              <Text style={s.coverMetaLabel}>Version : </Text>{project.version}
+            </Text>
+          )}
+        </View>
+
+        {hasClient && (
+          <View style={s.coverClientBlock}>
+            <Text style={s.coverClientLabel}>Client</Text>
+            {client?.name && <Text style={s.coverClientName}>{client.name}</Text>}
+            {client?.url && <Text style={s.coverClientDetail}>{client.url}</Text>}
+            {client?.contact && <Text style={s.coverClientDetail}>{client.contact}</Text>}
+          </View>
+        )}
+      </View>
+
+      <Text style={s.coverStudio}>{date}</Text>
+    </Page>
+  );
+}
+
 // ─── Document principal ───────────────────────────────────────────────────────
 
 interface Props {
@@ -257,6 +304,9 @@ export function ProjectPDFDocument({ project, showEstimations = true, exportComm
       author="SCOPE"
       creator="SCOPE"
     >
+      {/* ── Page de garde ───────────────────────────────────────────────────── */}
+      <CoverPage project={project} date={today} studioName={studioName} docKind="Cahier des charges" />
+
       {/* ── Page 1 : Vue d'ensemble ─────────────────────────────────────────── */}
       <Page size="A4" style={s.page}>
         <PageHeader projectName={project.name} date={today} />
