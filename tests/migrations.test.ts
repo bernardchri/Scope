@@ -48,6 +48,26 @@ describe('migrateProjectsToV2', () => {
     expect(comp.notes?.[0]).toEqual({ id: notesWidgetId, content: '# Titre' });
   });
 
+  it('preserves task pinRef and scope through migration', () => {
+    const legacy = {
+      id: 'p1', name: 'x', createdAt: '2024-01-01',
+      components: [
+        {
+          id: 'c1', name: 'a', instances: [],
+          tasks: [
+            { id: 't1', name: 'do', completed: false, category: 'backend', scope: 'v2',
+              pinRef: { imageId: 'i1', pinId: 'pin1', pinNumber: 3 } },
+          ],
+        },
+      ],
+    } as unknown as Project;
+
+    const [migrated] = migrateProjectsToV2([legacy]);
+    const task = migrated.components[0].tasks[0];
+    expect(task.pinRef).toEqual({ imageId: 'i1', pinId: 'pin1', pinNumber: 3 });
+    expect(task.scope).toBe('v2');
+  });
+
   it('gives every task a default category when missing', () => {
     const legacy = {
       id: 'p1', name: 'x', createdAt: '2024-01-01',

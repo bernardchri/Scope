@@ -184,6 +184,7 @@ export default function TaskList({ projectId, componentId, tasks, images = [] }:
                   onStartEdit={() => startEditing(task)}
                   onSaveEdit={handleSaveEdit}
                   onCancelEdit={() => setEditingTaskId(null)}
+                  onToggleScope={() => updateTask(projectId, componentId, task.id, { scope: task.scope === 'v2' ? undefined : 'v2' })}
                   onDelete={() => deleteTask(projectId, componentId, task.id)}
                 />
               ))}

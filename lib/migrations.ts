@@ -37,10 +37,8 @@ export function migrateProjectsToV2(projects: Project[]): Project[] {
         imageBase64: (component as any).imageBase64 || undefined,
         images,
         tasks: ((component as any).tasks || []).map((task: any) => ({
-          id: task.id,
-          name: task.name,
-          completed: task.completed,
-          category: task.category || 'frontend'
+          ...task,
+          category: task.category || 'frontend',
         })),
         content: (component as any).content || undefined,
         ...migrateWidgetsAndNotes(component as any),

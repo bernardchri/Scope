@@ -95,9 +95,12 @@ function ComponentDetailBlock({
     src: normalizeBase64(img.base64 || ''),
   }));
 
+  const inScopeTasks = component.tasks.filter(t => t.scope !== 'v2');
+  const outOfScopeTasks = component.tasks.filter(t => t.scope === 'v2');
+
   const tasksByCategory = TASK_CATEGORY_ORDER.reduce<Partial<Record<TaskCategory, typeof component.tasks>>>(
     (acc, cat) => {
-      const tasks = component.tasks.filter(t => t.category === cat);
+      const tasks = inScopeTasks.filter(t => t.category === cat);
       if (tasks.length > 0) acc[cat] = tasks;
       return acc;
     }, {}
@@ -135,7 +138,7 @@ function ComponentDetailBlock({
       ))}
 
       {/* Liste des tâches groupées par catégorie */}
-      {component.tasks.length > 0 && (
+      {inScopeTasks.length > 0 && (
         <View style={s.taskSection}>
           <Text style={s.taskSectionLabel}>Éléments</Text>
           {TASK_CATEGORY_ORDER.map(cat => {
@@ -166,6 +169,19 @@ function ComponentDetailBlock({
               </View>
             );
           })}
+        </View>
+      )}
+
+      {/* Hors périmètre (évolutions v2) */}
+      {outOfScopeTasks.length > 0 && (
+        <View style={s.taskSection}>
+          <Text style={s.taskSectionLabel}>Hors périmètre — évolutions (v2)</Text>
+          {outOfScopeTasks.map(task => (
+            <View key={task.id} style={s.taskRow} wrap={false}>
+              <View style={s.taskCheckbox} />
+              <Text style={s.taskNameDone}>{task.name}</Text>
+            </View>
+          ))}
         </View>
       )}
 

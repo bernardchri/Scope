@@ -65,6 +65,7 @@ const taskSchema = z.object({
   name: z.string().catch(''),
   completed: z.boolean().catch(false),
   category: z.enum(['frontend', 'backend', 'seo', 'motion']).catch('frontend'),
+  scope: z.literal('v2').optional().catch(undefined),
   pinRef: pinRefSchema,
 });
 

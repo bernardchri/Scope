@@ -26,6 +26,8 @@ export interface Task {
   name: string;
   completed: boolean;
   category: TaskCategory;
+  /** 'v2' = hors périmètre / évolution : exclu du chiffrage, listé à part dans les exports. */
+  scope?: 'v2';
   pinRef?: { imageId: string; pinId: string; pinNumber: number };
 }
 

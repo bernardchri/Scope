@@ -32,6 +32,7 @@ interface TaskItemProps {
   onStartEdit: () => void;
   onSaveEdit: () => void;
   onCancelEdit: () => void;
+  onToggleScope: () => void;
   onDelete: () => void;
 }
 
@@ -50,6 +51,7 @@ export default function TaskItem({
   onStartEdit,
   onSaveEdit,
   onCancelEdit,
+  onToggleScope,
   onDelete
 }: TaskItemProps) {
   if (isEditing) {
@@ -116,8 +118,10 @@ export default function TaskItem({
     );
   }
 
+  const isOutOfScope = task.scope === 'v2';
+
   return (
-    <Card className="group/item hover:shadow-sm transition-shadow">
+    <Card className={`group/item hover:shadow-sm transition-shadow ${isOutOfScope ? 'opacity-60' : ''}`}>
       <CardContent className="py-3 px-4">
         <div className="flex items-center gap-3">
           {/* Poignée drag & drop */}
@@ -144,8 +148,22 @@ export default function TaskItem({
                   {label}
                 </DropdownMenuItem>
               ))}
+              <DropdownMenuItem onClick={onToggleScope}>
+                {isOutOfScope ? 'Remettre au périmètre' : 'Marquer hors périmètre (v2)'}
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+
+          {isOutOfScope && (
+            <Badge
+              variant="outline"
+              className="border-amber-400 text-amber-600 bg-amber-50 shrink-0 cursor-pointer"
+              onClick={onToggleScope}
+              title="Hors périmètre — cliquer pour remettre"
+            >
+              v2
+            </Badge>
+          )}
 
           {/* Nom de l'élément */}
           <span

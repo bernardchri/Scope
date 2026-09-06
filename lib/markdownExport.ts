@@ -53,7 +53,8 @@ function generateComponentBlock(component: Component, imageMap: ImageMap, allCom
       taskLines.push(`### ${TASK_CATEGORY_PLAIN_LABELS[cat]}`, '');
       for (const task of catTasks) {
         const pinSuffix = task.pinRef ? ` [Pin #${task.pinRef.pinNumber}]` : '';
-        taskLines.push(`- [ ] ${task.name}${pinSuffix}`);
+        const scopePrefix = task.scope === 'v2' ? 'v2: ' : '';
+        taskLines.push(`- [ ] ${scopePrefix}${task.name}${pinSuffix}`);
       }
       taskLines.push('');
     }
