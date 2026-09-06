@@ -1,5 +1,9 @@
 # Philosophie du projet & intégration Story-compiler
 
+> **Vision élargie** : voir [`vision.md`](./vision.md) — SCOPE comme outil de
+> périmètre contractuel versionné (référence signée + brouillon + avenant), les
+> 4 publics, les phases. Ce document-ci reste centré sur le pont avec Story-compiler.
+
 SCOPE s'interface avec un autre projet : **[Story-compiler](https://github.com/bernardchri/Story-compiler)**
 
 ---
@@ -69,8 +73,10 @@ Le PDF généré par SCOPE doit ressembler à un livrable pro, pas à un export 
 
 ## Prochaines étapes (ordre logique)
 
-1. **Ajouter les estimations de temps** dans SCOPE par composant -> ok
-2. **Améliorer l'export PDF** vers un format cahier des charges professionnel -> ok
-3. **Ajouter l'export STORIES.md** — un fichier par composant ou un fichier global selon la taille du projet
+1. **Estimations de temps** par composant — ✅
+2. **Export PDF** format cahier des charges professionnel (+ page de garde, devis) — ✅
+3. **Export STORIES.md** — un fichier par composant ou un fichier global selon la taille — ✅
+4. **IDs stables** par composant/tâche dans l'export → prérequis du retour d'avancement
+5. **Import d'un `stories-status.json`** produit par Story-compiler → overlay d'avancement dans SCOPE (phase production, voir `vision.md`)
 
-Le pont entre les deux outils (export STORIES.md) est la fonctionnalité clé qui justifie que les deux projets existent et se complètent plutôt que se dupliquent.
+Le pont entre les deux outils est la fonctionnalité clé qui justifie que les deux projets existent et se complètent plutôt que se dupliquent. Aujourd'hui il est **à sens unique** (SCOPE → STORIES.md) ; les étapes 4-5 ouvrent le retour.
