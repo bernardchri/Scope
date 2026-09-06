@@ -24,6 +24,9 @@ interface Props {
 export default function ProjectInfoDialog({ open, onOpenChange, project, onUpdateProject }: Props) {
   const [version, setVersion] = useState('');
   const [client, setClient] = useState<ClientInfo>({});
+  const [deposit, setDeposit] = useState('');
+  const [delay, setDelay] = useState('');
+  const [validity, setValidity] = useState('');
 
   useEffect(() => {
     // Recharge le formulaire à l'ouverture depuis l'état projet courant.
@@ -31,8 +34,11 @@ export default function ProjectInfoDialog({ open, onOpenChange, project, onUpdat
     /* eslint-disable react-hooks/set-state-in-effect */
     setVersion(project.version ?? '');
     setClient(project.client ?? {});
+    setDeposit(project.depositPercent?.toString() ?? '');
+    setDelay(project.estimatedDelay ?? '');
+    setValidity(project.quoteValidityDays?.toString() ?? '');
     /* eslint-enable react-hooks/set-state-in-effect */
-  }, [open, project.version, project.client]);
+  }, [open, project.version, project.client, project.depositPercent, project.estimatedDelay, project.quoteValidityDays]);
 
   function handleSave() {
     const trimmedClient: ClientInfo = {
@@ -41,9 +47,14 @@ export default function ProjectInfoDialog({ open, onOpenChange, project, onUpdat
       contact: client.contact?.trim() || undefined,
     };
     const hasClient = Object.values(trimmedClient).some(Boolean);
+    const depositNum = parseFloat(deposit);
+    const validityNum = parseInt(validity, 10);
     onUpdateProject({
       version: version.trim() || undefined,
       client: hasClient ? trimmedClient : undefined,
+      depositPercent: !isNaN(depositNum) && depositNum > 0 ? depositNum : undefined,
+      estimatedDelay: delay.trim() || undefined,
+      quoteValidityDays: !isNaN(validityNum) && validityNum > 0 ? validityNum : undefined,
     });
     onOpenChange(false);
   }
@@ -96,6 +107,42 @@ export default function ProjectInfoDialog({ open, onOpenChange, project, onUpdat
                 value={client.contact ?? ''}
                 onChange={e => setClient({ ...client, contact: e.target.value })}
                 placeholder="ex : Marie Dupont — marie@trois-chenes.fr"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <Label className="text-sm font-semibold">Conditions du devis</Label>
+            <div className="space-y-2">
+              <Label htmlFor="deposit" className="font-normal">Acompte à la commande (%)</Label>
+              <Input
+                id="deposit"
+                type="number"
+                min="0"
+                max="100"
+                value={deposit}
+                onChange={e => setDeposit(e.target.value)}
+                placeholder="ex : 30"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="delay" className="font-normal">Délai indicatif</Label>
+              <Input
+                id="delay"
+                value={delay}
+                onChange={e => setDelay(e.target.value)}
+                placeholder="ex : 6 à 8 semaines"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="validity" className="font-normal">Validité du devis (jours)</Label>
+              <Input
+                id="validity"
+                type="number"
+                min="0"
+                value={validity}
+                onChange={e => setValidity(e.target.value)}
+                placeholder="ex : 30"
               />
             </div>
           </div>

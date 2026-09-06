@@ -353,6 +353,98 @@ export const s = StyleSheet.create({
     color: '#ccc',
   },
 
+  // ─── Devis ───────────────────────────────────────────────────────────────────
+  quoteIntro: {
+    fontSize: 10,
+    color: '#555',
+    lineHeight: 1.6,
+    marginBottom: 20,
+  },
+  quoteTable: {
+    borderWidth: 1,
+    borderColor: '#e5e5e5',
+    borderStyle: 'solid',
+    borderRadius: 3,
+    marginBottom: 14,
+  },
+  quoteTableHead: {
+    flexDirection: 'row',
+    backgroundColor: '#f6f6f6',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e5e5',
+    borderBottomStyle: 'solid',
+    paddingVertical: 7,
+    paddingHorizontal: 10,
+  },
+  quoteTableRow: {
+    flexDirection: 'row',
+    paddingVertical: 7,
+    paddingHorizontal: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f2f2f2',
+    borderBottomStyle: 'solid',
+  },
+  quoteColName: { flex: 1, fontSize: 9, color: '#333' },
+  quoteColHours: { width: 90, fontSize: 9, color: '#666', textAlign: 'right' },
+  quoteColAmount: { width: 90, fontSize: 9, color: '#333', textAlign: 'right' },
+  quoteColHead: {
+    fontSize: 7,
+    fontFamily: 'Inter', fontWeight: 700,
+    letterSpacing: 1,
+    color: '#999',
+    textTransform: 'uppercase',
+  },
+  quoteTotalRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'baseline',
+    gap: 14,
+    paddingTop: 10,
+    marginBottom: 4,
+  },
+  quoteTotalLabel: {
+    fontSize: 10,
+    fontFamily: 'Inter', fontWeight: 700,
+    color: '#1a1a1a',
+  },
+  quoteTotalAmount: {
+    fontSize: 16,
+    fontFamily: 'Inter', fontWeight: 700,
+    color: '#1a1a1a',
+  },
+  quoteVatMention: {
+    fontSize: 8,
+    color: '#999',
+    fontStyle: 'italic',
+    textAlign: 'right',
+    marginBottom: 24,
+  },
+  quoteConditions: {
+    marginTop: 8,
+  },
+  quoteConditionRow: {
+    flexDirection: 'row',
+    marginBottom: 5,
+  },
+  quoteConditionLabel: {
+    width: 130,
+    fontSize: 9,
+    color: '#999',
+  },
+  quoteConditionValue: {
+    flex: 1,
+    fontSize: 9,
+    color: '#333',
+  },
+  quoteScopeList: {
+    marginTop: 4,
+  },
+  quoteScopeItem: {
+    fontSize: 9,
+    color: '#777',
+    marginBottom: 2,
+  },
+
   // ─── Bon pour accord ─────────────────────────────────────────────────────────
   approvalSection: {
     marginTop: 'auto',

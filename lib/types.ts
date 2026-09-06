@@ -85,6 +85,10 @@ export interface Project {
   budgetCap?: number;
   version?: string; // ex : "v1.0" — affiché sur la page de garde PDF
   client?: ClientInfo;
+  // Conditions de devis
+  depositPercent?: number;   // acompte à la commande, en % (ex : 30)
+  estimatedDelay?: string;   // délai indicatif, texte libre (ex : "6 à 8 semaines")
+  quoteValidityDays?: number; // durée de validité du devis, en jours (ex : 30)
   components: Component[];
   createdAt: string;
   formatVersion?: number; // 2 = folder format

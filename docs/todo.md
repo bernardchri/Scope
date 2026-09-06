@@ -16,14 +16,14 @@ _(aucun bug connu)_
 
 - [x] Toutes les images sont rendues dans le PDF
 - [x] Les images prennent la largeur de la page
-- [ ] Page de garde : nom projet, date, version, nom du créateur/studio
+- [x] Page de garde : nom projet, date, version, nom du créateur/studio
 - [x] Supprimer les estimations de temps du rendu PDF (heures, coûts)
-- [ ] Section "Hors périmètre" : lister les tâches marquées `v2`
+- [x] Section "Hors périmètre" : lister les tâches marquées `v2`
 
 ## Export Devis (nouveau document PDF)
 
 - [x] Tableau composants × estimation × coût (taux horaire × heures)
-- [ ] Conditions : délais, acompte, hors périmètre
+- [x] Conditions : délais, acompte, hors périmètre
 - [x] Réutilise l'infrastructure `@react-pdf/renderer` existante
 
 ## Export STORIES.md
@@ -33,7 +33,7 @@ _(aucun bug connu)_
 
 ## Informations projet
 
-- [ ] Informations client : nom, lien internet, etc.
+- [x] Informations client : nom, lien internet, etc.
 - [x] Nom du créateur / studio (ex : "Studio Bergall") — utilisé dans PDF et export
 - [x] Numéro de version du projet (ex : v1.0) pour le PDF
 
@@ -73,6 +73,6 @@ Les pins permettent de marquer un point précis sur une maquette. Les **zones** 
 
 ## Qualité / dette technique
 
-- [ ] Valider `scope.json` au chargement (schéma Zod) pour se prémunir des fichiers corrompus ou d'une version future
+- [x] Valider `scope.json` au chargement (schéma Zod) pour se prémunir des fichiers corrompus ou d'une version future
 - [ ] Étendre la couverture de tests (`npm test`) : `markdownExport`, slices du store, helpers de crop
 - [ ] Réduire les 25 warnings ESLint restants (`<img>` → next/image, deps de hooks, vars inutilisées)

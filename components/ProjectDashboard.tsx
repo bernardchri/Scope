@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { ChevronRight, Clock, CheckSquare, FileText, FileCode, Euro, TriangleAlert, Building2, Pencil } from 'lucide-react';
 import ProjectInfoDialog from './ProjectInfoDialog';
 import { exportProjectPDF } from '@/lib/pdfExport';
+import { exportProjectQuote } from '@/lib/quoteExport';
 import { exportProjectMarkdown } from '@/lib/markdownExport';
 import { CATEGORY_SECTION_LABELS, COMPONENT_DISPLAY_ORDER } from '@/lib/categoryHelpers';
 import { cn } from '@/lib/utils';
@@ -34,6 +35,7 @@ export default function ProjectDashboard({
   const [capDraft, setCapDraft] = useState(project.budgetCap?.toString() ?? '');
   const [isExporting, setIsExporting] = useState(false);
   const [isExportingMd, setIsExportingMd] = useState(false);
+  const [isExportingQuote, setIsExportingQuote] = useState(false);
   const [isInfoOpen, setIsInfoOpen] = useState(false);
 
   async function handleExportPDF() {
@@ -42,6 +44,15 @@ export default function ProjectDashboard({
       await exportProjectPDF(project, folderPath);
     } finally {
       setIsExporting(false);
+    }
+  }
+
+  async function handleExportQuote() {
+    setIsExportingQuote(true);
+    try {
+      await exportProjectQuote(project, folderPath);
+    } finally {
+      setIsExportingQuote(false);
     }
   }
 
@@ -364,6 +375,10 @@ export default function ProjectDashboard({
         <Button variant="outline" size="sm" onClick={handleExportPDF} disabled={isExporting}>
           <FileText className="w-4 h-4 mr-2" />
           {isExporting ? 'Génération…' : 'Exporter en PDF'}
+        </Button>
+        <Button variant="outline" size="sm" onClick={handleExportQuote} disabled={isExportingQuote}>
+          <Euro className="w-4 h-4 mr-2" />
+          {isExportingQuote ? 'Génération…' : 'Exporter le devis'}
         </Button>
       </div>
     </div>

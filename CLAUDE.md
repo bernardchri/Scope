@@ -112,9 +112,10 @@ Widget toggle UI in `ScopeItemDetail.tsx` allows enabling/disabling widgets per 
 ### Data types (`lib/types.ts`)
 
 - `AppSettings`: `{ studioName?, pdf: { showEstimations }, markdown: { multiFile } }` — stored in `config.dat`, deep-merged with `DEFAULT_APP_SETTINGS` on load
-- `Project`: `{ id, name, description?, filename?, hourlyRate?, budgetCap?, components[], createdAt, formatVersion? }` — `formatVersion: 2` = folder format
+- `Project`: `{ id, name, description?, filename?, hourlyRate?, budgetCap?, version?, client?: { name?, url?, contact? }, depositPercent?, estimatedDelay?, quoteValidityDays?, components[], createdAt, formatVersion? }` — `formatVersion: 2` = folder format. `version`/`client` sur la page de garde ; `depositPercent`/`estimatedDelay`/`quoteValidityDays` = conditions du devis. Édités via `ProjectInfoDialog` (dashboard).
 - `Component`: `{ category: ScopeItemType, tasks[], instances[], images[], estimatedHours?, widgets?, notes?, }`
-- `Task`: `{ id, name, completed, category: 'frontend'|'backend'|'seo'|'motion', pinRef? }` — `pinRef: { imageId, pinId, pinNumber }` links a task to an image pin
+- `Task`: `{ id, name, completed, category: 'frontend'|'backend'|'seo'|'motion', scope?: 'v2', pinRef? }` — `pinRef: { imageId, pinId, pinNumber }` links a task to an image pin ; `scope: 'v2'` = hors périmètre (exclu du devis, listé à part)
+- `scope.json` est validé/réparé au chargement par `parseProject` (`lib/projectSchema.ts`, Zod) après la migration legacy — voir `normalizeLoadedProject` dans `lib/persistence.ts`.
 - `CropRect`: `{ x, y, width, height }` — all percentages (0-100) of full image dimensions
 - `ComponentImage`: `{ id, base64?, filename?, caption?, isPrimary, pins?, crop? }` — `filename` for folder format, `base64` for legacy/migration, `crop` for interactive cropping
 - `ImagePin`: `{ id, number, x, y }` — x/y are percentages (0-100) relative to the **full** image (not the cropped view)
@@ -177,7 +178,13 @@ Element deletion uses an `AlertDialog` (shadcn/ui) for confirmation — not `win
 
 ### PDF export (`components/pdf/ProjectPDFDocument.tsx`)
 
-4 pages: overview → sommaire (with internal `#anchor` links) → component details (tasks + instances + markdown content if notes widget active + paragraph plain text) → bon pour accord. Dynamic import via `lib/pdfExport.tsx` to avoid SSR issues. PDF bytes transferred to Rust as base64.
+Pages : page de garde (`components/pdf/CoverPage.tsx` — studio, type de doc, projet, date, `project.version`, bloc `project.client`) → overview → sommaire (with internal `#anchor` links) → component details (tasks + instances + markdown content if notes widget active + paragraph plain text) → bon pour accord. Dynamic import via `lib/pdfExport.tsx` to avoid SSR issues. PDF bytes transferred to Rust as base64.
+
+Les tâches `Task.scope === 'v2'` sont exclues de la liste principale et regroupées dans une section « Hors périmètre — évolutions (v2) » par composant.
+
+### Devis PDF (`components/pdf/QuotePDFDocument.tsx`)
+
+Export séparé via `lib/quoteExport.tsx` (bouton « Exporter le devis » dans le footer du dashboard). Page de garde partagée (`CoverPage`, `docKind="Devis"`) → tableau à plat (une ligne par composant : nom, heures, montant HT = `estimatedHours × project.hourlyRate`) + total HT → mention « TVA non applicable, art. 293 B du CGI » → conditions (`project.depositPercent`, `project.estimatedDelay`, `project.quoteValidityDays`) → hors périmètre (v2) → bon pour accord. Pas d'images, donc pas de pré-cuisson Canvas.
 
 **Pins dans le PDF** : avant génération, `preparePdfProject` (dans `lib/pdfExport.tsx`) charge les images depuis le disque via `getImageBase64()` puis pré-cuit les pins via Canvas (`renderImageWithPins`, exportée depuis `lib/imageHelpers.ts`). Les images passées au renderer n'ont plus de `pins[]` — pas d'overlay dans `ProjectPDFDocument`.
 

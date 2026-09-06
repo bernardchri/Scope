@@ -115,6 +115,9 @@ const projectSchema = z.object({
       contact: z.string().optional(),
     })
     .optional(),
+  depositPercent: z.number().optional(),
+  estimatedDelay: z.string().optional(),
+  quoteValidityDays: z.number().optional(),
   components: resilientArray(componentSchema),
   createdAt: z.string().catch(() => new Date().toISOString()),
   formatVersion: z.number().optional(),
