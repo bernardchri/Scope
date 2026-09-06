@@ -5,6 +5,20 @@
 _(aucun bug connu)_
 
 
+## Versions & avenants — colonne vertébrale
+
+Voir [`vision.md`](./vision.md) pour le modèle complet (référence signée + brouillon + avenant).
+
+- [ ] **1. `Project.phase`** (`cadrage / production / livré`) + dashboard qui s'adapte à la phase
+- [ ] **2. Figer une version** : snapshot `versions/vX.Y/scope.json` (immuable) + PDF cahier + PDF devis, métadonnées (dates, montant HT, empreinte SHA-256), panneau « Versions »
+- [ ] **3. Moteur de diff** entre le brouillon et la dernière version figée (composants ±, tâches ± / v2, estimations, budget, conditions) + vue « comparer les versions » in-app (vert/rouge/ambre)
+- [ ] **4. PDF d'avenant** : rappel version de référence, modifications chiffrées, nouveau total HT + delta, conditions modifiées, bon pour accord
+- [ ] **5. Suivi de signature** par version (`brouillon → figée → signée studio → signée client → active`) + réimport du PDF signé + capture signature studio in-app (canvas + nom + horodatage) dans le PDF
+- [ ] **6. Import d'un statut d'avancement** (`stories-status.json`) → overlay par composant (x/y tâches, %). Prérequis : IDs stables par composant/tâche dans l'export STORIES.md
+
+**Prérequis transverse** : garantir que les fichiers de `img/` ne sont jamais supprimés ni écrasés (le « remplacer une maquette » écrit un nouveau UUID) — sinon les anciennes versions figées perdent leurs images. ⚠️ contredit « Réduire le projet » ci-dessous.
+
+
 ## Widgets
 ### Maquettes
 - [x] pouvoir modifier une image par une autre
@@ -65,7 +79,7 @@ Les pins permettent de marquer un point précis sur une maquette. Les **zones** 
 
 ## Maintenance projet
 
-- [ ] Réduire le projet : fonction qui supprime les fichiers `img/` non référencés par un composant et compresse les images restantes — permet de nettoyer l'espace disque sans supprimer manuellement
+- [ ] Réduire le projet : compresser les images de `img/`. ⚠️ **ne pas supprimer** les fichiers non référencés tant que le versioning (§ Versions & avenants) n'a pas tranché la question de l'immuabilité des snapshots — une image « orpheline » dans le brouillon peut encore être référencée par une version figée.
 
 ## Documents & fichiers
 
@@ -75,4 +89,4 @@ Les pins permettent de marquer un point précis sur une maquette. Les **zones** 
 
 - [x] Valider `scope.json` au chargement (schéma Zod) pour se prémunir des fichiers corrompus ou d'une version future
 - [ ] Étendre la couverture de tests (`npm test`) : `markdownExport`, slices du store, helpers de crop
-- [ ] Réduire les 25 warnings ESLint restants (`<img>` → next/image, deps de hooks, vars inutilisées)
+- [ ] Réduire les ~23 warnings ESLint restants (`<img>` → next/image, deps de hooks, vars inutilisées)
