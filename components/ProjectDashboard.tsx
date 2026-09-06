@@ -1,10 +1,11 @@
 'use client';
 
 import { useState } from 'react';
+import type React from 'react';
 import { Project, Component, ComponentCategory } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ChevronRight, Clock, CheckSquare, FileText, FileCode, Euro, TriangleAlert, Building2, Pencil } from 'lucide-react';
+import { ChevronRight, Clock, CheckSquare, FileText, FileCode, Euro, TriangleAlert, Pencil } from 'lucide-react';
 import ProjectInfoDialog from './ProjectInfoDialog';
 import { exportProjectPDF } from '@/lib/pdfExport';
 import { exportProjectQuote } from '@/lib/quoteExport';
@@ -29,10 +30,6 @@ export default function ProjectDashboard({
 }: ProjectDashboardProps) {
   const [isEditingDesc, setIsEditingDesc] = useState(false);
   const [descDraft, setDescDraft] = useState(project.description ?? '');
-  const [isEditingRate, setIsEditingRate] = useState(false);
-  const [rateDraft, setRateDraft] = useState(project.hourlyRate?.toString() ?? '');
-  const [isEditingCap, setIsEditingCap] = useState(false);
-  const [capDraft, setCapDraft] = useState(project.budgetCap?.toString() ?? '');
   const [isExporting, setIsExporting] = useState(false);
   const [isExportingMd, setIsExportingMd] = useState(false);
   const [isExportingQuote, setIsExportingQuote] = useState(false);
@@ -70,24 +67,24 @@ export default function ProjectDashboard({
     setIsEditingDesc(false);
   }
 
-  function saveRate() {
-    const rate = parseFloat(rateDraft);
-    onUpdateProject({ hourlyRate: !isNaN(rate) && rate > 0 ? rate : undefined });
-    setIsEditingRate(false);
-  }
-
-  function saveCap() {
-    const cap = parseFloat(capDraft);
-    onUpdateProject({ budgetCap: !isNaN(cap) && cap > 0 ? cap : undefined });
-    setIsEditingCap(false);
-  }
-
   // Calculs globaux
   const totalHours = project.components.reduce(
     (acc, c) => acc + (c.estimatedHours ?? 0), 0
   );
   const totalCost = project.hourlyRate ? totalHours * project.hourlyRate : null;
   const overBudget = totalCost !== null && project.budgetCap !== undefined && totalCost > project.budgetCap;
+
+  // Lignes d'infos affichées en lecture seule (édition via ProjectInfoDialog)
+  const clientLine = [project.client?.name, project.client?.url].filter(Boolean).join(' · ');
+  const infoRows: { label: string; value: React.ReactNode }[] = [];
+  if (clientLine) infoRows.push({ label: 'Client', value: clientLine });
+  if (project.client?.contact) infoRows.push({ label: 'Contact', value: project.client.contact });
+  if (project.version) infoRows.push({ label: 'Version', value: project.version });
+  if (project.hourlyRate) infoRows.push({ label: 'Taux horaire', value: `${project.hourlyRate} € HT/h` });
+  if (project.budgetCap) infoRows.push({ label: 'Plafond budget', value: `${project.budgetCap.toLocaleString('fr-FR')} € HT` });
+  if (project.depositPercent) infoRows.push({ label: 'Acompte', value: `${project.depositPercent} %` });
+  if (project.estimatedDelay) infoRows.push({ label: 'Délai indicatif', value: project.estimatedDelay });
+  if (project.quoteValidityDays) infoRows.push({ label: 'Validité du devis', value: `${project.quoteValidityDays} jours` });
   const totalTasks = project.components.reduce(
     (acc, c) => acc + c.tasks.length, 0
   );
@@ -160,116 +157,44 @@ export default function ProjectDashboard({
         )}
       </section>
 
-      {/* Infos projet & client */}
-      <section className="flex items-start gap-3 text-sm">
-        <Building2 className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
-        <div className="flex-1 min-w-0">
-          {project.client?.name || project.version ? (
-            <div className="space-y-0.5">
-              {project.client?.name && (
-                <p className="font-medium">
-                  {project.client.name}
-                  {project.client.url && (
-                    <span className="text-muted-foreground font-normal"> · {project.client.url}</span>
-                  )}
-                </p>
-              )}
-              {project.client?.contact && (
-                <p className="text-muted-foreground text-xs">{project.client.contact}</p>
-              )}
-              {project.version && (
-                <p className="text-muted-foreground text-xs">Version {project.version}</p>
-              )}
-            </div>
-          ) : (
-            <span className="text-muted-foreground/50 italic">Aucune info client</span>
-          )}
-        </div>
-        <button
-          onClick={() => setIsInfoOpen(true)}
-          className="text-muted-foreground hover:text-foreground transition-colors shrink-0"
-          title="Modifier les infos projet & client"
-        >
-          <Pencil className="w-3.5 h-3.5" />
-        </button>
-      </section>
-
-         {/* Taux horaire */}
-      <section className="flex items-center gap-3 text-sm">
-        <Euro className="w-4 h-4 text-muted-foreground shrink-0" />
-        <span className="text-muted-foreground">Taux horaire :</span>
-        {isEditingRate ? (
-          <div className="flex items-center gap-2">
-            <input
-              type="number"
-              value={rateDraft}
-              onChange={e => setRateDraft(e.target.value)}
-              onBlur={saveRate}
-              onKeyDown={e => {
-                if (e.key === 'Enter') saveRate();
-                if (e.key === 'Escape') { setRateDraft(project.hourlyRate?.toString() ?? ''); setIsEditingRate(false); }
-              }}
-              placeholder="ex: 60"
-              min="0"
-              step="1"
-              className="w-24 border-b border-gray-300 outline-none bg-transparent text-sm"
-              autoFocus
-            />
-            <span className="text-muted-foreground">€/h</span>
-          </div>
-        ) : (
-          <button
-            onClick={() => { setRateDraft(project.hourlyRate?.toString() ?? ''); setIsEditingRate(true); }}
-            className="hover:text-foreground transition-colors"
-          >
-            {project.hourlyRate ? (
-              <span className="font-semibold">{project.hourlyRate} € HT/h</span>
-            ) : (
-              <span className="italic text-muted-foreground/50">Définir un taux…</span>
-            )}
-          </button>
-        )}
-      </section>
-
-      {/* Plafond budget */}
-      <section className="flex items-center gap-3 text-sm">
-        <TriangleAlert className={`w-4 h-4 shrink-0 ${overBudget ? 'text-red-500' : 'text-muted-foreground'}`} />
-        <span className="text-muted-foreground">Plafond budget :</span>
-        {isEditingCap ? (
-          <div className="flex items-center gap-2">
-            <input
-              type="number"
-              value={capDraft}
-              onChange={e => setCapDraft(e.target.value)}
-              onBlur={saveCap}
-              onKeyDown={e => {
-                if (e.key === 'Enter') saveCap();
-                if (e.key === 'Escape') { setCapDraft(project.budgetCap?.toString() ?? ''); setIsEditingCap(false); }
-              }}
-              placeholder="ex: 2500"
-              min="0"
-              step="100"
-              className="w-28 border-b border-gray-300 outline-none bg-transparent text-sm"
-              autoFocus
-            />
-            <span className="text-muted-foreground">€ HT</span>
-          </div>
-        ) : (
-          <button
-            onClick={() => { setCapDraft(project.budgetCap?.toString() ?? ''); setIsEditingCap(true); }}
-            className="hover:text-foreground transition-colors"
-          >
-            {project.budgetCap ? (
-              <span className="font-semibold">{project.budgetCap.toLocaleString('fr-FR')} € HT</span>
-            ) : (
-              <span className="italic text-muted-foreground/50">Définir un plafond…</span>
-            )}
-          </button>
-        )}
-        {overBudget && totalCost !== null && project.budgetCap !== undefined && (
-          <span className="text-red-600 font-medium flex items-center gap-1">
-            Dépassement de {(totalCost - project.budgetCap).toLocaleString('fr-FR')} € HT
+      {/* Infos du projet (lecture seule — édition via le dialogue) */}
+      <section className="rounded-lg border bg-card">
+        <div className="flex items-center justify-between px-4 py-2.5 border-b">
+          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">
+            Infos du projet
           </span>
+          <button
+            onClick={() => setIsInfoOpen(true)}
+            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <Pencil className="w-3.5 h-3.5" />
+            Modifier
+          </button>
+        </div>
+
+        {infoRows.length === 0 ? (
+          <button
+            onClick={() => setIsInfoOpen(true)}
+            className="w-full text-left px-4 py-3 text-sm text-muted-foreground/60 italic hover:text-muted-foreground transition-colors"
+          >
+            Renseigner le budget, la version et les infos client…
+          </button>
+        ) : (
+          <dl className="divide-y">
+            {infoRows.map(row => (
+              <div key={row.label} className="flex gap-4 px-4 py-2 text-sm">
+                <dt className="w-40 shrink-0 text-muted-foreground">{row.label}</dt>
+                <dd className="flex-1 min-w-0">{row.value}</dd>
+              </div>
+            ))}
+          </dl>
+        )}
+
+        {overBudget && totalCost !== null && project.budgetCap !== undefined && (
+          <div className="flex items-center gap-2 px-4 py-2.5 border-t text-sm text-red-600 font-medium">
+            <TriangleAlert className="w-4 h-4 shrink-0" />
+            Dépassement du plafond de {(totalCost - project.budgetCap).toLocaleString('fr-FR')} € HT
+          </div>
         )}
       </section>
 
