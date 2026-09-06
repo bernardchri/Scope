@@ -3,15 +3,32 @@ import { save } from '@tauri-apps/plugin-dialog';
 import { getConfigStore } from './store';
 import { Project, ComponentImage, AppSettings, DEFAULT_APP_SETTINGS } from './types';
 import { migrateProjectsToV2 } from './migrations';
+import { parseProject } from './projectSchema';
+
+/**
+ * Applique la migration legacy puis la validation défensive (Zod).
+ * Journalise les réparations. Retourne `null` si le projet est inexploitable.
+ */
+function normalizeLoadedProject(raw: unknown, source: string): Project | null {
+  const migrated = migrateProjectsToV2([raw as Project])[0];
+  const { project, issues } = parseProject(migrated);
+  if (issues.length > 0) {
+    console.warn(`[scope.json] anomalies détectées (${source}) :\n- ${issues.join('\n- ')}`);
+  }
+  if (!project) {
+    console.error(`[scope.json] fichier inexploitable (${source})`);
+    return null;
+  }
+  return project;
+}
 
 export function slugify(name: string): string {
   return name
     .toLowerCase()
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9\s-]/g, '')
-    .trim()
     .replace(/[\s_]+/g, '-')
+    .replace(/[^a-z0-9-]/g, '')
     .replace(/-+/g, '-')
     .replace(/^-+|-+$/g, '');
 }
@@ -35,7 +52,8 @@ function stripBase64FromProject(project: Project): Project {
     components: project.components.map(comp => ({
       ...comp,
       images: (comp.images || []).map(img => {
-        const { base64, ...rest } = img;
+        const rest = { ...img };
+        delete rest.base64;
         return rest as ComponentImage;
       }),
     })),
@@ -47,10 +65,10 @@ function stripBase64FromProject(project: Project): Project {
  */
 export async function openProjectFolder(folderPath: string): Promise<Project | null> {
   try {
-    const data = await invoke<any>('load_project_from_folder', { folderPath });
+    const data = await invoke<Record<string, unknown>>('load_project_from_folder', { folderPath });
     if (!data || !data.id) return null;
-    const project = migrateProjectsToV2([data as Project])[0];
-    project.formatVersion = 2;
+    const project = normalizeLoadedProject(data, 'dossier');
+    if (project) project.formatVersion = 2;
     return project;
   } catch {
     return null;
@@ -74,16 +92,16 @@ export async function openProjectFile(path: string): Promise<Project | null> {
 
   // Legacy .scope file
   try {
-    const data = await invoke<any>('load_project_file', { path });
-    let project: Project;
-    if (data.projects && Array.isArray(data.projects)) {
-      project = data.projects[0];
+    const data = await invoke<Record<string, unknown>>('load_project_file', { path });
+    let raw: unknown;
+    if (Array.isArray(data.projects)) {
+      raw = data.projects[0];
     } else if (data.id) {
-      project = data as Project;
+      raw = data;
     } else {
       return null;
     }
-    return migrateProjectsToV2([project])[0];
+    return normalizeLoadedProject(raw, 'fichier .scope');
   } catch {
     return null;
   }
@@ -125,9 +143,9 @@ export async function migrateScopeToFolder(
   folderPath: string
 ): Promise<Project | null> {
   try {
-    const data = await invoke<any>('migrate_scope_to_folder', { scopePath, folderPath });
+    const data = await invoke<Record<string, unknown>>('migrate_scope_to_folder', { scopePath, folderPath });
     if (!data || !data.id) return null;
-    return migrateProjectsToV2([data as Project])[0];
+    return normalizeLoadedProject(data, 'migration .scope');
   } catch (e) {
     console.error('Erreur migration:', e);
     return null;

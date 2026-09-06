@@ -26,6 +26,8 @@ export interface Task {
   name: string;
   completed: boolean;
   category: TaskCategory;
+  /** 'v2' = hors périmètre / évolution : exclu du chiffrage, listé à part dans les exports. */
+  scope?: 'v2';
   pinRef?: { imageId: string; pinId: string; pinNumber: number };
 }
 
@@ -68,6 +70,12 @@ export interface Component {
   tasks: Task[];
 }
 
+export interface ClientInfo {
+  name?: string;
+  url?: string;
+  contact?: string; // email ou nom du contact
+}
+
 export interface Project {
   id: string;
   name: string;
@@ -75,6 +83,12 @@ export interface Project {
   filename?: string;
   hourlyRate?: number;
   budgetCap?: number;
+  version?: string; // ex : "v1.0" — affiché sur la page de garde PDF
+  client?: ClientInfo;
+  // Conditions de devis
+  depositPercent?: number;   // acompte à la commande, en % (ex : 30)
+  estimatedDelay?: string;   // délai indicatif, texte libre (ex : "6 à 8 semaines")
+  quoteValidityDays?: number; // durée de validité du devis, en jours (ex : 30)
   components: Component[];
   createdAt: string;
   formatVersion?: number; // 2 = folder format

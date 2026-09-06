@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, type ComponentProps } from 'react';
 import { useProjectStore } from '@/lib/projectStore';
 import { Task, TaskCategory, ComponentImage } from '@/lib/types';
 import { computeAvailablePins } from '@/lib/pinHelpers';
@@ -34,7 +34,9 @@ interface TaskListProps {
 }
 
 // Wrapper sortable pour chaque TaskItem
-function SortableTaskItem(props: any) {
+type SortableTaskItemProps = Omit<ComponentProps<typeof TaskItem>, 'dragHandleProps'>;
+
+function SortableTaskItem(props: SortableTaskItemProps) {
   const {
     attributes,
     listeners,
@@ -182,6 +184,7 @@ export default function TaskList({ projectId, componentId, tasks, images = [] }:
                   onStartEdit={() => startEditing(task)}
                   onSaveEdit={handleSaveEdit}
                   onCancelEdit={() => setEditingTaskId(null)}
+                  onToggleScope={() => updateTask(projectId, componentId, task.id, { scope: task.scope === 'v2' ? undefined : 'v2' })}
                   onDelete={() => deleteTask(projectId, componentId, task.id)}
                 />
               ))}

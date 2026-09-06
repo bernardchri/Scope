@@ -1,4 +1,8 @@
-import { Project, Component, ComponentImage, ScopeItemType, WidgetInstance, NoteData } from './types';
+/* eslint-disable @typescript-eslint/no-explicit-any --
+ * Ce module normalise des projets issus d'anciens formats JSON dont la forme
+ * n'est pas typée (champs disparus, renommés, structures legacy). Les `any` y
+ * sont assumés : on inspecte des données brutes avant de les couler dans `Project`. */
+import { Project, ComponentImage, ScopeItemType, WidgetInstance, NoteData } from './types';
 
 export function migrateProjectsToV2(projects: Project[]): Project[] {
   return projects.map(project => ({
@@ -33,10 +37,8 @@ export function migrateProjectsToV2(projects: Project[]): Project[] {
         imageBase64: (component as any).imageBase64 || undefined,
         images,
         tasks: ((component as any).tasks || []).map((task: any) => ({
-          id: task.id,
-          name: task.name,
-          completed: task.completed,
-          category: task.category || 'frontend'
+          ...task,
+          category: task.category || 'frontend',
         })),
         content: (component as any).content || undefined,
         ...migrateWidgetsAndNotes(component as any),

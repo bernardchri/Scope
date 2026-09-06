@@ -89,6 +89,76 @@ export const s = StyleSheet.create({
     textAlign: 'center',
   },
 
+  // ─── Page de garde ───────────────────────────────────────────────────────────
+  coverPage: {
+    paddingTop: 52,
+    paddingBottom: 52,
+    paddingHorizontal: 56,
+    fontFamily: 'Inter',
+    fontSize: 10,
+    color: '#1a1a1a',
+    backgroundColor: '#ffffff',
+    flexDirection: 'column',
+    justifyContent: 'space-between',
+  },
+  coverStudio: {
+    fontSize: 9,
+    letterSpacing: 2,
+    color: '#999',
+    textTransform: 'uppercase',
+  },
+  coverMiddle: {
+    marginTop: 'auto',
+    marginBottom: 'auto',
+  },
+  coverDocKind: {
+    fontSize: 10,
+    letterSpacing: 1,
+    color: '#999',
+    textTransform: 'uppercase',
+    marginBottom: 12,
+  },
+  coverProjectName: {
+    fontSize: 34,
+    fontFamily: 'Inter', fontWeight: 700,
+    color: '#1a1a1a',
+    lineHeight: 1.15,
+  },
+  coverMeta: {
+    marginTop: 24,
+    fontSize: 10,
+    color: '#555',
+    lineHeight: 1.7,
+  },
+  coverMetaLabel: {
+    color: '#aaa',
+  },
+  coverClientBlock: {
+    marginTop: 28,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#e8e8e8',
+    borderTopStyle: 'solid',
+  },
+  coverClientLabel: {
+    fontSize: 8,
+    fontFamily: 'Inter', fontWeight: 700,
+    letterSpacing: 1.5,
+    color: '#aaa',
+    textTransform: 'uppercase',
+    marginBottom: 6,
+  },
+  coverClientName: {
+    fontSize: 13,
+    fontFamily: 'Inter', fontWeight: 700,
+    color: '#1a1a1a',
+  },
+  coverClientDetail: {
+    fontSize: 10,
+    color: '#666',
+    marginTop: 2,
+  },
+
   // ─── Sommaire ────────────────────────────────────────────────────────────────
   tocPageTitle: {
     fontSize: 22,
@@ -281,6 +351,98 @@ export const s = StyleSheet.create({
     left: 56,
     fontSize: 8,
     color: '#ccc',
+  },
+
+  // ─── Devis ───────────────────────────────────────────────────────────────────
+  quoteIntro: {
+    fontSize: 10,
+    color: '#555',
+    lineHeight: 1.6,
+    marginBottom: 20,
+  },
+  quoteTable: {
+    borderWidth: 1,
+    borderColor: '#e5e5e5',
+    borderStyle: 'solid',
+    borderRadius: 3,
+    marginBottom: 14,
+  },
+  quoteTableHead: {
+    flexDirection: 'row',
+    backgroundColor: '#f6f6f6',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e5e5',
+    borderBottomStyle: 'solid',
+    paddingVertical: 7,
+    paddingHorizontal: 10,
+  },
+  quoteTableRow: {
+    flexDirection: 'row',
+    paddingVertical: 7,
+    paddingHorizontal: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f2f2f2',
+    borderBottomStyle: 'solid',
+  },
+  quoteColName: { flex: 1, fontSize: 9, color: '#333' },
+  quoteColHours: { width: 90, fontSize: 9, color: '#666', textAlign: 'right' },
+  quoteColAmount: { width: 90, fontSize: 9, color: '#333', textAlign: 'right' },
+  quoteColHead: {
+    fontSize: 7,
+    fontFamily: 'Inter', fontWeight: 700,
+    letterSpacing: 1,
+    color: '#999',
+    textTransform: 'uppercase',
+  },
+  quoteTotalRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'baseline',
+    gap: 14,
+    paddingTop: 10,
+    marginBottom: 4,
+  },
+  quoteTotalLabel: {
+    fontSize: 10,
+    fontFamily: 'Inter', fontWeight: 700,
+    color: '#1a1a1a',
+  },
+  quoteTotalAmount: {
+    fontSize: 16,
+    fontFamily: 'Inter', fontWeight: 700,
+    color: '#1a1a1a',
+  },
+  quoteVatMention: {
+    fontSize: 8,
+    color: '#999',
+    fontStyle: 'italic',
+    textAlign: 'right',
+    marginBottom: 24,
+  },
+  quoteConditions: {
+    marginTop: 8,
+  },
+  quoteConditionRow: {
+    flexDirection: 'row',
+    marginBottom: 5,
+  },
+  quoteConditionLabel: {
+    width: 130,
+    fontSize: 9,
+    color: '#999',
+  },
+  quoteConditionValue: {
+    flex: 1,
+    fontSize: 9,
+    color: '#333',
+  },
+  quoteScopeList: {
+    marginTop: 4,
+  },
+  quoteScopeItem: {
+    fontSize: 9,
+    color: '#777',
+    marginBottom: 2,
   },
 
   // ─── Bon pour accord ─────────────────────────────────────────────────────────

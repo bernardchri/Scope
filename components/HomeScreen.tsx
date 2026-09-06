@@ -188,7 +188,7 @@ export default function HomeScreen() {
             />
             <div className="flex gap-2">
               <Button className="flex-1" onClick={handleCreate} disabled={!newProjectName.trim()}>
-                Créer et choisir l'emplacement
+                Créer et choisir l&apos;emplacement
               </Button>
               <Button variant="outline" onClick={() => { setIsCreating(false); setNewProjectName(''); }}>
                 Annuler
@@ -217,7 +217,7 @@ export default function HomeScreen() {
         <DialogHeader>
           <DialogTitle>Fichier introuvable</DialogTitle>
           <DialogDescription>
-            Le fichier <span className="font-medium text-foreground">{missingFile?.name}</span> est introuvable à l'emplacement suivant :
+            Le fichier <span className="font-medium text-foreground">{missingFile?.name}</span> est introuvable à l&apos;emplacement suivant :
             <br />
             <span className="text-xs text-muted-foreground break-all">{missingFile?.path}</span>
             <br /><br />
@@ -236,7 +236,7 @@ export default function HomeScreen() {
         <DialogHeader>
           <DialogTitle>Migrer vers le format dossier ?</DialogTitle>
           <DialogDescription>
-            Ce projet utilise l'ancien format <code>.scope</code>. Le nouveau format stocke les images comme fichiers séparés pour de meilleures performances.
+            Ce projet utilise l&apos;ancien format <code>.scope</code>. Le nouveau format stocke les images comme fichiers séparés pour de meilleures performances.
             <br /><br />
             Le fichier original sera conservé comme sauvegarde.
           </DialogDescription>
