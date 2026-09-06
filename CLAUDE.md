@@ -17,8 +17,8 @@ npx tauri icon <path/to/icon.svg>
 ```
 
 Tests unitaires avec Vitest dans `tests/` (config `vitest.config.mts`). Couvre pour l'instant
-les helpers purs : `slugify`, `imageHelpers` (remapping pins/crop), `pinHelpers`, `migrations`,
-`categoryHelpers`. Pas de tests de composants React.
+les helpers purs : `slugify`, `imageHelpers` (remapping pins/crop), `pinHelpers`,
+`projectSchema` (validation/réparation Zod), `categoryHelpers`. Pas de tests de composants React.
 
 **Production builds** : via GitHub Actions (`.github/workflows/build.yml`), déclenché par un tag `v*` (`git tag vX.Y.Z && git push origin vX.Y.Z`). Produit `.dmg` (macOS arm64 + x64) et `.exe` NSIS (Windows x64).
 
@@ -28,7 +28,7 @@ les helpers purs : `slugify`, `imageHelpers` (remapping pins/crop), `pinHelpers`
 
 Tauri v2 desktop app wrapping a Next.js 15 static export. No backend/API. All data on local filesystem via Rust commands.
 
-**Document-centric**: one project open at a time, stored as a folder containing `scope.json` + `img/` + `export/`. Legacy `.scope` files auto-migrate on open.
+**Document-centric**: one project open at a time, stored as a folder containing `scope.json` + `img/` + `export/`. C'est le **seul format supporté** (le format legacy mono-fichier `.scope` a été retiré).
 
 ### Routing (`app/page.tsx`)
 
@@ -54,13 +54,12 @@ mon-projet/
 └── export/        # PDF/STORIES.md default output
 ```
 
-- **Open**: `openProjectFile(path)` auto-detects folder vs legacy `.scope` file. Always call `initPreviousProject(project)` before `openProject` to avoid a spurious auto-save on load.
+- **Open**: `openProjectFolder(path)` lit `scope.json`, valide/répare via `parseProject` (Zod). Always call `initPreviousProject(project)` before `openProject` to avoid a spurious auto-save on load. `isProjectFolder(path)` teste la présence de `scope.json`.
 - **Auto-save**: subscribe in `lib/projectStore.ts` compares `projects[0]` by reference → calls `saveProjectToPath` (writes `scope.json` without base64).
 - **Close/switch**: `closeProject()` → back to `HomeScreen`.
 - **Recent files**: last 3 paths in `config.dat` (`recentFiles: Array<{name, path, openedAt}>`). Paths point to folders.
 - **No in-app deletion** — users delete project folders from Finder.
-- **Auto-backup**: gzip archive wrapping `{ projects: [] }` via `lib/backup.ts` (`createAutoBackup` only). `load_project_file` (Rust) handles both plain JSON and gzip for legacy `.scope` files.
-- **Migration**: opening a `.scope` file prompts migration to folder format via `migrate_scope_to_folder` (Rust). Original file is preserved.
+- **Auto-backup**: archive gzip de `{ projects: [project] }` via `lib/backup.ts` (`createAutoBackup`) → `create_auto_backup` (Rust), 10 backups glissants dans `app_data_dir/backups/`. Pas de restauration in-app.
 
 ### Image management (`lib/imageManager.ts`)
 
@@ -75,8 +74,7 @@ Images are stored as files in `img/` and loaded on demand via Rust `read_image_a
 **`useImageLoader` hook** (`lib/hooks/useImageLoader.ts`): takes `images[]` + `folderPath`, async-loads filename-based images from disk, returns `resolve(image)` for `<img src>`. Used by `ImagePinViewer`, `ZoomModal`.
 
 Rust commands (`src-tauri/src/main.rs`):
-- Legacy (read-only): `load_project_file` (for opening `.scope` files + migration)
-- Folder: `create_project_folder`, `save_project_to_folder`, `load_project_from_folder`, `save_image_file`, `read_image_as_base64`, `delete_image_file`, `is_project_folder`, `migrate_scope_to_folder`
+- Folder: `create_project_folder`, `save_project_to_folder`, `load_project_from_folder`, `save_image_file`, `read_image_as_base64`, `delete_image_file`, `is_project_folder`
 - Utility: `write_pdf_file`, `write_binary_file`, `write_text_file`, `create_auto_backup`
 
 Native macOS menu (`src-tauri/src/main.rs` `.setup()`):
@@ -115,9 +113,9 @@ Widget toggle UI in `ScopeItemDetail.tsx` allows enabling/disabling widgets per 
 - `Project`: `{ id, name, description?, filename?, hourlyRate?, budgetCap?, version?, client?: { name?, url?, contact? }, depositPercent?, estimatedDelay?, quoteValidityDays?, components[], createdAt, formatVersion? }` — `formatVersion: 2` = folder format. `version`/`client` sur la page de garde ; `depositPercent`/`estimatedDelay`/`quoteValidityDays` = conditions du devis. Édités via `ProjectInfoDialog` (dashboard).
 - `Component`: `{ category: ScopeItemType, tasks[], instances[], images[], estimatedHours?, widgets?, notes?, }`
 - `Task`: `{ id, name, completed, category: 'frontend'|'backend'|'seo'|'motion', scope?: 'v2', pinRef? }` — `pinRef: { imageId, pinId, pinNumber }` links a task to an image pin ; `scope: 'v2'` = hors périmètre (exclu du devis, listé à part)
-- `scope.json` est validé/réparé au chargement par `parseProject` (`lib/projectSchema.ts`, Zod) après la migration legacy — voir `normalizeLoadedProject` dans `lib/persistence.ts`.
+- `scope.json` est validé/réparé au chargement par `parseProject` (`lib/projectSchema.ts`, Zod) — enum inconnu ramené à une valeur sûre, entrées de tableau invalides ignorées, `formatVersion` future tolérée, rejet seulement si `id`/`name` absents. Voir `normalizeLoadedProject` dans `lib/persistence.ts`.
 - `CropRect`: `{ x, y, width, height }` — all percentages (0-100) of full image dimensions
-- `ComponentImage`: `{ id, base64?, filename?, caption?, isPrimary, pins?, crop? }` — `filename` for folder format, `base64` for legacy/migration, `crop` for interactive cropping
+- `ComponentImage`: `{ id, base64?, filename?, caption?, isPrimary, pins?, crop? }` — `filename` = fichier sur disque (`img/`), `base64` = transitoire en mémoire (chargé à la demande, retiré avant écriture), `crop` for interactive cropping
 - `ImagePin`: `{ id, number, x, y }` — x/y are percentages (0-100) relative to the **full** image (not the cropped view)
 - `ComponentInstance`: `{ id, componentId, pinRef? }` — `pinRef: { imageId, pinId, pinNumber }` links an instance to an image pin
 
