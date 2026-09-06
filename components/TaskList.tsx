@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, type ComponentProps } from 'react';
 import { useProjectStore } from '@/lib/projectStore';
 import { Task, TaskCategory, ComponentImage } from '@/lib/types';
 import { computeAvailablePins } from '@/lib/pinHelpers';
@@ -34,7 +34,9 @@ interface TaskListProps {
 }
 
 // Wrapper sortable pour chaque TaskItem
-function SortableTaskItem(props: any) {
+type SortableTaskItemProps = Omit<ComponentProps<typeof TaskItem>, 'dragHandleProps'>;
+
+function SortableTaskItem(props: SortableTaskItemProps) {
   const {
     attributes,
     listeners,

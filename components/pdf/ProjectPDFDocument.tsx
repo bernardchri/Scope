@@ -271,7 +271,7 @@ export function ProjectPDFDocument({ project, showEstimations = true, exportComm
           </>
         )}
 
-        <Text style={s.sectionLabel}>Vue d'ensemble</Text>
+        <Text style={s.sectionLabel}>{"Vue d'ensemble"}</Text>
         <View style={s.statsRow}>
           {showEstimations && totalHours > 0 && (
             <View style={s.statBox}>
@@ -350,8 +350,8 @@ export function ProjectPDFDocument({ project, showEstimations = true, exportComm
           </View>
 
           <Text style={s.approvalNote}>
-            En signant ce document, le client reconnaît avoir pris connaissance du cahier des charges
-            et approuve l'ensemble des composants et des solutions techniques présentés.
+            {"En signant ce document, le client reconnaît avoir pris connaissance du cahier des charges "}
+            {"et approuve l'ensemble des composants et des solutions techniques présentés."}
           </Text>
 
           <Text style={s.signatureLabel}>Signature</Text>

@@ -1,20 +1,21 @@
 import { Task } from '../types';
+import type { SetState } from './types';
 
 export interface TaskSlice {
   addTask: (projectId: string, componentId: string, task: Task) => void;
   deleteTask: (projectId: string, componentId: string, taskId: string) => void;
   toggleTask: (projectId: string, componentId: string, taskId: string) => void;
-  updateTask: (projectId: string, componentId: string, taskId: string, updates: Partial<Task>) => void; // 🆕
+  updateTask: (projectId: string, componentId: string, taskId: string, updates: Partial<Task>) => void;
 }
 
-export const createTaskSlice = (set: any) => ({
+export const createTaskSlice = (set: SetState) => ({
   addTask: (projectId: string, componentId: string, task: Task) => {
-    set((state: any) => ({
-      projects: state.projects.map((p: any) =>
+    set((state) => ({
+      projects: state.projects.map((p) =>
         p.id === projectId
           ? {
               ...p,
-              components: p.components.map((c: any) =>
+              components: p.components.map((c) =>
                 c.id === componentId
                   ? { ...c, tasks: [...c.tasks, task] }
                   : c
@@ -24,16 +25,16 @@ export const createTaskSlice = (set: any) => ({
       )
     }));
   },
-  
+
   deleteTask: (projectId: string, componentId: string, taskId: string) => {
-    set((state: any) => ({
-      projects: state.projects.map((p: any) =>
+    set((state) => ({
+      projects: state.projects.map((p) =>
         p.id === projectId
           ? {
               ...p,
-              components: p.components.map((c: any) =>
+              components: p.components.map((c) =>
                 c.id === componentId
-                  ? { ...c, tasks: c.tasks.filter((t: any) => t.id !== taskId) }
+                  ? { ...c, tasks: c.tasks.filter((t) => t.id !== taskId) }
                   : c
               )
             }
@@ -41,18 +42,18 @@ export const createTaskSlice = (set: any) => ({
       )
     }));
   },
-  
+
   toggleTask: (projectId: string, componentId: string, taskId: string) => {
-    set((state: any) => ({
-      projects: state.projects.map((p: any) =>
+    set((state) => ({
+      projects: state.projects.map((p) =>
         p.id === projectId
           ? {
               ...p,
-              components: p.components.map((c: any) =>
+              components: p.components.map((c) =>
                 c.id === componentId
                   ? {
                       ...c,
-                      tasks: c.tasks.map((t: any) =>
+                      tasks: c.tasks.map((t) =>
                         t.id === taskId ? { ...t, completed: !t.completed } : t
                       )
                     }
@@ -64,18 +65,18 @@ export const createTaskSlice = (set: any) => ({
     }));
   },
 
-  // 🆕 Nouvelle action pour mettre à jour une tâche (notamment la catégorie)
+  // Mettre à jour une tâche (notamment la catégorie)
   updateTask: (projectId: string, componentId: string, taskId: string, updates: Partial<Task>) => {
-    set((state: any) => ({
-      projects: state.projects.map((p: any) =>
+    set((state) => ({
+      projects: state.projects.map((p) =>
         p.id === projectId
           ? {
               ...p,
-              components: p.components.map((c: any) =>
+              components: p.components.map((c) =>
                 c.id === componentId
                   ? {
                       ...c,
-                      tasks: c.tasks.map((t: any) =>
+                      tasks: c.tasks.map((t) =>
                         t.id === taskId ? { ...t, ...updates } : t
                       )
                     }

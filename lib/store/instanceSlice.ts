@@ -1,4 +1,5 @@
 import { ComponentInstance } from '../types';
+import type { SetState } from './types';
 
 export interface InstanceSlice {
   addComponentInstance: (projectId: string, parentId: string, componentId: string) => void;
@@ -6,14 +7,14 @@ export interface InstanceSlice {
   updateComponentInstance: (projectId: string, parentId: string, instanceId: string, updates: Partial<ComponentInstance>) => void;
 }
 
-export const createInstanceSlice = (set: any) => ({
+export const createInstanceSlice = (set: SetState) => ({
   addComponentInstance: (projectId: string, parentId: string, componentId: string) => {
-    set((state: any) => ({
-      projects: state.projects.map((p: any) =>
+    set((state) => ({
+      projects: state.projects.map((p) =>
         p.id === projectId
           ? {
               ...p,
-              components: p.components.map((c: any) =>
+              components: p.components.map((c) =>
                 c.id === parentId
                   ? {
                       ...c,
@@ -34,16 +35,16 @@ export const createInstanceSlice = (set: any) => ({
   },
 
   updateComponentInstance: (projectId: string, parentId: string, instanceId: string, updates: Partial<ComponentInstance>) => {
-    set((state: any) => ({
-      projects: state.projects.map((p: any) =>
+    set((state) => ({
+      projects: state.projects.map((p) =>
         p.id === projectId
           ? {
               ...p,
-              components: p.components.map((c: any) =>
+              components: p.components.map((c) =>
                 c.id === parentId
                   ? {
                       ...c,
-                      instances: c.instances.map((i: any) =>
+                      instances: c.instances.map((i) =>
                         i.id === instanceId ? { ...i, ...updates } : i
                       )
                     }
@@ -56,16 +57,16 @@ export const createInstanceSlice = (set: any) => ({
   },
 
   removeComponentInstance: (projectId: string, parentId: string, instanceId: string) => {
-    set((state: any) => ({
-      projects: state.projects.map((p: any) =>
+    set((state) => ({
+      projects: state.projects.map((p) =>
         p.id === projectId
           ? {
               ...p,
-              components: p.components.map((c: any) =>
+              components: p.components.map((c) =>
                 c.id === parentId
                   ? {
                       ...c,
-                      instances: c.instances.filter((i: any) => i.id !== instanceId)
+                      instances: c.instances.filter((i) => i.id !== instanceId)
                     }
                   : c
               )

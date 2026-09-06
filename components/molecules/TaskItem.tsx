@@ -1,5 +1,6 @@
 'use client';
 
+import type { HTMLAttributes } from 'react';
 import { Task, TaskCategory } from '@/lib/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -23,7 +24,7 @@ interface TaskItemProps {
   editCategory: TaskCategory;
   editPinRef?: Task['pinRef'];
   availablePins?: AvailablePin[];
-  dragHandleProps?: any;
+  dragHandleProps?: HTMLAttributes<HTMLElement>;
   onEditNameChange: (name: string) => void;
   onEditCategoryChange: (category: TaskCategory) => void;
   onDirectCategoryChange: (category: TaskCategory) => void;

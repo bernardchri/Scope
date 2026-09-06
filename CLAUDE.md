@@ -10,12 +10,15 @@ npm run tauri        # Tauri dev mode
 npm run build        # Next.js static export → ./out
 npm run build:tauri  # Full Tauri production build local (macOS only)
 npm run lint
+npm test             # Vitest (tests unitaires des helpers purs, dossier tests/)
 
 # Regénérer les icônes depuis le SVG source
 npx tauri icon <path/to/icon.svg>
 ```
 
-No test suite.
+Tests unitaires avec Vitest dans `tests/` (config `vitest.config.mts`). Couvre pour l'instant
+les helpers purs : `slugify`, `imageHelpers` (remapping pins/crop), `pinHelpers`, `migrations`,
+`categoryHelpers`. Pas de tests de composants React.
 
 **Production builds** : via GitHub Actions (`.github/workflows/build.yml`), déclenché par un tag `v*` (`git tag vX.Y.Z && git push origin vX.Y.Z`). Produit `.dmg` (macOS arm64 + x64) et `.exe` NSIS (Windows x64).
 

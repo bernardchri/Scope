@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Rust build artifacts — never lint these.
+    "src-tauri/target/**",
+    "src-tauri/gen/**",
   ]),
 ]);
 

@@ -9,9 +9,8 @@ export function slugify(name: string): string {
     .toLowerCase()
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9\s-]/g, '')
-    .trim()
     .replace(/[\s_]+/g, '-')
+    .replace(/[^a-z0-9-]/g, '')
     .replace(/-+/g, '-')
     .replace(/^-+|-+$/g, '');
 }
@@ -35,7 +34,8 @@ function stripBase64FromProject(project: Project): Project {
     components: project.components.map(comp => ({
       ...comp,
       images: (comp.images || []).map(img => {
-        const { base64, ...rest } = img;
+        const rest = { ...img };
+        delete rest.base64;
         return rest as ComponentImage;
       }),
     })),
@@ -47,9 +47,9 @@ function stripBase64FromProject(project: Project): Project {
  */
 export async function openProjectFolder(folderPath: string): Promise<Project | null> {
   try {
-    const data = await invoke<any>('load_project_from_folder', { folderPath });
+    const data = await invoke<Record<string, unknown>>('load_project_from_folder', { folderPath });
     if (!data || !data.id) return null;
-    const project = migrateProjectsToV2([data as Project])[0];
+    const project = migrateProjectsToV2([data as unknown as Project])[0];
     project.formatVersion = 2;
     return project;
   } catch {
@@ -74,12 +74,12 @@ export async function openProjectFile(path: string): Promise<Project | null> {
 
   // Legacy .scope file
   try {
-    const data = await invoke<any>('load_project_file', { path });
+    const data = await invoke<Record<string, unknown>>('load_project_file', { path });
     let project: Project;
-    if (data.projects && Array.isArray(data.projects)) {
-      project = data.projects[0];
+    if (Array.isArray(data.projects)) {
+      project = data.projects[0] as Project;
     } else if (data.id) {
-      project = data as Project;
+      project = data as unknown as Project;
     } else {
       return null;
     }
@@ -125,9 +125,9 @@ export async function migrateScopeToFolder(
   folderPath: string
 ): Promise<Project | null> {
   try {
-    const data = await invoke<any>('migrate_scope_to_folder', { scopePath, folderPath });
+    const data = await invoke<Record<string, unknown>>('migrate_scope_to_folder', { scopePath, folderPath });
     if (!data || !data.id) return null;
-    return migrateProjectsToV2([data as Project])[0];
+    return migrateProjectsToV2([data as unknown as Project])[0];
   } catch (e) {
     console.error('Erreur migration:', e);
     return null;

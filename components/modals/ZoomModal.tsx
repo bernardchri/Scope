@@ -37,8 +37,10 @@ export default function ZoomModal({ open, image, tasks, folderPath, onUpdatePins
 
   // Sync pins quand l'image change (changement de slide depuis l'extérieur)
   useEffect(() => {
+    // Resync l'état local quand on change de slide depuis l'extérieur (clé: image.id).
     const pins = image.pins ?? [];
     localPinsRef.current = pins;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLocalPins(pins);
   }, [image.id]);
 
