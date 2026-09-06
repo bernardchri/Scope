@@ -281,8 +281,7 @@ export function ProjectPDFDocument({ project, showEstimations = true, exportComm
       <Page size="A4" style={s.page}>
         <PageHeader projectName={project.name} date={today} />
 
-        <Text style={s.projectName}>{project.name}</Text>
-        <Text style={s.projectType}>Cahier des charges — {today}</Text>
+        <Text style={s.tocPageTitle}>{project.name}</Text>
 
         {project.description && (
           <>

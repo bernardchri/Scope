@@ -45,7 +45,7 @@ export function CoverPage({
         )}
       </View>
 
-      <Text style={s.coverStudio}>{date}</Text>
+      <Text style={s.coverStudio}> </Text>
     </Page>
   );
 }
