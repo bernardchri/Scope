@@ -2,21 +2,19 @@ import { invoke } from '@tauri-apps/api/core';
 import { save } from '@tauri-apps/plugin-dialog';
 import { getConfigStore } from './store';
 import { Project, ComponentImage, AppSettings, DEFAULT_APP_SETTINGS } from './types';
-import { migrateProjectsToV2 } from './migrations';
 import { parseProject } from './projectSchema';
 
 /**
- * Applique la migration legacy puis la validation défensive (Zod).
- * Journalise les réparations. Retourne `null` si le projet est inexploitable.
+ * Valide et répare le contenu de `scope.json` (Zod). Journalise les réparations.
+ * Retourne `null` si le fichier est inexploitable (`id`/`name` absents).
  */
-function normalizeLoadedProject(raw: unknown, source: string): Project | null {
-  const migrated = migrateProjectsToV2([raw as Project])[0];
-  const { project, issues } = parseProject(migrated);
+function normalizeLoadedProject(raw: unknown): Project | null {
+  const { project, issues } = parseProject(raw);
   if (issues.length > 0) {
-    console.warn(`[scope.json] anomalies détectées (${source}) :\n- ${issues.join('\n- ')}`);
+    console.warn(`[scope.json] anomalies détectées :\n- ${issues.join('\n- ')}`);
   }
   if (!project) {
-    console.error(`[scope.json] fichier inexploitable (${source})`);
+    console.error('[scope.json] fichier inexploitable');
     return null;
   }
   return project;
@@ -61,13 +59,14 @@ function stripBase64FromProject(project: Project): Project {
 }
 
 /**
- * Open a project from a folder (reads scope.json).
+ * Ouvre un projet depuis un dossier (lit `scope.json`).
+ * C'est le seul format supporté.
  */
 export async function openProjectFolder(folderPath: string): Promise<Project | null> {
   try {
     const data = await invoke<Record<string, unknown>>('load_project_from_folder', { folderPath });
     if (!data || !data.id) return null;
-    const project = normalizeLoadedProject(data, 'dossier');
+    const project = normalizeLoadedProject(data);
     if (project) project.formatVersion = 2;
     return project;
   } catch {
@@ -75,35 +74,12 @@ export async function openProjectFolder(folderPath: string): Promise<Project | n
   }
 }
 
-/**
- * Open a project — auto-detects folder vs legacy .scope file.
- * For .scope files, returns the project but does NOT auto-migrate.
- */
-export async function openProjectFile(path: string): Promise<Project | null> {
-  // Check if it's a folder with scope.json
+/** Un dossier de projet valide contient un `scope.json`. */
+export async function isProjectFolder(path: string): Promise<boolean> {
   try {
-    const isFolder = await invoke<boolean>('is_project_folder', { path });
-    if (isFolder) {
-      return openProjectFolder(path);
-    }
+    return await invoke<boolean>('is_project_folder', { path });
   } catch {
-    // Not a folder, try as file
-  }
-
-  // Legacy .scope file
-  try {
-    const data = await invoke<Record<string, unknown>>('load_project_file', { path });
-    let raw: unknown;
-    if (Array.isArray(data.projects)) {
-      raw = data.projects[0];
-    } else if (data.id) {
-      raw = data;
-    } else {
-      return null;
-    }
-    return normalizeLoadedProject(raw, 'fichier .scope');
-  } catch {
-    return null;
+    return false;
   }
 }
 
@@ -132,24 +108,6 @@ export async function createNewProjectFolder(
 
   await invoke('save_project_to_folder', { folderPath: filePath, data: project });
   return { project, path: filePath };
-}
-
-/**
- * Migrate a .scope file to folder format.
- * Returns the migrated project data.
- */
-export async function migrateScopeToFolder(
-  scopePath: string,
-  folderPath: string
-): Promise<Project | null> {
-  try {
-    const data = await invoke<Record<string, unknown>>('migrate_scope_to_folder', { scopePath, folderPath });
-    if (!data || !data.id) return null;
-    return normalizeLoadedProject(data, 'migration .scope');
-  } catch (e) {
-    console.error('Erreur migration:', e);
-    return null;
-  }
 }
 
 // ─── Fichiers récents ─────────────────────────────────────────────────────────

@@ -97,87 +97,6 @@ fn is_project_folder(path: String) -> Result<bool, String> {
 }
 
 #[tauri::command]
-fn migrate_scope_to_folder(scope_path: String, folder_path: String) -> Result<serde_json::Value, String> {
-    use base64::{Engine as _, engine::general_purpose};
-
-    // Load the .scope file (try JSON first, then gzip)
-    let data = load_project_file(scope_path)?;
-
-    // Create folder structure
-    let root = PathBuf::from(&folder_path);
-    std::fs::create_dir_all(root.join("img"))
-        .map_err(|e| format!("Impossible de créer img/: {}", e))?;
-    std::fs::create_dir_all(root.join("export"))
-        .map_err(|e| format!("Impossible de créer export/: {}", e))?;
-
-    // Process the project data — extract base64 images to files
-    let mut project = data.clone();
-    if let Some(components) = project.get_mut("components").and_then(|c| c.as_array_mut()) {
-        for component in components.iter_mut() {
-            if let Some(images) = component.get_mut("images").and_then(|i| i.as_array_mut()) {
-                for image in images.iter_mut() {
-                    if let Some(base64_str) = image.get("base64").and_then(|b| b.as_str()) {
-                        if !base64_str.is_empty() {
-                            // Determine extension from data URI
-                            let (ext, raw) = if let Some(pos) = base64_str.find(',') {
-                                let header = &base64_str[..pos];
-                                let extension = if header.contains("jpeg") || header.contains("jpg") {
-                                    "jpg"
-                                } else if header.contains("gif") {
-                                    "gif"
-                                } else if header.contains("webp") {
-                                    "webp"
-                                } else {
-                                    "png"
-                                };
-                                (extension, &base64_str[pos + 1..])
-                            } else {
-                                ("png", base64_str)
-                            };
-
-                            // Generate filename from image id
-                            let id = image.get("id")
-                                .and_then(|i| i.as_str())
-                                .unwrap_or("unknown");
-                            let filename = format!("{}.{}", id, ext);
-
-                            // Decode and write file
-                            if let Ok(bytes) = general_purpose::STANDARD.decode(raw) {
-                                let img_path = root.join("img").join(&filename);
-                                let _ = std::fs::write(&img_path, bytes);
-                            }
-
-                            // Replace base64 with filename in JSON
-                            if let Some(obj) = image.as_object_mut() {
-                                obj.remove("base64");
-                                obj.insert("filename".to_string(), serde_json::Value::String(filename));
-                            }
-                        }
-                    }
-                }
-            }
-            // Also handle legacy imageBase64 field
-            if let Some(obj) = component.as_object_mut() {
-                obj.remove("imageBase64");
-            }
-        }
-    }
-
-    // Set format version
-    if let Some(obj) = project.as_object_mut() {
-        obj.insert("formatVersion".to_string(), serde_json::Value::Number(2.into()));
-    }
-
-    // Write scope.json (without base64 data)
-    let json = serde_json::to_string_pretty(&project)
-        .map_err(|e| format!("Erreur sérialisation: {}", e))?;
-    std::fs::write(root.join("scope.json"), json)
-        .map_err(|e| format!("Erreur écriture scope.json: {}", e))?;
-
-    Ok(project)
-}
-
-#[tauri::command]
 fn create_auto_backup(
     app: tauri::AppHandle,
     data: serde_json::Value,
@@ -188,21 +107,6 @@ fn create_auto_backup(
         .join("backups");
 
     backup::create_auto_backup(data, backup_dir)
-}
-
-#[tauri::command]
-fn load_project_file(path: String) -> Result<serde_json::Value, String> {
-    let path_buf = PathBuf::from(&path);
-
-    // Essayer JSON plain en premier (nouveau format)
-    if let Ok(content) = std::fs::read_to_string(&path_buf) {
-        if let Ok(value) = serde_json::from_str::<serde_json::Value>(&content) {
-            return Ok(value);
-        }
-    }
-
-    // Fallback : format gzip (anciens exports/backups)
-    backup::import_from_scope_file(path_buf)
 }
 
 #[tauri::command]
@@ -305,7 +209,6 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             create_auto_backup,
-            load_project_file,
             write_pdf_file,
             write_binary_file,
             write_text_file,
@@ -315,8 +218,7 @@ pub fn run() {
             save_image_file,
             read_image_as_base64,
             delete_image_file,
-            is_project_folder,
-            migrate_scope_to_folder
+            is_project_folder
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

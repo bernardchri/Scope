@@ -1,8 +1,7 @@
 use flate2::Compression;
-use flate2::read::GzDecoder;
 use flate2::write::GzEncoder;
 use std::fs;
-use std::io::{Read, Write};
+use std::io::Write;
 use std::path::PathBuf;
 use chrono::Local;
 
@@ -37,27 +36,6 @@ pub fn export_to_scope_file(data: serde_json::Value, path: PathBuf) -> Result<()
         .map_err(|e| format!("Erreur d'écriture: {}", e))?;
 
     Ok(())
-}
-
-/// Importer les projets depuis un fichier .scope compressé
-pub fn import_from_scope_file(path: PathBuf) -> Result<serde_json::Value, String> {
-    let compressed = fs::read(&path)
-        .map_err(|e| format!("Erreur de lecture: {}", e))?;
-
-    let mut decoder = GzDecoder::new(&compressed[..]);
-    let mut json = String::new();
-    decoder.read_to_string(&mut json)
-        .map_err(|e| format!("Erreur de décompression: {}", e))?;
-
-    let scope_file: ScopeFile = serde_json::from_str(&json)
-        .map_err(|e| format!("Erreur de désérialisation: {}", e))?;
-
-    // Vérifier la version (optionnel)
-    if scope_file.version != "1.0" {
-        return Err(format!("Version incompatible: {}", scope_file.version));
-    }
-
-    Ok(scope_file.data)
 }
 
 /// Créer un backup automatique
