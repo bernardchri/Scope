@@ -1,5 +1,6 @@
 import { Component, ComponentImage, ImagePin, ScopeItemType } from './types';
 import { saveImageFromBase64, deleteImage } from './imageManager';
+import { nextPinNumber } from './pinHelpers';
 
 export interface FigmaImportPin {
   figmaLayerId: string;
@@ -46,10 +47,6 @@ export interface FigmaImportResult {
   orphanedPins: ImagePin[];
 }
 
-function nextPinNumber(taken: number[]): number {
-  return taken.reduce((max, n) => Math.max(max, n), 0) + 1;
-}
-
 /**
  * Construit les updates de `Component` pour un import Figma.
  * Si `existing` est fourni, fait un merge différentiel sur l'image déjà liée
@@ -65,15 +62,15 @@ export async function applyFigmaImport(
   const existingImage = existing?.images?.find((img) => img.figmaNodeId === payload.nodeId);
   const existingPins = existingImage?.pins || [];
 
-  const filename = await saveImageFromBase64(folderPath, payload.image, 'png');
-  if (existingImage?.filename) {
-    await deleteImage(folderPath, existingImage.filename).catch(() => {});
-  }
+  const [filename] = await Promise.all([
+    saveImageFromBase64(folderPath, payload.image, 'png'),
+    existingImage?.filename ? deleteImage(folderPath, existingImage.filename).catch(() => {}) : null,
+  ]);
 
   const incomingIds = new Set(payload.pins.map((p) => p.figmaLayerId));
   const orphanedPins = existingPins.filter((p) => p.figmaLayerId && !incomingIds.has(p.figmaLayerId));
 
-  let nextNumber = nextPinNumber(existingPins.map((p) => p.number));
+  let nextNumber = nextPinNumber(existingPins);
   const mergedPins: ImagePin[] = payload.pins.map((p) => {
     const match = existingPins.find((ep) => ep.figmaLayerId === p.figmaLayerId);
     if (match) {
@@ -95,7 +92,7 @@ export async function applyFigmaImport(
     id: existingImage?.id || crypto.randomUUID(),
     filename,
     caption: payload.caption || existingImage?.caption,
-    isPrimary: existingImage?.isPrimary ?? !(existing?.images && existing.images.length > 0),
+    isPrimary: existingImage?.isPrimary ?? !existing?.images?.length,
     pins: allPins.length ? allPins : undefined,
     figmaNodeId: payload.nodeId,
   };
@@ -109,10 +106,26 @@ export async function applyFigmaImport(
     description: payload.description || existing?.description,
     category: normalizeFigmaCategory(payload.category),
     images,
-    figmaLink: { fileKey: payload.fileKey, nodeId: payload.groupNodeId, lastSyncAt: new Date().toISOString() },
+    figmaLink: { fileKey: payload.fileKey, groupNodeId: payload.groupNodeId, lastSyncAt: new Date().toISOString() },
   };
 
   return { componentUpdates, imageId: newImage.id, orphanedPins };
+}
+
+/**
+ * Construit un `Component` complet à partir des updates calculés par
+ * `applyFigmaImport`, pour un nouveau composant (pas de composant existant
+ * trouvé via `figmaLink.groupNodeId`).
+ */
+export function buildComponentFromFigmaUpdates(updates: Partial<Component>): Component {
+  return {
+    id: crypto.randomUUID(),
+    instances: [],
+    tasks: [],
+    name: updates.name || 'Sans nom',
+    category: updates.category || 'component',
+    ...updates,
+  };
 }
 
 /**

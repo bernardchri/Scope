@@ -66,7 +66,7 @@ const componentImageSchema = z.object({
 const figmaLinkSchema = z
   .object({
     fileKey: z.string(),
-    nodeId: z.string(),
+    groupNodeId: z.string(),
     lastSyncAt: z.string().optional(),
   })
   .optional();

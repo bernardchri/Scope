@@ -40,6 +40,13 @@ function getDescription(node) {
   return 'description' in node ? (node.description || '') : '';
 }
 
+/** Légende taguée à la main sur variantNode/groupNode, sinon déduite de la
+ * propriété de variant (ex: "Desktop"), sinon vide. */
+function resolveCaption(groupNode, variantNode) {
+  const captionHost = variantNode || groupNode;
+  return captionHost.getPluginData('scopeCaption') || deriveVariantLabel(variantNode) || '';
+}
+
 function serializeNode(node) {
   if (!node) return null;
 
@@ -72,8 +79,7 @@ function serializeNode(node) {
       }))
     : [];
 
-  const captionHost = variantNode || groupNode;
-  const caption = captionHost.getPluginData('scopeCaption') || deriveVariantLabel(variantNode) || '';
+  const caption = resolveCaption(groupNode, variantNode);
 
   return {
     id: pinHost.id,
@@ -116,8 +122,7 @@ async function exportAndSend({ groupNode, variantNode, name, port, token, bulk }
     })
     .filter(Boolean);
 
-  const captionHost = variantNode || groupNode;
-  const caption = captionHost.getPluginData('scopeCaption') || deriveVariantLabel(variantNode) || '';
+  const caption = resolveCaption(groupNode, variantNode);
 
   const payload = {
     name: name || groupNode.name,

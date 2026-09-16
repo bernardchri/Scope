@@ -22,25 +22,19 @@ pub struct FigmaBridgeInfo {
 const CANDIDATE_PORTS: [u16; 5] = [51789, 51790, 51791, 51792, 51793];
 
 /// Jeton local anti-collision, pas une protection cryptographique — suffisant
-/// pour un pont qui n'écoute que sur 127.0.0.1.
+/// pour un pont qui n'écoute que sur 127.0.0.1. Concatène des sources
+/// d'entropie triviales (temps, pid, compteur) plutôt que de les mélanger :
+/// pas besoin de mieux pour ce niveau de garantie.
 fn generate_token() -> String {
     static COUNTER: AtomicU64 = AtomicU64::new(0);
     let nanos = SystemTime::now()
         .duration_since(UNIX_EPOCH)
-        .map(|d| d.as_nanos() as u64)
+        .map(|d| d.as_nanos())
         .unwrap_or(0);
     let counter = COUNTER.fetch_add(1, Ordering::Relaxed);
-    let pid = std::process::id() as u64;
+    let pid = std::process::id();
 
-    let mut state = nanos ^ pid.wrapping_mul(0x9E37_79B9_7F4A_7C15) ^ counter;
-    let mut bytes = [0u8; 24];
-    for chunk in bytes.chunks_mut(8) {
-        state ^= state << 13;
-        state ^= state >> 7;
-        state ^= state << 17;
-        chunk.copy_from_slice(&state.to_le_bytes()[..chunk.len()]);
-    }
-    bytes.iter().map(|b| format!("{:02x}", b)).collect()
+    format!("{:032x}{:08x}{:016x}", nanos, pid, counter)
 }
 
 /// Le plugin Figma appelle `fetch` depuis le sandbox principal, qui a une

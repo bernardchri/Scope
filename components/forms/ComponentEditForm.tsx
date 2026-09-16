@@ -40,14 +40,14 @@ export default function ComponentEditForm({
     initialEstimatedHours !== undefined ? String(initialEstimatedHours) : ''
   );
   const [figmaFileKey, setFigmaFileKey] = useState(initialFigmaLink?.fileKey || '');
-  const [figmaNodeId, setFigmaNodeId] = useState(initialFigmaLink?.nodeId || '');
+  const [figmaGroupNodeId, setFigmaGroupNodeId] = useState(initialFigmaLink?.groupNodeId || '');
 
   function handleSubmit() {
     if (!name.trim()) return;
     const hours = estimatedHours !== '' ? parseFloat(estimatedHours) : undefined;
     const figmaLink: FigmaLink | undefined =
-      figmaFileKey.trim() && figmaNodeId.trim()
-        ? { fileKey: figmaFileKey.trim(), nodeId: figmaNodeId.trim(), lastSyncAt: initialFigmaLink?.lastSyncAt }
+      figmaFileKey.trim() && figmaGroupNodeId.trim()
+        ? { fileKey: figmaFileKey.trim(), groupNodeId: figmaGroupNodeId.trim(), lastSyncAt: initialFigmaLink?.lastSyncAt }
         : undefined;
     onSubmit(name, description, category, hours && !isNaN(hours) ? hours : undefined, figmaLink);
   }
@@ -106,9 +106,9 @@ export default function ComponentEditForm({
               className="flex-1"
             />
             <Input
-              value={figmaNodeId}
-              onChange={(e) => setFigmaNodeId(e.target.value)}
-              placeholder="Node ID"
+              value={figmaGroupNodeId}
+              onChange={(e) => setFigmaGroupNodeId(e.target.value)}
+              placeholder="ID du component set (pas un état/variant)"
               className="flex-1"
             />
           </div>

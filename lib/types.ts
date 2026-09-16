@@ -64,7 +64,8 @@ export interface ComponentImage {
 /** Lien vers un composant/frame Figma, pour import initial et re-sync ultérieur. */
 export interface FigmaLink {
   fileKey: string;
-  nodeId: string;
+  /** Id du component set (ou du node lui-même hors variant) — stable entre tous les états. */
+  groupNodeId: string;
   lastSyncAt?: string;
 }
 

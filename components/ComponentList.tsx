@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { listen } from '@tauri-apps/api/event';
 import { useProjectStore, undo, redo } from '@/lib/projectStore';
 import { Component, ScopeItemType } from '@/lib/types';
-import { FigmaImportPayload, applyFigmaImport } from '@/lib/figmaImport';
+import { FigmaImportPayload, applyFigmaImport, buildComponentFromFigmaUpdates } from '@/lib/figmaImport';
 import { useShortcuts } from '@/lib/hooks/useShortcuts';
 import ComponentSidebar from './ComponentSidebar';
 import ScopeItemDetail from './ScopeItemDetail';
@@ -53,21 +53,13 @@ export default function ComponentList({ projectId }: ComponentListProps) {
     const state = useProjectStore.getState();
     const project = state.projects.find(p => p.id === projectId);
     if (!project) return;
-    const existing = project.components.find(c => c.figmaLink?.nodeId === payload.groupNodeId);
+    const existing = project.components.find(c => c.figmaLink?.groupNodeId === payload.groupNodeId);
     try {
       const result = await applyFigmaImport(state.currentProjectPath || '', payload, existing);
       if (existing) {
         state.updateComponent(project.id, existing.id, result.componentUpdates);
       } else {
-        const newComponent: Component = {
-          id: crypto.randomUUID(),
-          instances: [],
-          tasks: [],
-          name: result.componentUpdates.name || 'Sans nom',
-          category: result.componentUpdates.category || 'component',
-          ...result.componentUpdates,
-        };
-        state.addComponent(project.id, newComponent);
+        state.addComponent(project.id, buildComponentFromFigmaUpdates(result.componentUpdates));
       }
     } catch (e) {
       console.error('[figma-import bulk] échec pour', payload.nodeId, e);
@@ -149,14 +141,7 @@ export default function ComponentList({ projectId }: ComponentListProps) {
 
   function handleFigmaImportCreate(updates: Partial<Component>) {
     if (!activeProject) return;
-    const newComponent: Component = {
-      id: crypto.randomUUID(),
-      instances: [],
-      tasks: [],
-      name: updates.name || 'Sans nom',
-      category: updates.category || 'component',
-      ...updates,
-    };
+    const newComponent = buildComponentFromFigmaUpdates(updates);
     addComponent(activeProject.id, newComponent);
     setNavHistory([newComponent.id]);
   }

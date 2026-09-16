@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Component, ImagePin } from '@/lib/types';
-import { FigmaImportPayload, applyFigmaImport, dropOrphanedPins, normalizeFigmaCategory } from '@/lib/figmaImport';
+import { Component } from '@/lib/types';
+import { FigmaImportPayload, FigmaImportResult, applyFigmaImport, dropOrphanedPins, normalizeFigmaCategory } from '@/lib/figmaImport';
 import { SCOPE_ITEM_TYPES, TYPE_LABELS } from '@/lib/categoryHelpers';
 import {
   Dialog,
@@ -38,7 +38,7 @@ export default function FigmaImportDialog({
   const open = !!payload;
 
   const matchedExisting = useMemo(
-    () => components.find((c) => c.figmaLink?.nodeId === payload?.groupNodeId) || null,
+    () => components.find((c) => c.figmaLink?.groupNodeId === payload?.groupNodeId) || null,
     [components, payload]
   );
 
@@ -48,9 +48,10 @@ export default function FigmaImportDialog({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [pendingUpdates, setPendingUpdates] = useState<Partial<Component> | null>(null);
-  const [pendingImageId, setPendingImageId] = useState<string | null>(null);
-  const [orphanedPins, setOrphanedPins] = useState<ImagePin[]>([]);
+  // pendingResult !== null pendant l'étape de revue des pins orphelins (les
+  // trois infos — updates, image concernée, pins orphelins — vont toujours
+  // ensemble, d'où un seul state plutôt que trois à garder synchronisés).
+  const [pendingResult, setPendingResult] = useState<FigmaImportResult | null>(null);
   const [pinsToDelete, setPinsToDelete] = useState<Set<string>>(new Set());
 
   useEffect(() => {
@@ -59,14 +60,13 @@ export default function FigmaImportDialog({
     setCategory(normalizeFigmaCategory(payload.category));
     setTarget(matchedExisting?.id || NEW_COMPONENT_VALUE);
     setError(null);
-    setPendingUpdates(null);
-    setOrphanedPins([]);
+    setPendingResult(null);
   }, [payload, matchedExisting]);
 
   if (!payload) return null;
 
   const existing = target === NEW_COMPONENT_VALUE ? undefined : components.find((c) => c.id === target);
-  const reviewingOrphans = pendingUpdates !== null;
+  const reviewingOrphans = pendingResult !== null;
 
   async function handleImport() {
     if (!payload) return;
@@ -79,9 +79,7 @@ export default function FigmaImportDialog({
         existing
       );
       if (result.orphanedPins.length > 0) {
-        setPendingUpdates(result.componentUpdates);
-        setPendingImageId(result.imageId);
-        setOrphanedPins(result.orphanedPins);
+        setPendingResult(result);
         setPinsToDelete(new Set(result.orphanedPins.map((p) => p.id)));
       } else {
         commit(result.componentUpdates);
@@ -103,8 +101,8 @@ export default function FigmaImportDialog({
   }
 
   function handleConfirmOrphans() {
-    if (!pendingUpdates || !pendingImageId) return;
-    const finalUpdates = dropOrphanedPins(pendingUpdates, pendingImageId, Array.from(pinsToDelete));
+    if (!pendingResult) return;
+    const finalUpdates = dropOrphanedPins(pendingResult.componentUpdates, pendingResult.imageId, Array.from(pinsToDelete));
     commit(finalUpdates);
   }
 
@@ -146,7 +144,7 @@ export default function FigmaImportDialog({
                   <SelectItem value={NEW_COMPONENT_VALUE}>+ Nouveau composant</SelectItem>
                   {components.map((c) => (
                     <SelectItem key={c.id} value={c.id}>
-                      {c.name}{c.figmaLink?.nodeId === payload.groupNodeId ? ' (déjà lié)' : ''}
+                      {c.name}{c.figmaLink?.groupNodeId === payload.groupNodeId ? ' (déjà lié)' : ''}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -183,7 +181,7 @@ export default function FigmaImportDialog({
             <p className="text-sm text-muted-foreground">
               Coché = supprimer le pin correspondant dans SCOPE. Décoché = le garder (il restera orphelin, sans calque Figma associé).
             </p>
-            {orphanedPins.map((pin) => (
+            {pendingResult.orphanedPins.map((pin) => (
               <div key={pin.id} className="flex items-center gap-2">
                 <Checkbox
                   id={`orphan-${pin.id}`}
