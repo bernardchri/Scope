@@ -83,6 +83,20 @@ export async function saveImageFromPath(folderPath: string, filePath: string): P
 }
 
 /**
+ * Save an image from a raw base64 string (no data URI prefix), e.g. received
+ * from the Figma import bridge. Resizes if needed, saves with a UUID filename.
+ */
+export async function saveImageFromBase64(folderPath: string, base64: string, ext: string = 'png'): Promise<string> {
+  const mime = EXT_TO_MIME[ext] || 'image/png';
+  const dataUri = `data:${mime};base64,${base64}`;
+  const processed = await processImage(dataUri, ext);
+  const filename = `${crypto.randomUUID()}.${processed.ext}`;
+  await invoke('save_image_file', { folderPath, filename, base64Data: processed.base64DataUri });
+  imageCache.set(cacheKey(folderPath, filename), processed.base64DataUri);
+  return filename;
+}
+
+/**
  * Get a displayable src for an image.
  * Returns cached base64 if available, otherwise empty string.
  * Use loadImageSrc() to async-load from disk.

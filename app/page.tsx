@@ -34,6 +34,14 @@ export default function Home() {
     listen('menu-undo', () => undo()).then(fn => unlisteners.push(fn));
     listen('menu-redo', () => redo()).then(fn => unlisteners.push(fn));
 
+    // Filet de sécurité : si un import Figma arrive sans projet ouvert,
+    // ComponentList (qui gère normalement cet événement) n'est pas monté.
+    listen('figma-import', () => {
+      if (!useProjectStore.getState().activeProjectId) {
+        alert("Ouvre un projet SCOPE avant d'importer depuis Figma.");
+      }
+    }).then(fn => unlisteners.push(fn));
+
     return () => { unlisteners.forEach(fn => fn()); };
   }, [openProject, closeProject]);
 

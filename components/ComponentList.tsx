@@ -1,14 +1,17 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { listen } from '@tauri-apps/api/event';
 import { useProjectStore, undo, redo } from '@/lib/projectStore';
 import { Component, ScopeItemType } from '@/lib/types';
+import { FigmaImportPayload } from '@/lib/figmaImport';
 import { useShortcuts } from '@/lib/hooks/useShortcuts';
 import ComponentSidebar from './ComponentSidebar';
 import ScopeItemDetail from './ScopeItemDetail';
 import ProjectHeader from './ProjectHeader';
 import ProjectDashboard from './ProjectDashboard';
 import CreateComponentModal from './modals/CreateComponentModal';
+import FigmaImportDialog from './modals/FigmaImportDialog';
 import { Button } from '@/components/ui/button';
 import { PanelLeftOpen } from 'lucide-react';
 
@@ -30,6 +33,7 @@ export default function ComponentList({ projectId }: ComponentListProps) {
   const [navHistory, setNavHistory] = useState<string[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [figmaImportPayload, setFigmaImportPayload] = useState<FigmaImportPayload | null>(null);
 
   const activeProject = projects.find(p => p.id === projectId);
 
@@ -38,6 +42,13 @@ export default function ComponentList({ projectId }: ComponentListProps) {
     'undo': useCallback(() => undo(), []),
     'redo': useCallback(() => redo(), []),
   });
+
+  useEffect(() => {
+    const unlisten = listen<FigmaImportPayload>('figma-import', (event) => {
+      setFigmaImportPayload(event.payload);
+    });
+    return () => { unlisten.then(fn => fn()); };
+  }, []);
 
   if (!activeProject) return null;
 
@@ -101,6 +112,20 @@ export default function ComponentList({ projectId }: ComponentListProps) {
     updateComponent(activeProject.id, componentId, updates);
   }
 
+  function handleFigmaImportCreate(updates: Partial<Component>) {
+    if (!activeProject) return;
+    const newComponent: Component = {
+      id: crypto.randomUUID(),
+      instances: [],
+      tasks: [],
+      name: updates.name || 'Sans nom',
+      category: updates.category || 'component',
+      ...updates,
+    };
+    addComponent(activeProject.id, newComponent);
+    setNavHistory([newComponent.id]);
+  }
+
   return (
     <div className="flex flex-col h-screen w-full overflow-hidden">
       <ProjectHeader
@@ -113,6 +138,15 @@ export default function ComponentList({ projectId }: ComponentListProps) {
         open={isModalOpen}
         onOpenChange={setIsModalOpen}
         onSubmit={handleCreateComponent}
+      />
+
+      <FigmaImportDialog
+        payload={figmaImportPayload}
+        components={activeProject.components}
+        folderPath={currentProjectPath || ''}
+        onClose={() => setFigmaImportPayload(null)}
+        onCreate={handleFigmaImportCreate}
+        onUpdate={handleUpdateComponent}
       />
 
       <div className="flex flex-1 overflow-hidden relative">
