@@ -82,7 +82,7 @@ fn handle_request(
         return preflight_response();
     }
 
-    if request.method() != &Method::Post || request.url() != "/import-figma" {
+    if request.method() != &Method::Post || request.url() != "/scope-push" {
         return text_response("not found", 404);
     }
 
@@ -123,7 +123,7 @@ pub fn start(app: AppHandle) -> Option<FigmaBridgeInfo> {
             Err(_) => continue,
         };
 
-        println!("[figma_bridge] listening on http://localhost:{}/import-figma (token in Paramètres)", port);
+        println!("[figma_bridge] listening on http://localhost:{}/scope-push (token in Paramètres)", port);
 
         let token_for_thread = token.clone();
         std::thread::spawn(move || {

@@ -9,7 +9,7 @@
 // inchangé).
 //
 // Sélectionner directement le component set permet d'envoyer tous ses états
-// en une fois (msg.type === 'send-all') — chaque état part comme un import
+// en une fois (msg.type === 'send-all') — chaque état part comme un envoi
 // distinct (payload.bulk = true), appliqué automatiquement côté SCOPE sans
 // popup de confirmation par état (voir ComponentList.tsx).
 
@@ -135,7 +135,7 @@ async function exportAndSend({ groupNode, variantNode, name, port, token, bulk }
     bulk: !!bulk,
   };
 
-  const res = await fetch(`http://localhost:${port}/import-figma`, {
+  const res = await fetch(`http://localhost:${port}/scope-push`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

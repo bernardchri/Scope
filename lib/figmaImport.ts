@@ -8,7 +8,7 @@ export interface FigmaImportPin {
   y: number;
 }
 
-/** Payload envoyé par figma-plugin/code.js via POST /import-figma. */
+/** Payload envoyé par figma-plugin/code.js via POST /scope-push. */
 export interface FigmaImportPayload {
   name: string;
   category: string;

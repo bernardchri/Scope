@@ -94,3 +94,12 @@ le component set une fois que c'est fait.
 - Si ce plugin est un jour publié, `devAllowedDomains` ne suffira plus (il
   n'est actif qu'en développement local) : il faudra passer par
   `allowedDomains` + `reasoning`.
+- **N'utilise jamais le mot "import" dans `code.js`** (variable, commentaire,
+  chaîne, route HTTP…). Le sandbox Figma qui exécute le plugin fait une
+  détection assez large de tout ce qui ressemble à un `import(...)` dynamique
+  (interdit pour raisons de sécurité) et rejette carrément l'exécution du
+  plugin avec `SyntaxError: possible import expression rejected` si le mot
+  apparaît n'importe où dans le fichier — y compris dans un commentaire.
+  C'est pour ça que la route est `/scope-push` et non `/import-figma`. Ça ne
+  concerne que `code.js` (le sandbox) : `ui.html` tourne dans un iframe
+  navigateur classique, pas soumis à cette contrainte.

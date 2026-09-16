@@ -76,7 +76,11 @@ le plugin qui déclenche l'envoi (pas de sync automatique en tâche de fond).
 
 - Nouvelle commande Rust + petit serveur HTTP local (ex. `axum`/`tiny_http`) démarré au lancement
   de l'app, écoute sur `127.0.0.1:PORT` uniquement (jamais `0.0.0.0`).
-- Un seul endpoint utile : `POST /import-figma` avec le payload du plugin.
+- Un seul endpoint utile : `POST /scope-push` avec le payload du plugin (route
+  renommée depuis `/import-figma` — Figma rejette l'exécution du plugin avec
+  une erreur "possible import expression rejected" dès que le mot "import"
+  apparaît n'importe où dans code.js, y compris dans un commentaire ou une
+  chaîne de caractères comme cette route).
 - **Sécurité minimale** : un token généré au démarrage de l'app et affiché/copiable dans SCOPE
   (collé une fois dans le plugin Figma), pour éviter qu'une autre page web locale n'envoie des
   données à l'app. Pas de credentials Figma qui transitent — le plugin a déjà son propre contexte
