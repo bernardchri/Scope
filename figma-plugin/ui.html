@@ -43,6 +43,9 @@
         <option value="section">Section</option>
       </select>
     </label>
+    <label>Légende de l'image
+      <input id="caption" type="text" placeholder="ex: Version desktop" />
+    </label>
 
     <fieldset>
       <legend>Zones d'intérêt (calques enfants)</legend>
@@ -109,11 +112,16 @@
     el('form').style.display = 'block';
     el('name').value = node.name;
     el('type').value = node.type;
+    el('caption').value = node.caption || '';
     renderChildren(node.children);
   }
 
   el('type').addEventListener('change', () => {
     parent.postMessage({ pluginMessage: { type: 'tag-type', value: el('type').value } }, '*');
+  });
+
+  el('caption').addEventListener('change', () => {
+    parent.postMessage({ pluginMessage: { type: 'tag-caption', value: el('caption').value } }, '*');
   });
 
   el('send').addEventListener('click', () => {

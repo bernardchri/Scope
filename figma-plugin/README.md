@@ -24,8 +24,13 @@ réconciliation avec un composant déjà lié).
    de l'app SCOPE — l'app doit être ouverte pour que le pont écoute).
 2. Dans Figma, sélectionner un composant ou une frame.
 3. Lancer le plugin (**Plugins → Development → SCOPE Import**).
-4. Renseigner le nom, le type, cocher les calques enfants à exposer comme
-   zones d'intérêt et leur donner un nom.
+4. Renseigner le nom, le type, la légende (ex: « Version desktop » /
+   « Version mobile »), cocher les calques enfants à exposer comme zones
+   d'intérêt et leur donner un nom. La légende est taguée sur le calque
+   Figma lui-même (comme le type) — elle reste attachée à ce bloc précis
+   même si tu sélectionnes un autre bloc entre-temps, et un re-sync ne
+   l'efface jamais si tu la laisses vide côté Figma (celle déjà présente
+   dans SCOPE est conservée).
 5. Coller le port et le token (mémorisés ensuite par le plugin).
 6. **Envoyer vers SCOPE**.
 

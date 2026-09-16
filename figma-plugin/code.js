@@ -25,6 +25,7 @@ function serializeNode(node) {
     id: node.id,
     name: node.name,
     type: node.getPluginData('scopeType') || 'component',
+    caption: node.getPluginData('scopeCaption') || '',
     children,
   };
 }
@@ -55,6 +56,14 @@ figma.ui.onmessage = async (msg) => {
     if (node) {
       node.setPluginData('scopeType', msg.value);
       postSelection();
+    }
+    return;
+  }
+
+  if (msg.type === 'tag-caption') {
+    const node = getSelection();
+    if (node) {
+      node.setPluginData('scopeCaption', msg.value || '');
     }
     return;
   }
@@ -100,6 +109,7 @@ figma.ui.onmessage = async (msg) => {
       const payload = {
         name: msg.name || node.name,
         category: node.getPluginData('scopeType') || 'component',
+        caption: node.getPluginData('scopeCaption') || '',
         fileKey: figma.fileKey || '',
         nodeId: node.id,
         image,
