@@ -35,6 +35,8 @@ réconciliation avec un composant déjà lié).
 - Les zones d'intérêt sont des points (centre du calque), pas des rectangles.
 - Pas de re-sync : réenvoyer recrée un import, ne met pas à jour un composant
   existant (voir `docs/figma-import-plan.md`, phase 4).
+- `networkAccess.allowedDomains` doit être présent (même vide) — Figma le
+  valide comme champ obligatoire indépendamment de `devAllowedDomains`.
 - `networkAccess.devAllowedDomains` du manifest liste 5 ports exacts
   (`http://localhost:51789` à `51793`). `devAllowedDomains` (pas
   `allowedDomains`) car c'est la clé prévue par Figma pour l'accès réseau en
