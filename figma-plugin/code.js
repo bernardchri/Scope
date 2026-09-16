@@ -40,6 +40,15 @@ function getDescription(node) {
   return 'description' in node ? (node.description || '') : '';
 }
 
+/** Les états d'un component set sont ses enfants directs de type COMPONENT. */
+function getStates(componentSet) {
+  return componentSet.children.filter((c) => c.type === 'COMPONENT');
+}
+
+function errorMessage(e) {
+  return e && e.message ? e.message : String(e);
+}
+
 /** Légende taguée à la main sur variantNode/groupNode, sinon déduite de la
  * propriété de variant (ex: "Desktop"), sinon vide. */
 function resolveCaption(groupNode, variantNode) {
@@ -51,8 +60,7 @@ function serializeNode(node) {
   if (!node) return null;
 
   if (node.type === 'COMPONENT_SET') {
-    const states = node.children
-      .filter((c) => c.type === 'COMPONENT')
+    const states = getStates(node)
       .map((c) => ({
         id: c.id,
         label: c.getPluginData('scopeCaption') || deriveVariantLabel(c) || c.name,
@@ -154,6 +162,13 @@ async function exportAndSend({ groupNode, variantNode, name, port, token, bulk }
   }
 }
 
+/** Vérifie que port/token sont renseignés ; poste l'erreur et renvoie false sinon. */
+function requireBridgeConfig(msg) {
+  if (msg.port && msg.token) return true;
+  figma.ui.postMessage({ type: 'error', message: 'Port et token requis (voir Paramètres SCOPE).' });
+  return false;
+}
+
 figma.ui.onmessage = async (msg) => {
   if (msg.type === 'init') {
     const token = (await figma.clientStorage.getAsync('scopeToken')) || '';
@@ -206,17 +221,14 @@ figma.ui.onmessage = async (msg) => {
       figma.ui.postMessage({ type: 'error', message: "Sélectionne un composant ou une frame." });
       return;
     }
-    if (!msg.port || !msg.token) {
-      figma.ui.postMessage({ type: 'error', message: 'Port et token requis (voir Paramètres SCOPE).' });
-      return;
-    }
+    if (!requireBridgeConfig(msg)) return;
 
     try {
       const { groupNode, variantNode } = getComponentGroup(node);
       await exportAndSend({ groupNode, variantNode, name: msg.name, port: msg.port, token: msg.token, bulk: false });
       figma.ui.postMessage({ type: 'sent-ok' });
     } catch (e) {
-      figma.ui.postMessage({ type: 'error', message: 'Erreur : ' + (e && e.message ? e.message : e) });
+      figma.ui.postMessage({ type: 'error', message: 'Erreur : ' + errorMessage(e) });
     }
     return;
   }
@@ -227,12 +239,9 @@ figma.ui.onmessage = async (msg) => {
       figma.ui.postMessage({ type: 'error', message: "Sélectionne un component set." });
       return;
     }
-    if (!msg.port || !msg.token) {
-      figma.ui.postMessage({ type: 'error', message: 'Port et token requis (voir Paramètres SCOPE).' });
-      return;
-    }
+    if (!requireBridgeConfig(msg)) return;
 
-    const states = node.children.filter((c) => c.type === 'COMPONENT');
+    const states = getStates(node);
     let sent = 0;
     for (const variantNode of states) {
       try {
@@ -242,7 +251,7 @@ figma.ui.onmessage = async (msg) => {
       } catch (e) {
         figma.ui.postMessage({
           type: 'error',
-          message: `État "${variantNode.name}" : ` + (e && e.message ? e.message : e),
+          message: `État "${variantNode.name}" : ` + errorMessage(e),
         });
       }
     }
