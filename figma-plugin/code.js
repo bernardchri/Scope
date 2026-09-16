@@ -170,91 +170,94 @@ function requireBridgeConfig(msg) {
 }
 
 figma.ui.onmessage = async (msg) => {
-  if (msg.type === 'init') {
-    const token = (await figma.clientStorage.getAsync('scopeToken')) || '';
-    const port = (await figma.clientStorage.getAsync('scopePort')) || '';
-    figma.ui.postMessage({ type: 'config', token, port });
-    return;
-  }
-
-  if (msg.type === 'save-config') {
-    await figma.clientStorage.setAsync('scopeToken', msg.token || '');
-    await figma.clientStorage.setAsync('scopePort', msg.port || '');
-    return;
-  }
-
-  if (msg.type === 'tag-type') {
-    const node = getSelection();
-    if (node) {
-      const { groupNode } = getComponentGroup(node);
-      groupNode.setPluginData('scopeType', msg.value);
-      postSelection();
-    }
-    return;
-  }
-
-  if (msg.type === 'tag-caption') {
-    const node = getSelection();
-    if (node) {
-      const { groupNode, variantNode } = getComponentGroup(node);
-      (variantNode || groupNode).setPluginData('scopeCaption', msg.value || '');
-    }
-    return;
-  }
-
-  if (msg.type === 'tag-pin') {
-    const node = getSelection();
-    if (!node) return;
-    const { groupNode, variantNode } = getComponentGroup(node);
-    const pinHost = variantNode || groupNode;
-    if (!('children' in pinHost)) return;
-    const child = pinHost.children.find((c) => c.id === msg.childId);
-    if (!child) return;
-    child.setPluginData('scopePinLabel', msg.label || '');
-    postSelection();
-    return;
-  }
-
-  if (msg.type === 'send') {
-    const node = getSelection();
-    if (!node) {
-      figma.ui.postMessage({ type: 'error', message: "Sélectionne un composant ou une frame." });
+  switch (msg.type) {
+    case 'init': {
+      const token = (await figma.clientStorage.getAsync('scopeToken')) || '';
+      const port = (await figma.clientStorage.getAsync('scopePort')) || '';
+      figma.ui.postMessage({ type: 'config', token, port });
       return;
     }
-    if (!requireBridgeConfig(msg)) return;
 
-    try {
-      const { groupNode, variantNode } = getComponentGroup(node);
-      await exportAndSend({ groupNode, variantNode, name: msg.name, port: msg.port, token: msg.token, bulk: false });
-      figma.ui.postMessage({ type: 'sent-ok' });
-    } catch (e) {
-      figma.ui.postMessage({ type: 'error', message: 'Erreur : ' + errorMessage(e) });
-    }
-    return;
-  }
-
-  if (msg.type === 'send-all') {
-    const node = getSelection();
-    if (!node || node.type !== 'COMPONENT_SET') {
-      figma.ui.postMessage({ type: 'error', message: "Sélectionne un component set." });
+    case 'save-config': {
+      await figma.clientStorage.setAsync('scopeToken', msg.token || '');
+      await figma.clientStorage.setAsync('scopePort', msg.port || '');
       return;
     }
-    if (!requireBridgeConfig(msg)) return;
 
-    const states = getStates(node);
-    let sent = 0;
-    for (const variantNode of states) {
-      try {
-        await exportAndSend({ groupNode: node, variantNode, name: msg.name, port: msg.port, token: msg.token, bulk: true });
-        sent++;
-        figma.ui.postMessage({ type: 'send-all-progress', sent, total: states.length });
-      } catch (e) {
-        figma.ui.postMessage({
-          type: 'error',
-          message: `État "${variantNode.name}" : ` + errorMessage(e),
-        });
+    case 'tag-type': {
+      const node = getSelection();
+      if (node) {
+        const { groupNode } = getComponentGroup(node);
+        groupNode.setPluginData('scopeType', msg.value);
+        postSelection();
       }
+      return;
     }
-    figma.ui.postMessage({ type: 'send-all-done', sent, total: states.length });
+
+    case 'tag-caption': {
+      const node = getSelection();
+      if (node) {
+        const { groupNode, variantNode } = getComponentGroup(node);
+        (variantNode || groupNode).setPluginData('scopeCaption', msg.value || '');
+      }
+      return;
+    }
+
+    case 'tag-pin': {
+      const node = getSelection();
+      if (!node) return;
+      const { groupNode, variantNode } = getComponentGroup(node);
+      const pinHost = variantNode || groupNode;
+      if (!('children' in pinHost)) return;
+      const child = pinHost.children.find((c) => c.id === msg.childId);
+      if (!child) return;
+      child.setPluginData('scopePinLabel', msg.label || '');
+      postSelection();
+      return;
+    }
+
+    case 'send': {
+      const node = getSelection();
+      if (!node) {
+        figma.ui.postMessage({ type: 'error', message: "Sélectionne un composant ou une frame." });
+        return;
+      }
+      if (!requireBridgeConfig(msg)) return;
+
+      try {
+        const { groupNode, variantNode } = getComponentGroup(node);
+        await exportAndSend({ groupNode, variantNode, name: msg.name, port: msg.port, token: msg.token, bulk: false });
+        figma.ui.postMessage({ type: 'sent-ok' });
+      } catch (e) {
+        figma.ui.postMessage({ type: 'error', message: 'Erreur : ' + errorMessage(e) });
+      }
+      return;
+    }
+
+    case 'send-all': {
+      const node = getSelection();
+      if (!node || node.type !== 'COMPONENT_SET') {
+        figma.ui.postMessage({ type: 'error', message: "Sélectionne un component set." });
+        return;
+      }
+      if (!requireBridgeConfig(msg)) return;
+
+      const states = getStates(node);
+      let sent = 0;
+      for (const variantNode of states) {
+        try {
+          await exportAndSend({ groupNode: node, variantNode, name: msg.name, port: msg.port, token: msg.token, bulk: true });
+          sent++;
+          figma.ui.postMessage({ type: 'send-all-progress', sent, total: states.length });
+        } catch (e) {
+          figma.ui.postMessage({
+            type: 'error',
+            message: `État "${variantNode.name}" : ` + errorMessage(e),
+          });
+        }
+      }
+      figma.ui.postMessage({ type: 'send-all-done', sent, total: states.length });
+      return;
+    }
   }
 };
