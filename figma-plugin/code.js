@@ -65,19 +65,22 @@ function findInstances(node, out) {
 }
 
 /** Id du component set (ou du composant lui-même hors variant) dont ce node
- * est une instance — même valeur que FigmaLink.groupNodeId côté SCOPE. */
-function getInstanceGroupId(instanceNode) {
-  const main = instanceNode.mainComponent;
+ * est une instance — même valeur que FigmaLink.groupNodeId côté SCOPE.
+ * Utilise getMainComponentAsync (pas la propriété mainComponent, dépréciée)
+ * car un composant venant d'une bibliothèque externe peut ne pas être
+ * chargé en mémoire au moment de l'appel synchrone, qui renverrait alors
+ * `null` silencieusement. */
+async function getInstanceGroupId(instanceNode) {
+  const main = await instanceNode.getMainComponentAsync();
   if (!main) return null;
   return main.parent && main.parent.type === 'COMPONENT_SET' ? main.parent.id : main.id;
 }
 
 /** Ids (dédupliqués) des composants Figma utilisés comme instances sur cette page. */
-function collectUsedComponentIds(node) {
-  const ids = findInstances(node, [])
-    .map(getInstanceGroupId)
-    .filter((id) => !!id);
-  return Array.from(new Set(ids));
+async function collectUsedComponentIds(node) {
+  const instances = findInstances(node, []);
+  const ids = await Promise.all(instances.map(getInstanceGroupId));
+  return Array.from(new Set(ids.filter((id) => !!id)));
 }
 
 /** Légende taguée à la main sur variantNode/groupNode, sinon déduite de la
@@ -87,7 +90,7 @@ function resolveCaption(groupNode, variantNode) {
   return captionHost.getPluginData('scopeCaption') || deriveVariantLabel(variantNode) || '';
 }
 
-function serializeNode(node) {
+async function serializeNode(node) {
   if (!node) return null;
 
   if (node.type === 'COMPONENT_SET') {
@@ -129,12 +132,12 @@ function serializeNode(node) {
     isVariant: !!variantNode,
     isComponentSet: false,
     children,
-    usedComponentsCount: collectUsedComponentIds(pinHost).length,
+    usedComponentsCount: (await collectUsedComponentIds(pinHost)).length,
   };
 }
 
-function postSelection() {
-  figma.ui.postMessage({ type: 'selection', node: serializeNode(getSelection()) });
+async function postSelection() {
+  figma.ui.postMessage({ type: 'selection', node: await serializeNode(getSelection()) });
 }
 
 figma.on('selectionchange', postSelection);
@@ -179,7 +182,7 @@ async function exportAndSend({ groupNode, variantNode, name, port, token, bulk }
     pins,
     // Composants Figma détectés comme instances sur cette page — SCOPE relie
     // ceux déjà présents côté SCOPE (matching par groupNodeId) à ce composant.
-    usedComponentIds: collectUsedComponentIds(exportNode),
+    usedComponentIds: await collectUsedComponentIds(exportNode),
     bulk: !!bulk,
   };
 

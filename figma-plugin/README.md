@@ -91,6 +91,11 @@ automatiquement dans le template, sans action manuelle.
   fait) — juste le lien composant ↔ page. Le placement de pin reste manuel
   pour l'instant (ou via les zones d'intérêt existantes, limitées aux
   calques enfants directs).
+- La résolution du composant d'origine d'une instance utilise
+  `getMainComponentAsync()` (pas la propriété `mainComponent`, dépréciée) :
+  un composant venant d'une bibliothèque externe peut ne pas être chargé en
+  mémoire au moment d'un appel synchrone, qui renverrait alors `null`
+  silencieusement et ferait sous-compter les composants détectés.
 
 ## Limites connues (phase 3)
 
