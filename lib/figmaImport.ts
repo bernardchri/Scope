@@ -14,7 +14,16 @@ export interface FigmaImportPayload {
   category: string;
   /** Tagué sur le node Figma (scopeCaption) ; vide si jamais renseigné côté Figma. */
   caption?: string;
+  /** Description Figma du composant (component set), utilisée comme description SCOPE. */
+  description?: string;
   fileKey: string;
+  /**
+   * Id du composant Figma, stable entre tous ses états/variants (component
+   * set, ou le node lui-même hors variant) — sert à retrouver le composant
+   * SCOPE cible sans repasser par la liste à chaque état envoyé.
+   */
+  groupNodeId: string;
+  /** Id du node exporté (l'état précis) — matche une ComponentImage donnée. */
   nodeId: string;
   /** PNG en base64 brut (sans préfixe data:). */
   image: string;
@@ -95,9 +104,10 @@ export async function applyFigmaImport(
 
   const componentUpdates: Partial<Component> = {
     name: payload.name || existing?.name,
+    description: payload.description || existing?.description,
     category: normalizeFigmaCategory(payload.category),
     images,
-    figmaLink: { fileKey: payload.fileKey, nodeId: payload.nodeId, lastSyncAt: new Date().toISOString() },
+    figmaLink: { fileKey: payload.fileKey, nodeId: payload.groupNodeId, lastSyncAt: new Date().toISOString() },
   };
 
   return { componentUpdates, imageId: newImage.id, orphanedPins };

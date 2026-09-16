@@ -34,6 +34,24 @@ réconciliation avec un composant déjà lié).
 5. Coller le port et le token (mémorisés ensuite par le plugin).
 6. **Envoyer vers SCOPE**.
 
+## Variants de composant
+
+Si tu sélectionnes un état d'un component set Figma (ex: le composant
+"Header" avec une propriété de variant valant "Desktop"), le plugin
+distingue automatiquement deux niveaux :
+
+- **Composant** (nom, type, description) — partagé entre tous les états,
+  tagué sur le component set. Envoyer depuis n'importe quel état retrouve
+  et met à jour le même composant SCOPE (matching par `groupNodeId`).
+- **État** (légende, image, zones d'intérêt) — propre à l'état sélectionné.
+  La légende est pré-remplie automatiquement à partir de la valeur de la
+  propriété de variant (ex: "Desktop") si tu ne l'as jamais éditée
+  manuellement ; sinon ta légende tagée à la main garde la priorité.
+
+La description Figma du component set (le champ « Description » dans le
+panneau Figma) est envoyée comme description globale du composant SCOPE à
+chaque envoi (écrase la description SCOPE existante si Figma en fournit une).
+
 ## Limites connues (phase 3)
 
 - Un seul niveau de calques enfants (pas de zones dans des groupes imbriqués).

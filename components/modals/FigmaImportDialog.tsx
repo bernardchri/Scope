@@ -38,7 +38,7 @@ export default function FigmaImportDialog({
   const open = !!payload;
 
   const matchedExisting = useMemo(
-    () => components.find((c) => c.figmaLink?.nodeId === payload?.nodeId) || null,
+    () => components.find((c) => c.figmaLink?.nodeId === payload?.groupNodeId) || null,
     [components, payload]
   );
 
@@ -146,7 +146,7 @@ export default function FigmaImportDialog({
                   <SelectItem value={NEW_COMPONENT_VALUE}>+ Nouveau composant</SelectItem>
                   {components.map((c) => (
                     <SelectItem key={c.id} value={c.id}>
-                      {c.name}{c.figmaLink?.nodeId === payload.nodeId ? ' (déjà lié)' : ''}
+                      {c.name}{c.figmaLink?.nodeId === payload.groupNodeId ? ' (déjà lié)' : ''}
                     </SelectItem>
                   ))}
                 </SelectContent>

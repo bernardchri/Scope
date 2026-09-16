@@ -32,6 +32,9 @@
   <div id="empty">Sélectionne un composant ou une frame dans Figma.</div>
 
   <div id="form" style="display:none">
+    <div id="variant-note" style="display:none; color:#888; font-size:11px; margin-top:8px;">
+      État de composant détecté — nom, type et description partagés avec les autres états.
+    </div>
     <label>Nom
       <input id="name" type="text" />
     </label>
@@ -113,6 +116,7 @@
     el('name').value = node.name;
     el('type').value = node.type;
     el('caption').value = node.caption || '';
+    el('variant-note').style.display = node.isVariant ? 'block' : 'none';
     renderChildren(node.children);
   }
 
