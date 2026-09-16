@@ -128,7 +128,7 @@ export default function SettingsDialog({ open, onOpenChange }: Props) {
               {figmaBridge ? (
                 <div className="text-sm text-muted-foreground space-y-1">
                   <p>
-                    Endpoint : <code>http://127.0.0.1:{figmaBridge.port}/import-figma</code>
+                    Endpoint : <code>http://localhost:{figmaBridge.port}/import-figma</code>
                   </p>
                   <p>
                     Token : <code className="break-all">{figmaBridge.token}</code>

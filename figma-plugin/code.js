@@ -106,7 +106,7 @@ figma.ui.onmessage = async (msg) => {
         pins,
       };
 
-      const res = await fetch(`http://127.0.0.1:${msg.port}/import-figma`, {
+      const res = await fetch(`http://localhost:${msg.port}/import-figma`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
