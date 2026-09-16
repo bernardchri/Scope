@@ -35,12 +35,19 @@ réconciliation avec un composant déjà lié).
 - Les zones d'intérêt sont des points (centre du calque), pas des rectangles.
 - Pas de re-sync : réenvoyer recrée un import, ne met pas à jour un composant
   existant (voir `docs/figma-import-plan.md`, phase 4).
-- `networkAccess.allowedDomains` du manifest liste 5 ports exacts
-  (`http://localhost:51789` à `51793`). Le validateur de manifest Figma
-  refuse les IP littérales (`http://127.0.0.1:*`) et le wildcard de port
-  (`http://localhost:*`) — seul un port exact est accepté. Le pont côté
-  SCOPE (`src-tauri/src/figma_bridge.rs`) essaie ces mêmes ports dans l'ordre
-  et prend le premier libre, donc `allowedDomains` reste synchronisé avec
+- `networkAccess.devAllowedDomains` du manifest liste 5 ports exacts
+  (`http://localhost:51789` à `51793`). `devAllowedDomains` (pas
+  `allowedDomains`) car c'est la clé prévue par Figma pour l'accès réseau en
+  développement local — `allowedDomains` exigerait un champ `reasoning`
+  (justification revue lors d'une publication, non pertinent ici). Le
+  validateur de manifest Figma refuse par ailleurs les IP littérales
+  (`http://127.0.0.1:*`) et le wildcard de port (`http://localhost:*`) — seul
+  un port exact est accepté. Le pont côté SCOPE
+  (`src-tauri/src/figma_bridge.rs`) essaie ces mêmes ports dans l'ordre et
+  prend le premier libre, donc `devAllowedDomains` reste synchronisé avec
   `CANDIDATE_PORTS` côté Rust. Si les 5 ports sont pris (rare : une autre app
   qui les utilise déjà), le pont ne démarre pas et les Paramètres SCOPE
   affichent « Pont indisponible ».
+- Si ce plugin est un jour publié, `devAllowedDomains` ne suffira plus (il
+  n'est actif qu'en développement local) : il faudra passer par
+  `allowedDomains` + `reasoning`.
