@@ -125,7 +125,7 @@ export default function SettingsDialog({ open, onOpenChange }: Props) {
 
             <div className="space-y-2">
               <Label className="text-sm font-semibold">Pont Figma (bêta)</Label>
-              {figmaBridge ? (
+              {figmaBridge && figmaBridge.port !== 0 ? (
                 <div className="text-sm text-muted-foreground space-y-1">
                   <p>
                     Endpoint : <code>http://localhost:{figmaBridge.port}/import-figma</code>

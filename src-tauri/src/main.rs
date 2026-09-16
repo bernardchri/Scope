@@ -186,7 +186,8 @@ pub fn run() {
             let menu = Menu::with_items(app, &[&scope_menu, &edit_menu])?;
             app.set_menu(menu)?;
 
-            let figma_bridge_info = figma_bridge::start(app.handle().clone())?;
+            let figma_bridge_info = figma_bridge::start(app.handle().clone())
+                .unwrap_or_else(|| figma_bridge::FigmaBridgeInfo { port: 0, token: String::new() });
             app.manage(figma_bridge_info);
 
             let app_handle = app.handle().clone();

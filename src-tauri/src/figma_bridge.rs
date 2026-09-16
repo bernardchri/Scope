@@ -14,6 +14,13 @@ pub struct FigmaBridgeInfo {
     pub token: String,
 }
 
+/// Ports candidats, dans l'ordre. Fixes (pas un port OS-assigné) pour que le
+/// manifest du plugin Figma puisse les lister explicitement dans
+/// `networkAccess.allowedDomains` — Figma refuse les wildcards de port et
+/// les IP littérales, seul un `http://localhost:<port exact>` est accepté.
+/// Plusieurs candidats en cas de port déjà pris par une autre app.
+const CANDIDATE_PORTS: [u16; 5] = [51789, 51790, 51791, 51792, 51793];
+
 /// Jeton local anti-collision, pas une protection cryptographique — suffisant
 /// pour un pont qui n'écoute que sur 127.0.0.1.
 fn generate_token() -> String {
@@ -77,27 +84,32 @@ fn handle_request(
     text_response("ok", 200)
 }
 
-/// Démarre le pont sur un port local libre et retourne les infos de connexion.
-/// Le serveur tourne dans son propre thread jusqu'à la fermeture de l'app.
-pub fn start(app: AppHandle) -> Result<FigmaBridgeInfo, String> {
+/// Démarre le pont sur le premier port disponible parmi `CANDIDATE_PORTS` et
+/// retourne les infos de connexion. Le serveur tourne dans son propre thread
+/// jusqu'à la fermeture de l'app. Retourne `None` si aucun candidat n'est
+/// libre — l'app continue de fonctionner sans le pont plutôt que de planter.
+pub fn start(app: AppHandle) -> Option<FigmaBridgeInfo> {
     let token = generate_token();
-    let server = tiny_http::Server::http("127.0.0.1:0")
-        .map_err(|e| format!("Impossible de démarrer le pont Figma: {}", e))?;
-    let port = server
-        .server_addr()
-        .to_ip()
-        .map(|addr| addr.port())
-        .ok_or_else(|| "Impossible de déterminer le port du pont Figma".to_string())?;
 
-    println!("[figma_bridge] listening on http://127.0.0.1:{}/import-figma (token in Paramètres)", port);
+    for port in CANDIDATE_PORTS {
+        let server = match tiny_http::Server::http(("127.0.0.1", port)) {
+            Ok(s) => s,
+            Err(_) => continue,
+        };
 
-    let token_for_thread = token.clone();
-    std::thread::spawn(move || {
-        for mut request in server.incoming_requests() {
-            let response = handle_request(&mut request, &app, &token_for_thread);
-            let _ = request.respond(response);
-        }
-    });
+        println!("[figma_bridge] listening on http://localhost:{}/import-figma (token in Paramètres)", port);
 
-    Ok(FigmaBridgeInfo { port, token })
+        let token_for_thread = token.clone();
+        std::thread::spawn(move || {
+            for mut request in server.incoming_requests() {
+                let response = handle_request(&mut request, &app, &token_for_thread);
+                let _ = request.respond(response);
+            }
+        });
+
+        return Some(FigmaBridgeInfo { port, token });
+    }
+
+    eprintln!("[figma_bridge] aucun port disponible parmi {:?}, pont désactivé", CANDIDATE_PORTS);
+    None
 }
