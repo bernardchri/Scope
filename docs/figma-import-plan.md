@@ -1,5 +1,32 @@
 # Plan : Import Figma → Composant SCOPE
 
+## État (2026-09-16)
+
+Phases 1 à 4 livrées et testées bout en bout (plugin Figma réel → pont local →
+import dans SCOPE, image + zones d'intérêt). Écarts par rapport au plan initial,
+découverts en testant avec le vrai validateur de manifest Figma :
+
+- **Port fixe** (`CANDIDATE_PORTS` dans `figma_bridge.rs`), pas un port
+  OS-assigné : Figma refuse les wildcards de port et les IP littérales dans
+  son manifest, seul un `http://localhost:<port exact>` passe.
+- **`networkAccess.devAllowedDomains`**, pas `allowedDomains`, pour l'accès
+  local en développement — `allowedDomains` exige un champ `reasoning`
+  (justification revue à la publication, non pertinent pour un plugin privé/dev).
+  `allowedDomains: ["none"]` reste obligatoire même vide.
+- **CORS** : le plugin Figma appelle `fetch` depuis une origine "null" ; le
+  header `Authorization` déclenche un preflight `OPTIONS`. Le pont doit gérer
+  ce preflight et renvoyer `Access-Control-Allow-Origin` sur toutes les
+  réponses, sinon `fetch` échoue côté plugin avec un `Failed to fetch`
+  générique sans détail exploitable.
+- **Token régénéré à chaque redémarrage de l'app** (y compris les rebuilds
+  à chaud en dev) : friction connue en session de dev (recopier le token
+  dans le plugin après chaque rebuild déclenché par une modif Rust), pas un
+  problème en usage normal (l'app ne redémarre pas pendant qu'on travaille).
+
+Prochain axe de travail : affiner les zones d'intérêt (actuellement des points
+sur les calques enfants directs uniquement — cf. limites phase 3 dans
+`figma-plugin/README.md`).
+
 ## Objectif
 
 Un composant SCOPE (`component`/`template`) peut être lié à un composant Figma. Depuis un plugin
