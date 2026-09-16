@@ -43,12 +43,34 @@ fn generate_token() -> String {
     bytes.iter().map(|b| format!("{:02x}", b)).collect()
 }
 
+/// Le plugin Figma appelle `fetch` depuis le sandbox principal, qui a une
+/// origine "null" — sans ces en-têtes, le navigateur bloque la réponse (et
+/// la requête POST avec un header Authorization déclenche un preflight
+/// OPTIONS) avant même que notre code ne s'exécute, d'où un `Failed to
+/// fetch` générique côté plugin.
+fn cors_header() -> Header {
+    Header::from_bytes(&b"Access-Control-Allow-Origin"[..], &b"*"[..]).expect("en-tête statique valide")
+}
+
 fn text_response(body: &str, status: u16) -> Response<std::io::Cursor<Vec<u8>>> {
-    let header = Header::from_bytes(&b"Content-Type"[..], &b"text/plain; charset=utf-8"[..])
+    let content_type = Header::from_bytes(&b"Content-Type"[..], &b"text/plain; charset=utf-8"[..])
         .expect("en-tête statique valide");
     Response::from_string(body)
         .with_status_code(StatusCode(status))
-        .with_header(header)
+        .with_header(content_type)
+        .with_header(cors_header())
+}
+
+fn preflight_response() -> Response<std::io::Cursor<Vec<u8>>> {
+    let methods = Header::from_bytes(&b"Access-Control-Allow-Methods"[..], &b"POST, OPTIONS"[..])
+        .expect("en-tête statique valide");
+    let headers = Header::from_bytes(&b"Access-Control-Allow-Headers"[..], &b"Content-Type, Authorization"[..])
+        .expect("en-tête statique valide");
+    Response::from_string("")
+        .with_status_code(StatusCode(204))
+        .with_header(cors_header())
+        .with_header(methods)
+        .with_header(headers)
 }
 
 fn handle_request(
@@ -56,6 +78,10 @@ fn handle_request(
     app: &AppHandle,
     token: &str,
 ) -> Response<std::io::Cursor<Vec<u8>>> {
+    if request.method() == &Method::Options {
+        return preflight_response();
+    }
+
     if request.method() != &Method::Post || request.url() != "/import-figma" {
         return text_response("not found", 404);
     }
