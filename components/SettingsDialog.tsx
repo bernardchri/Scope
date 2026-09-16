@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { getAppSettings, saveAppSettings } from '@/lib/persistence';
+import { getFigmaBridgeInfo, FigmaBridgeInfo } from '@/lib/figmaBridge';
 import { AppSettings, DEFAULT_APP_SETTINGS } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,6 +25,7 @@ interface Props {
 export default function SettingsDialog({ open, onOpenChange }: Props) {
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_APP_SETTINGS);
   const [loaded, setLoaded] = useState(false);
+  const [figmaBridge, setFigmaBridge] = useState<FigmaBridgeInfo | null>(null);
 
   useEffect(() => {
     if (open) {
@@ -31,6 +33,7 @@ export default function SettingsDialog({ open, onOpenChange }: Props) {
         setSettings(s);
         setLoaded(true);
       });
+      getFigmaBridgeInfo().then(setFigmaBridge).catch(() => setFigmaBridge(null));
     }
   }, [open]);
 
@@ -118,6 +121,23 @@ export default function SettingsDialog({ open, onOpenChange }: Props) {
                   Inclure les commentaires dans les exports
                 </Label>
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold">Pont Figma (bêta)</Label>
+              {figmaBridge ? (
+                <div className="text-sm text-muted-foreground space-y-1">
+                  <p>
+                    Endpoint : <code>http://127.0.0.1:{figmaBridge.port}/import-figma</code>
+                  </p>
+                  <p>
+                    Token : <code className="break-all">{figmaBridge.token}</code>
+                  </p>
+                  <p>À utiliser depuis le futur plugin Figma (en-tête <code>Authorization: Bearer &lt;token&gt;</code>).</p>
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">Pont indisponible.</p>
+              )}
             </div>
           </div>
         )}
