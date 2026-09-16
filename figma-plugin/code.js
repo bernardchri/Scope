@@ -49,6 +49,37 @@ function errorMessage(e) {
   return e && e.message ? e.message : String(e);
 }
 
+/** Instances de composant dans le sous-arbre, sans descendre dans une
+ * instance déjà trouvée (on veut les composants utilisés sur la page, pas
+ * ceux imbriqués à l'intérieur, ex. une icône dans un bouton). */
+function findInstances(node, out) {
+  if (!node || !('children' in node)) return out;
+  for (const child of node.children) {
+    if (child.type === 'INSTANCE') {
+      out.push(child);
+    } else {
+      findInstances(child, out);
+    }
+  }
+  return out;
+}
+
+/** Id du component set (ou du composant lui-même hors variant) dont ce node
+ * est une instance — même valeur que FigmaLink.groupNodeId côté SCOPE. */
+function getInstanceGroupId(instanceNode) {
+  const main = instanceNode.mainComponent;
+  if (!main) return null;
+  return main.parent && main.parent.type === 'COMPONENT_SET' ? main.parent.id : main.id;
+}
+
+/** Ids (dédupliqués) des composants Figma utilisés comme instances sur cette page. */
+function collectUsedComponentIds(node) {
+  const ids = findInstances(node, [])
+    .map(getInstanceGroupId)
+    .filter((id) => !!id);
+  return Array.from(new Set(ids));
+}
+
 /** Légende taguée à la main sur variantNode/groupNode, sinon déduite de la
  * propriété de variant (ex: "Desktop"), sinon vide. */
 function resolveCaption(groupNode, variantNode) {
@@ -98,6 +129,7 @@ function serializeNode(node) {
     isVariant: !!variantNode,
     isComponentSet: false,
     children,
+    usedComponentsCount: collectUsedComponentIds(pinHost).length,
   };
 }
 
@@ -145,6 +177,9 @@ async function exportAndSend({ groupNode, variantNode, name, port, token, bulk }
     nodeId: exportNode.id,
     image,
     pins,
+    // Composants Figma détectés comme instances sur cette page — SCOPE relie
+    // ceux déjà présents côté SCOPE (matching par groupNodeId) à ce composant.
+    usedComponentIds: collectUsedComponentIds(exportNode),
     bulk: !!bulk,
   };
 

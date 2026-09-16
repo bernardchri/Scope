@@ -84,6 +84,7 @@ const instanceSchema = z.object({
   id: z.string(),
   componentId: z.string(),
   pinRef: pinRefSchema,
+  autoFromFigma: z.boolean().optional(),
 });
 
 const widgetInstanceSchema = z.object({

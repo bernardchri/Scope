@@ -68,6 +68,30 @@ veux des pins sur un état précis, tague-les au préalable en sélectionnant
 cet état individuellement (flux normal), puis fais l'import groupé depuis
 le component set une fois que c'est fait.
 
+## Liaison automatique des composants utilisés sur une page
+
+Quand tu envoies une frame de page (template), le plugin détecte les
+instances de composant qu'elle contient — récursivement, sans descendre à
+l'intérieur d'une instance trouvée (une icône dans un bouton n'est pas
+comptée séparément). Pour chaque composant Figma ainsi détecté, si un
+composant SCOPE avec le même lien Figma existe déjà (importé au préalable,
+même en un seul état ou tous ses états), un `ComponentInstance` est créé
+automatiquement dans le template, sans action manuelle.
+
+- Un composant Figma pas encore importé dans SCOPE est simplement ignoré
+  (pas d'import en cascade) — importe-le d'abord (seul ou en bulk), puis
+  renvoie la page pour que le lien se fasse.
+- Chaque re-sync régénère entièrement les instances auto-créées à partir des
+  composants détectés à cet instant (pas de duplication si tu renvoies
+  plusieurs fois) — les instances que tu as ajoutées à la main dans SCOPE ne
+  sont jamais touchées.
+- Cette version ne place pas de pin pour ces instances (positionner
+  correctement un pin pour un composant imbriqué à une profondeur
+  quelconque demande un calcul de position absolue plus complexe, pas encore
+  fait) — juste le lien composant ↔ page. Le placement de pin reste manuel
+  pour l'instant (ou via les zones d'intérêt existantes, limitées aux
+  calques enfants directs).
+
 ## Limites connues (phase 3)
 
 - Un seul niveau de calques enfants (pas de zones dans des groupes imbriqués).

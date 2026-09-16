@@ -23,9 +23,16 @@ découverts en testant avec le vrai validateur de manifest Figma :
   dans le plugin après chaque rebuild déclenché par une modif Rust), pas un
   problème en usage normal (l'app ne redémarre pas pendant qu'on travaille).
 
-Prochain axe de travail : affiner les zones d'intérêt (actuellement des points
-sur les calques enfants directs uniquement — cf. limites phase 3 dans
+Liaison automatique composants ↔ page livrée (sans pins) : en important une
+page/template, le plugin détecte les instances de composant qu'elle contient
+et crée automatiquement les `ComponentInstance` correspondants côté SCOPE
+pour ceux déjà importés (voir « Liaison automatique » dans
 `figma-plugin/README.md`).
+
+Prochain axe de travail : positionner un pin pour chaque instance détectée
+(nécessite le calcul de position absolue Figma, pas encore fait — les
+instances peuvent être imbriquées à une profondeur quelconque, pas
+seulement en enfants directs comme les zones d'intérêt actuelles).
 
 ## Objectif
 

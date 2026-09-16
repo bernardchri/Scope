@@ -1,4 +1,4 @@
-import { Component, ComponentImage, ImagePin, ScopeItemType } from './types';
+import { Component, ComponentImage, ComponentInstance, ImagePin, ScopeItemType } from './types';
 import { saveImageFromBase64, deleteImage } from './imageManager';
 import { nextPinNumber } from './pinHelpers';
 
@@ -29,6 +29,13 @@ export interface FigmaImportPayload {
   /** PNG en base64 brut (sans préfixe data:). */
   image: string;
   pins: FigmaImportPin[];
+  /**
+   * Ids (groupNodeId) des composants Figma détectés comme instances sur
+   * cette page/frame, dédupliqués. Sert à relier automatiquement le
+   * composant SCOPE cible (matché par `figmaLink.groupNodeId`) — sans lien
+   * si pas encore importé dans SCOPE.
+   */
+  usedComponentIds?: string[];
   /** true = fait partie d'un "Importer tous les états" — appliqué sans popup de revue. */
   bulk?: boolean;
 }
@@ -53,11 +60,18 @@ export interface FigmaImportResult {
  * à ce node (matching par `figmaNodeId`/`figmaLayerId`) : position/label mis
  * à jour, `pinRef` vers Task/Instance préservé, pins orphelins signalés sans
  * être supprimés automatiquement.
+ *
+ * `allComponents` sert à relier automatiquement `payload.usedComponentIds`
+ * (composants Figma détectés comme instances sur la page) aux composants
+ * SCOPE déjà importés (matché par `figmaLink.groupNodeId`) : un
+ * `ComponentInstance` est créé pour chaque composant ainsi retrouvé. Ceux
+ * pas encore importés dans SCOPE sont ignorés (pas d'import en cascade).
  */
 export async function applyFigmaImport(
   folderPath: string,
   payload: FigmaImportPayload,
   existing?: Component,
+  allComponents: Component[] = [],
 ): Promise<FigmaImportResult> {
   const existingImage = existing?.images?.find((img) => img.figmaNodeId === payload.nodeId);
   const existingPins = existingImage?.pins || [];
@@ -101,11 +115,23 @@ export async function applyFigmaImport(
     ? (existing!.images || []).map((img) => (img.id === existingImage.id ? newImage : img))
     : [...(existing?.images || []), newImage];
 
+  const autoInstances: ComponentInstance[] = (payload.usedComponentIds || [])
+    .map((groupNodeId) => allComponents.find((c) => c.figmaLink?.groupNodeId === groupNodeId))
+    .filter((c): c is Component => !!c)
+    .map((targetComponent) => ({
+      id: crypto.randomUUID(),
+      componentId: targetComponent.id,
+      autoFromFigma: true,
+    }));
+
+  const instances = [...(existing?.instances || []).filter((i) => !i.autoFromFigma), ...autoInstances];
+
   const componentUpdates: Partial<Component> = {
     name: payload.name || existing?.name,
     description: payload.description || existing?.description,
     category: normalizeFigmaCategory(payload.category),
     images,
+    instances,
     figmaLink: { fileKey: payload.fileKey, groupNodeId: payload.groupNodeId, lastSyncAt: new Date().toISOString() },
   };
 

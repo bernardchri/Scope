@@ -76,7 +76,8 @@ export default function FigmaImportDialog({
       const result = await applyFigmaImport(
         folderPath,
         { ...payload, name, category },
-        existing
+        existing,
+        components
       );
       if (result.orphanedPins.length > 0) {
         setPendingResult(result);

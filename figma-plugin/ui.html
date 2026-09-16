@@ -51,6 +51,8 @@
         <input id="caption" type="text" placeholder="ex: Version desktop" />
       </label>
 
+      <div id="used-components-note" style="display:none; color:#888; font-size:11px; margin-top:8px;"></div>
+
       <fieldset>
         <legend>Zones d'intérêt (calques enfants)</legend>
         <div id="children"></div>
@@ -144,6 +146,13 @@
       el('send').style.display = 'block';
       el('send-all').style.display = 'none';
       el('caption').value = node.caption || '';
+      const note = el('used-components-note');
+      if (node.usedComponentsCount > 0) {
+        note.textContent = node.usedComponentsCount + ' composant(s) Figma détecté(s) sur cette page — reliés automatiquement à leur composant SCOPE s\'il est déjà importé.';
+        note.style.display = 'block';
+      } else {
+        note.style.display = 'none';
+      }
       renderChildren(node.children);
     }
   }

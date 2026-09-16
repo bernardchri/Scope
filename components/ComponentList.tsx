@@ -55,7 +55,7 @@ export default function ComponentList({ projectId }: ComponentListProps) {
     if (!project) return;
     const existing = project.components.find(c => c.figmaLink?.groupNodeId === payload.groupNodeId);
     try {
-      const result = await applyFigmaImport(state.currentProjectPath || '', payload, existing);
+      const result = await applyFigmaImport(state.currentProjectPath || '', payload, existing, project.components);
       if (existing) {
         state.updateComponent(project.id, existing.id, result.componentUpdates);
       } else {

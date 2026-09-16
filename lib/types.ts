@@ -19,6 +19,13 @@ export interface ComponentInstance {
   id: string;
   componentId: string;
   pinRef?: { imageId: string; pinId: string; pinNumber: number };
+  /**
+   * true si créé automatiquement lors d'un import Figma (instance de
+   * composant détectée sur la page). Recalculé à chaque re-sync à partir
+   * des pins courants — ne pas s'appuyer dessus pour une instance ajoutée
+   * à la main, même si elle a aussi un pinRef.
+   */
+  autoFromFigma?: boolean;
 }
 
 export interface Task {
