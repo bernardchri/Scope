@@ -52,6 +52,22 @@ La description Figma du component set (le champ « Description » dans le
 panneau Figma) est envoyée comme description globale du composant SCOPE à
 chaque envoi (écrase la description SCOPE existante si Figma en fournit une).
 
+## Importer tous les états d'un coup
+
+Sélectionne directement le **component set** (pas un état précis) : le
+plugin liste ses états détectés et affiche un bouton « Importer tous les
+états » à la place du bouton d'envoi normal. Chaque état part comme un
+import distinct vers SCOPE, appliqué automatiquement (sans popup de
+confirmation par état — sinon il faudrait valider un par un, ce qui va à
+l'encontre de l'intérêt de l'import groupé). Les états partagent tous le
+même composant SCOPE cible (retrouvé ou créé une fois, puis mis à jour pour
+chaque état suivant).
+
+Les zones d'intérêt et la légende restent propres à chaque état : si tu
+veux des pins sur un état précis, tague-les au préalable en sélectionnant
+cet état individuellement (flux normal), puis fais l'import groupé depuis
+le component set une fois que c'est fait.
+
 ## Limites connues (phase 3)
 
 - Un seul niveau de calques enfants (pas de zones dans des groupes imbriqués).

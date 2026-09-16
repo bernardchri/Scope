@@ -7,6 +7,11 @@
 // ("Header"), la légende/l'image/les pins sont propres à l'état sélectionné
 // ("Desktop"). Sans variant, groupNode === le node sélectionné (comportement
 // inchangé).
+//
+// Sélectionner directement le component set permet d'envoyer tous ses états
+// en une fois (msg.type === 'send-all') — chaque état part comme un import
+// distinct (payload.bulk = true), appliqué automatiquement côté SCOPE sans
+// popup de confirmation par état (voir ComponentList.tsx).
 
 figma.showUI(__html__, { width: 340, height: 520 });
 
@@ -37,6 +42,24 @@ function getDescription(node) {
 
 function serializeNode(node) {
   if (!node) return null;
+
+  if (node.type === 'COMPONENT_SET') {
+    const states = node.children
+      .filter((c) => c.type === 'COMPONENT')
+      .map((c) => ({
+        id: c.id,
+        label: c.getPluginData('scopeCaption') || deriveVariantLabel(c) || c.name,
+      }));
+    return {
+      id: node.id,
+      name: node.name,
+      type: node.getPluginData('scopeType') || 'component',
+      description: getDescription(node),
+      isComponentSet: true,
+      states,
+    };
+  }
+
   const { groupNode, variantNode } = getComponentGroup(node);
   const pinHost = variantNode || groupNode;
 
@@ -59,6 +82,7 @@ function serializeNode(node) {
     caption,
     description: getDescription(groupNode),
     isVariant: !!variantNode,
+    isComponentSet: false,
     children,
   };
 }
@@ -69,6 +93,61 @@ function postSelection() {
 
 figma.on('selectionchange', postSelection);
 postSelection();
+
+/** Exporte un état (variantNode ou groupNode lui-même hors variant) et le
+ * pousse vers le pont SCOPE. Utilisé pour un envoi simple et pour chaque
+ * état d'un envoi groupé. */
+async function exportAndSend({ groupNode, variantNode, name, port, token, bulk }) {
+  const exportNode = variantNode || groupNode;
+
+  const bytes = await exportNode.exportAsync({ format: 'PNG', constraint: { type: 'SCALE', value: 2 } });
+  const image = figma.base64Encode(bytes);
+
+  const pins = ('children' in exportNode ? exportNode.children : [])
+    .map((c) => {
+      const label = c.getPluginData('scopePinLabel');
+      if (!label) return null;
+      return {
+        figmaLayerId: c.id,
+        label,
+        x: exportNode.width ? ((c.x + c.width / 2) / exportNode.width) * 100 : 0,
+        y: exportNode.height ? ((c.y + c.height / 2) / exportNode.height) * 100 : 0,
+      };
+    })
+    .filter(Boolean);
+
+  const captionHost = variantNode || groupNode;
+  const caption = captionHost.getPluginData('scopeCaption') || deriveVariantLabel(variantNode) || '';
+
+  const payload = {
+    name: name || groupNode.name,
+    category: groupNode.getPluginData('scopeType') || 'component',
+    caption,
+    description: getDescription(groupNode),
+    fileKey: figma.fileKey || '',
+    // Identifie le composant (stable entre tous les états) : sert à
+    // retrouver le bon composant SCOPE cible sans repasser par la liste.
+    groupNodeId: groupNode.id,
+    // Identifie l'état exporté (une image distincte par état).
+    nodeId: exportNode.id,
+    image,
+    pins,
+    bulk: !!bulk,
+  };
+
+  const res = await fetch(`http://localhost:${port}/import-figma`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) {
+    throw new Error(`Échec de l'envoi (${res.status}).`);
+  }
+}
 
 figma.ui.onmessage = async (msg) => {
   if (msg.type === 'init') {
@@ -129,58 +208,39 @@ figma.ui.onmessage = async (msg) => {
 
     try {
       const { groupNode, variantNode } = getComponentGroup(node);
-      const exportNode = variantNode || groupNode;
-
-      const bytes = await exportNode.exportAsync({ format: 'PNG', constraint: { type: 'SCALE', value: 2 } });
-      const image = figma.base64Encode(bytes);
-
-      const pins = ('children' in exportNode ? exportNode.children : [])
-        .map((c) => {
-          const label = c.getPluginData('scopePinLabel');
-          if (!label) return null;
-          return {
-            figmaLayerId: c.id,
-            label,
-            x: exportNode.width ? ((c.x + c.width / 2) / exportNode.width) * 100 : 0,
-            y: exportNode.height ? ((c.y + c.height / 2) / exportNode.height) * 100 : 0,
-          };
-        })
-        .filter(Boolean);
-
-      const captionHost = variantNode || groupNode;
-      const caption = captionHost.getPluginData('scopeCaption') || deriveVariantLabel(variantNode) || '';
-
-      const payload = {
-        name: msg.name || groupNode.name,
-        category: groupNode.getPluginData('scopeType') || 'component',
-        caption,
-        description: getDescription(groupNode),
-        fileKey: figma.fileKey || '',
-        // Identifie le composant (stable entre tous les états) : sert à
-        // retrouver le bon composant SCOPE cible sans repasser par la liste.
-        groupNodeId: groupNode.id,
-        // Identifie l'état exporté (une image distincte par état).
-        nodeId: exportNode.id,
-        image,
-        pins,
-      };
-
-      const res = await fetch(`http://localhost:${msg.port}/import-figma`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${msg.token}`,
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (res.ok) {
-        figma.ui.postMessage({ type: 'sent-ok' });
-      } else {
-        figma.ui.postMessage({ type: 'error', message: `Échec de l'envoi (${res.status}).` });
-      }
+      await exportAndSend({ groupNode, variantNode, name: msg.name, port: msg.port, token: msg.token, bulk: false });
+      figma.ui.postMessage({ type: 'sent-ok' });
     } catch (e) {
       figma.ui.postMessage({ type: 'error', message: 'Erreur : ' + (e && e.message ? e.message : e) });
     }
+    return;
+  }
+
+  if (msg.type === 'send-all') {
+    const node = getSelection();
+    if (!node || node.type !== 'COMPONENT_SET') {
+      figma.ui.postMessage({ type: 'error', message: "Sélectionne un component set." });
+      return;
+    }
+    if (!msg.port || !msg.token) {
+      figma.ui.postMessage({ type: 'error', message: 'Port et token requis (voir Paramètres SCOPE).' });
+      return;
+    }
+
+    const states = node.children.filter((c) => c.type === 'COMPONENT');
+    let sent = 0;
+    for (const variantNode of states) {
+      try {
+        await exportAndSend({ groupNode: node, variantNode, name: msg.name, port: msg.port, token: msg.token, bulk: true });
+        sent++;
+        figma.ui.postMessage({ type: 'send-all-progress', sent, total: states.length });
+      } catch (e) {
+        figma.ui.postMessage({
+          type: 'error',
+          message: `État "${variantNode.name}" : ` + (e && e.message ? e.message : e),
+        });
+      }
+    }
+    figma.ui.postMessage({ type: 'send-all-done', sent, total: states.length });
   }
 };

@@ -46,13 +46,20 @@
         <option value="section">Section</option>
       </select>
     </label>
-    <label>Légende de l'image
-      <input id="caption" type="text" placeholder="ex: Version desktop" />
-    </label>
+    <div id="single-state-fields">
+      <label>Légende de l'image
+        <input id="caption" type="text" placeholder="ex: Version desktop" />
+      </label>
 
-    <fieldset>
-      <legend>Zones d'intérêt (calques enfants)</legend>
-      <div id="children"></div>
+      <fieldset>
+        <legend>Zones d'intérêt (calques enfants)</legend>
+        <div id="children"></div>
+      </fieldset>
+    </div>
+
+    <fieldset id="states-fieldset" style="display:none">
+      <legend>États détectés</legend>
+      <div id="states"></div>
     </fieldset>
 
     <fieldset>
@@ -66,6 +73,7 @@
     </fieldset>
 
     <button id="send">Envoyer vers SCOPE</button>
+    <button id="send-all" style="display:none">Importer tous les états</button>
     <div id="msg" class="msg"></div>
   </div>
 
@@ -105,6 +113,13 @@
     });
   }
 
+  function renderStates(states) {
+    const container = el('states');
+    container.innerHTML = states.length
+      ? states.map((s) => '<div style="padding:2px 0">' + s.label + '</div>').join('')
+      : '<div style="color:#888">Aucun état.</div>';
+  }
+
   function renderNode(node) {
     if (!node) {
       el('empty').style.display = 'block';
@@ -115,9 +130,22 @@
     el('form').style.display = 'block';
     el('name').value = node.name;
     el('type').value = node.type;
-    el('caption').value = node.caption || '';
     el('variant-note').style.display = node.isVariant ? 'block' : 'none';
-    renderChildren(node.children);
+
+    if (node.isComponentSet) {
+      el('single-state-fields').style.display = 'none';
+      el('states-fieldset').style.display = 'block';
+      el('send').style.display = 'none';
+      el('send-all').style.display = 'block';
+      renderStates(node.states);
+    } else {
+      el('single-state-fields').style.display = 'block';
+      el('states-fieldset').style.display = 'none';
+      el('send').style.display = 'block';
+      el('send-all').style.display = 'none';
+      el('caption').value = node.caption || '';
+      renderChildren(node.children);
+    }
   }
 
   el('type').addEventListener('change', () => {
@@ -137,6 +165,16 @@
     parent.postMessage({ pluginMessage: { type: 'send', name: el('name').value, port, token } }, '*');
   });
 
+  el('send-all').addEventListener('click', () => {
+    const port = el('port').value.trim();
+    const token = el('token').value.trim();
+    parent.postMessage({ pluginMessage: { type: 'save-config', port, token } }, '*');
+    el('msg').textContent = 'Envoi des états…';
+    el('msg').className = 'msg';
+    el('send-all').disabled = true;
+    parent.postMessage({ pluginMessage: { type: 'send-all', name: el('name').value, port, token } }, '*');
+  });
+
   window.onmessage = (event) => {
     const msg = event.data.pluginMessage;
     if (!msg) return;
@@ -148,7 +186,15 @@
     } else if (msg.type === 'sent-ok') {
       el('msg').textContent = 'Envoyé ✓';
       el('msg').className = 'msg ok';
+    } else if (msg.type === 'send-all-progress') {
+      el('msg').textContent = 'Envoi… ' + msg.sent + '/' + msg.total;
+      el('msg').className = 'msg';
+    } else if (msg.type === 'send-all-done') {
+      el('send-all').disabled = false;
+      el('msg').textContent = msg.sent + '/' + msg.total + ' état(s) envoyé(s) ✓';
+      el('msg').className = msg.sent === msg.total ? 'msg ok' : 'msg error';
     } else if (msg.type === 'error') {
+      el('send-all').disabled = false;
       el('msg').textContent = msg.message;
       el('msg').className = 'msg error';
     }

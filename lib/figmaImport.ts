@@ -28,6 +28,8 @@ export interface FigmaImportPayload {
   /** PNG en base64 brut (sans préfixe data:). */
   image: string;
   pins: FigmaImportPin[];
+  /** true = fait partie d'un "Importer tous les états" — appliqué sans popup de revue. */
+  bulk?: boolean;
 }
 
 const VALID_CATEGORIES: ScopeItemType[] = ['document', 'component', 'template', 'section'];
