@@ -35,5 +35,11 @@ réconciliation avec un composant déjà lié).
 - Les zones d'intérêt sont des points (centre du calque), pas des rectangles.
 - Pas de re-sync : réenvoyer recrée un import, ne met pas à jour un composant
   existant (voir `docs/figma-import-plan.md`, phase 4).
-- `networkAccess.allowedDomains` du manifest autorise uniquement
-  `127.0.0.1`/`localhost` — le plugin ne peut pas parler à autre chose.
+- `networkAccess.allowedDomains` du manifest est réglé sur `"*"` (tous
+  domaines). Le validateur de manifest Figma refuse les IP littérales
+  (`http://127.0.0.1:*`) et le wildcard de port (`http://localhost:*`) comme
+  entrées de `allowedDomains` — seul `"*"` passe pour un port dynamique. Le
+  code du plugin n'appelle en pratique que `http://localhost:<port>` (voir
+  `code.js`), mais **si ce plugin est un jour publié**, il faudra fixer le
+  port du pont côté SCOPE pour pouvoir restreindre `allowedDomains` à une
+  valeur exacte plutôt que `"*"`.

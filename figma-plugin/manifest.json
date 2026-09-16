@@ -6,6 +6,6 @@
   "ui": "ui.html",
   "editorType": ["figma"],
   "networkAccess": {
-    "allowedDomains": ["http://localhost:*"]
+    "allowedDomains": ["*"]
   }
 }
