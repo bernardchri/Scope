@@ -39,6 +39,8 @@ const imagePinSchema = z.object({
   number: z.number().catch(0),
   x: z.number().catch(0),
   y: z.number().catch(0),
+  label: z.string().optional(),
+  figmaLayerId: z.string().optional(),
 });
 
 const cropRectSchema = z
@@ -58,7 +60,16 @@ const componentImageSchema = z.object({
   isPrimary: z.boolean().catch(false),
   pins: resilientArray(imagePinSchema).optional(),
   crop: cropRectSchema,
+  figmaNodeId: z.string().optional(),
 });
+
+const figmaLinkSchema = z
+  .object({
+    fileKey: z.string(),
+    nodeId: z.string(),
+    lastSyncAt: z.string().optional(),
+  })
+  .optional();
 
 const taskSchema = z.object({
   id: z.string(),
@@ -98,6 +109,7 @@ const componentSchema = z.object({
   widgets: resilientArray(widgetInstanceSchema).optional(),
   instances: resilientArray(instanceSchema),
   tasks: resilientArray(taskSchema),
+  figmaLink: figmaLinkSchema,
 });
 
 const projectSchema = z.object({
