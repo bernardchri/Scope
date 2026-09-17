@@ -36,10 +36,17 @@ export default function ComponentList({ projectId }: ComponentListProps) {
 
   const currentDetailId = navHistory.length > 0 ? navHistory[navHistory.length - 1] : null;
   useEffect(() => {
-    // Le remount via key={selectedItem.id} ne suffit pas : WebKit (webview
-    // Tauri) restaure parfois le scroll d'un nouveau noeud selon sa propre
-    // heuristique. On force explicitement le retour en haut.
-    detailScrollRef.current?.scrollTo(0, 0);
+    // Le remount (key) + un scrollTo synchrone ne suffisaient pas : WebKit
+    // (webview Tauri) semble réappliquer son propre scroll après le paint,
+    // après le passage de cet effet. On repousse le reset après le rendu du
+    // navigateur (double rAF) pour gagner la course contre cette restauration.
+    const el = detailScrollRef.current;
+    if (!el) return;
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        el.scrollTo(0, 0);
+      });
+    });
   }, [currentDetailId]);
 
   useShortcuts({
