@@ -141,9 +141,8 @@ export default function ComponentList({ projectId }: ComponentListProps) {
         )}
 
         {selectedItem ? (
-          <div className="flex-1 overflow-y-auto p-8">
+          <div key={selectedItem.id} className="flex-1 overflow-y-auto p-8">
               <ScopeItemDetail
-                key={selectedItem.id}
                 projectId={projectId}
                 item={selectedItem}
                 allComponents={activeProject.components}
