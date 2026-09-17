@@ -44,7 +44,7 @@ export default function ComponentList({ projectId }: ComponentListProps) {
     if (!el) return;
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
-        el.scrollTo(0, 0);
+        el.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
       });
     });
   }, [currentDetailId]);
