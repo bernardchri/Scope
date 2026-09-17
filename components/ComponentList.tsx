@@ -105,7 +105,6 @@ export default function ComponentList({ projectId }: ComponentListProps) {
     <div className="flex flex-col h-screen w-full overflow-hidden">
       <ProjectHeader
         projectName={activeProject.name}
-        onNewElement={() => setIsModalOpen(true)}
         onRenameProject={(name) => updateProject(activeProject.id, { name })}
       />
 
@@ -126,6 +125,7 @@ export default function ComponentList({ projectId }: ComponentListProps) {
               onReorderComponents={(ids) => reorderComponents(activeProject.id, ids)}
               onGoHome={() => setNavHistory([])}
               onToggleSidebar={() => setSidebarOpen(false)}
+              onNewElement={() => setIsModalOpen(true)}
             />
           </div>
         ) : (
