@@ -177,17 +177,6 @@ export default function ComponentSidebar({
 
   return (
     <div className="flex flex-col h-full">
-      <div className="p-2 border-b">
-        <Button
-          size="sm"
-          className="w-full justify-start gap-2"
-          onClick={onNewElement}
-        >
-          <Plus className="h-4 w-4" />
-          Nouvel element
-        </Button>
-      </div>
-
       <div className="flex items-center gap-1 p-2 border-b">
         <Button
           variant={showingDashboard ? 'secondary' : 'ghost'}
@@ -197,6 +186,17 @@ export default function ComponentSidebar({
         >
           <Home className="h-4 w-4" />
           Accueil
+        </Button>
+      </div>
+
+      <div className="p-2 border-b">
+        <Button
+          size="sm"
+          className="w-full justify-start gap-2"
+          onClick={onNewElement}
+        >
+          <Plus className="h-4 w-4" />
+          Nouvel element
         </Button>
       </div>
 
