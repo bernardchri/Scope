@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useProjectStore, undo, redo } from '@/lib/projectStore';
 import { Component, ScopeItemType } from '@/lib/types';
 import { useShortcuts } from '@/lib/hooks/useShortcuts';
@@ -30,8 +30,17 @@ export default function ComponentList({ projectId }: ComponentListProps) {
   const [navHistory, setNavHistory] = useState<string[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const detailScrollRef = useRef<HTMLDivElement>(null);
 
   const activeProject = projects.find(p => p.id === projectId);
+
+  const currentDetailId = navHistory.length > 0 ? navHistory[navHistory.length - 1] : null;
+  useEffect(() => {
+    // Le remount via key={selectedItem.id} ne suffit pas : WebKit (webview
+    // Tauri) restaure parfois le scroll d'un nouveau noeud selon sa propre
+    // heuristique. On force explicitement le retour en haut.
+    detailScrollRef.current?.scrollTo(0, 0);
+  }, [currentDetailId]);
 
   useShortcuts({
     'new-element': useCallback(() => setIsModalOpen(true), []),
@@ -141,7 +150,7 @@ export default function ComponentList({ projectId }: ComponentListProps) {
         )}
 
         {selectedItem ? (
-          <div key={selectedItem.id} className="flex-1 overflow-y-auto p-8">
+          <div key={selectedItem.id} ref={detailScrollRef} className="flex-1 overflow-y-auto p-8">
               <ScopeItemDetail
                 projectId={projectId}
                 item={selectedItem}
