@@ -1,4 +1,4 @@
-import { ComponentImage } from './types';
+import { ComponentImage, ImagePin } from './types';
 
 export interface AvailablePin {
   pinId: string;
@@ -32,4 +32,9 @@ export function parsePinSelectValue(value: string): { imageId: string; pinId: st
   const idx = value.indexOf('::');
   if (idx === -1) return null;
   return { imageId: value.slice(0, idx), pinId: value.slice(idx + 2) };
+}
+
+/** Prochain numéro de pin disponible pour une image (max existant + 1, ou 1 si vide). */
+export function nextPinNumber(existingPins: Pick<ImagePin, 'number'>[]): number {
+  return existingPins.length === 0 ? 1 : Math.max(...existingPins.map(p => p.number)) + 1;
 }

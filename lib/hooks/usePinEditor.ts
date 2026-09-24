@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { ComponentImage, ImagePin, CropRect } from '@/lib/types';
 import { pinToFullSpace } from '@/lib/imageHelpers';
+import { nextPinNumber } from '@/lib/pinHelpers';
 
 interface UsePinEditorParams {
   imageContainerRef: React.RefObject<HTMLDivElement | null>;
@@ -67,8 +68,7 @@ export function usePinEditor({
     if ((e.target as HTMLElement).closest('button')) return;
     const coords = getCoords(e.clientX, e.clientY);
     if (!coords) return;
-    const nextNumber = currentPins.length === 0 ? 1 : Math.max(...currentPins.map(p => p.number)) + 1;
-    const newPin: ImagePin = { id: crypto.randomUUID(), number: nextNumber, ...coords };
+    const newPin: ImagePin = { id: crypto.randomUUID(), number: nextPinNumber(currentPins), ...coords };
     updatePins([...currentPins, newPin]);
     setSelectedPinId(newPin.id);
     setDraggingPinId(newPin.id);

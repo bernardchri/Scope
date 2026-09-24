@@ -19,6 +19,13 @@ export interface ComponentInstance {
   id: string;
   componentId: string;
   pinRef?: { imageId: string; pinId: string; pinNumber: number };
+  /**
+   * true si créé automatiquement lors d'un import Figma (instance de
+   * composant détectée sur la page). Recalculé à chaque re-sync à partir
+   * des pins courants — ne pas s'appuyer dessus pour une instance ajoutée
+   * à la main, même si elle a aussi un pinRef.
+   */
+  autoFromFigma?: boolean;
 }
 
 export interface Task {
@@ -36,6 +43,10 @@ export interface ImagePin {
   number: number;
   x: number; // % 0-100
   y: number; // % 0-100
+  /** Nom donné au calque Figma correspondant, si le pin vient d'un import Figma. */
+  label?: string;
+  /** id du calque Figma d'origine, utilisé pour le matching lors d'un re-sync. */
+  figmaLayerId?: string;
 }
 
 export interface CropRect {
@@ -53,6 +64,16 @@ export interface ComponentImage {
   isPrimary: boolean;
   pins?: ImagePin[];
   crop?: CropRect;
+  /** id du node Figma dont cette image est issue, si importée. */
+  figmaNodeId?: string;
+}
+
+/** Lien vers un composant/frame Figma, pour import initial et re-sync ultérieur. */
+export interface FigmaLink {
+  fileKey: string;
+  /** Id du component set (ou du node lui-même hors variant) — stable entre tous les états. */
+  groupNodeId: string;
+  lastSyncAt?: string;
 }
 
 export interface Component {
@@ -68,6 +89,7 @@ export interface Component {
   widgets?: WidgetInstance[];
   instances: ComponentInstance[];
   tasks: Task[];
+  figmaLink?: FigmaLink;
 }
 
 export interface ClientInfo {

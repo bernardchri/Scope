@@ -1,14 +1,17 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { listen } from '@tauri-apps/api/event';
 import { useProjectStore, undo, redo } from '@/lib/projectStore';
 import { Component, ScopeItemType } from '@/lib/types';
+import { FigmaImportPayload, applyFigmaImport, buildComponentFromFigmaUpdates } from '@/lib/figmaImport';
 import { useShortcuts } from '@/lib/hooks/useShortcuts';
 import ComponentSidebar from './ComponentSidebar';
 import ScopeItemDetail from './ScopeItemDetail';
 import ProjectHeader from './ProjectHeader';
 import ProjectDashboard from './ProjectDashboard';
 import CreateComponentModal from './modals/CreateComponentModal';
+import FigmaImportDialog from './modals/FigmaImportDialog';
 import { Button } from '@/components/ui/button';
 import { PanelLeftOpen } from 'lucide-react';
 
@@ -30,6 +33,8 @@ export default function ComponentList({ projectId }: ComponentListProps) {
   const [navHistory, setNavHistory] = useState<string[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [figmaImportPayload, setFigmaImportPayload] = useState<FigmaImportPayload | null>(null);
+  const bulkQueueRef = useRef(Promise.resolve());
 
   const activeProject = projects.find(p => p.id === projectId);
 
@@ -38,6 +43,39 @@ export default function ComponentList({ projectId }: ComponentListProps) {
     'undo': useCallback(() => undo(), []),
     'redo': useCallback(() => redo(), []),
   });
+
+  // Import Figma issu d'un "Importer tous les états" : plusieurs événements
+  // arrivent en rafale, on les applique en série (sans popup de revue par
+  // état) pour que chacun voie l'état du store laissé par le précédent —
+  // sinon deux états créeraient chacun un nouveau composant au lieu de
+  // partager le même.
+  const autoApplyFigmaImport = useCallback(async (payload: FigmaImportPayload) => {
+    const state = useProjectStore.getState();
+    const project = state.projects.find(p => p.id === projectId);
+    if (!project) return;
+    const existing = project.components.find(c => c.figmaLink?.groupNodeId === payload.groupNodeId);
+    try {
+      const result = await applyFigmaImport(state.currentProjectPath || '', payload, existing, project.components);
+      if (existing) {
+        state.updateComponent(project.id, existing.id, result.componentUpdates);
+      } else {
+        state.addComponent(project.id, buildComponentFromFigmaUpdates(result.componentUpdates));
+      }
+    } catch (e) {
+      console.error('[figma-import bulk] échec pour', payload.nodeId, e);
+    }
+  }, [projectId]);
+
+  useEffect(() => {
+    const unlisten = listen<FigmaImportPayload>('figma-import', (event) => {
+      if (event.payload.bulk) {
+        bulkQueueRef.current = bulkQueueRef.current.then(() => autoApplyFigmaImport(event.payload));
+      } else {
+        setFigmaImportPayload(event.payload);
+      }
+    });
+    return () => { unlisten.then(fn => fn()); };
+  }, [autoApplyFigmaImport]);
 
   if (!activeProject) return null;
 
@@ -101,6 +139,13 @@ export default function ComponentList({ projectId }: ComponentListProps) {
     updateComponent(activeProject.id, componentId, updates);
   }
 
+  function handleFigmaImportCreate(updates: Partial<Component>) {
+    if (!activeProject) return;
+    const newComponent = buildComponentFromFigmaUpdates(updates);
+    addComponent(activeProject.id, newComponent);
+    setNavHistory([newComponent.id]);
+  }
+
   return (
     <div className="flex flex-col h-screen w-full overflow-hidden">
       <ProjectHeader
@@ -113,6 +158,15 @@ export default function ComponentList({ projectId }: ComponentListProps) {
         open={isModalOpen}
         onOpenChange={setIsModalOpen}
         onSubmit={handleCreateComponent}
+      />
+
+      <FigmaImportDialog
+        payload={figmaImportPayload}
+        components={activeProject.components}
+        folderPath={currentProjectPath || ''}
+        onClose={() => setFigmaImportPayload(null)}
+        onCreate={handleFigmaImportCreate}
+        onUpdate={handleUpdateComponent}
       />
 
       <div className="flex flex-1 overflow-hidden relative">

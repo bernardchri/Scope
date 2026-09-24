@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Component, ScopeItemType, WidgetType, WidgetInstance } from '@/lib/types';
+import { Component, FigmaLink, ScopeItemType, WidgetType, WidgetInstance } from '@/lib/types';
 import { getCategoryLabel, getCategoryColor, getActiveWidgets, getAvailableWidgetTypes, WIDGET_LABELS, WIDGET_ICONS, widgetHasContent, isTextWidget } from '@/lib/categoryHelpers';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -103,12 +103,14 @@ export default function ScopeItemDetail({
     description: string,
     category: ScopeItemType,
     estimatedHours?: number,
+    figmaLink?: FigmaLink,
   ) {
     onUpdate(item.id, {
       name,
       description: description || undefined,
       category,
       estimatedHours,
+      figmaLink,
     });
     setIsEditing(false);
   }
@@ -284,6 +286,7 @@ export default function ScopeItemDetail({
           description={item.description}
           category={item.category}
           estimatedHours={item.estimatedHours}
+          figmaLink={item.figmaLink}
           onSubmit={handleSaveEdit}
           onCancel={() => setIsEditing(false)}
         />

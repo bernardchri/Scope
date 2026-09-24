@@ -52,6 +52,20 @@ function normalizePath(p: string): string {
 }
 
 /**
+ * Resize if needed, write to disk under a new UUID filename, and populate
+ * the cache. Shared by saveImageFromPath (external file) and
+ * saveImageFromBase64 (raw base64, e.g. from the Figma import bridge) —
+ * they only differ in how they obtain the initial data URI.
+ */
+async function persistNewImage(folderPath: string, dataUri: string, ext: string): Promise<string> {
+  const processed = await processImage(dataUri, ext);
+  const filename = `${crypto.randomUUID()}.${processed.ext}`;
+  await invoke('save_image_file', { folderPath, filename, base64Data: processed.base64DataUri });
+  imageCache.set(cacheKey(folderPath, filename), processed.base64DataUri);
+  return filename;
+}
+
+/**
  * Save an image from an absolute file path.
  * If the file is already inside `img/`, reuse it (invalidate cache to pick up external edits).
  * Otherwise, read the file via Rust, resize if needed, and save with a UUID filename.
@@ -75,11 +89,16 @@ export async function saveImageFromPath(folderPath: string, filePath: string): P
   const base64DataUri = await invoke<string>('read_image_as_base64', { filePath: nFile });
   const rawExt = nFile.split('.').pop()?.toLowerCase() || 'png';
   const ext = rawExt === 'jpeg' ? 'jpg' : rawExt;
-  const processed = await processImage(base64DataUri, ext);
-  const filename = `${crypto.randomUUID()}.${processed.ext}`;
-  await invoke('save_image_file', { folderPath, filename, base64Data: processed.base64DataUri });
-  imageCache.set(cacheKey(folderPath, filename), processed.base64DataUri);
-  return filename;
+  return persistNewImage(folderPath, base64DataUri, ext);
+}
+
+/**
+ * Save an image from a raw base64 string (no data URI prefix), e.g. received
+ * from the Figma import bridge. Resizes if needed, saves with a UUID filename.
+ */
+export async function saveImageFromBase64(folderPath: string, base64: string, ext: string = 'png'): Promise<string> {
+  const mime = EXT_TO_MIME[ext] || 'image/png';
+  return persistNewImage(folderPath, `data:${mime};base64,${base64}`, ext);
 }
 
 /**

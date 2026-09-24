@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { ComponentImage, ImagePin, Task } from '@/lib/types';
 import { useImageLoader } from '@/lib/hooks/useImageLoader';
 import { pinToFullSpace } from '@/lib/imageHelpers';
+import { nextPinNumber } from '@/lib/pinHelpers';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Eye, EyeOff, ZoomIn, ZoomOut, X } from 'lucide-react';
@@ -100,12 +101,6 @@ export default function ZoomModal({ open, image, tasks, folderPath, onUpdatePins
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [open, selectedPinId, onUpdatePins]);
 
-  function getNextPinNumber() {
-    const pins = localPinsRef.current;
-    if (pins.length === 0) return 1;
-    return Math.max(...pins.map(p => p.number)) + 1;
-  }
-
   function getInnerCoords(clientX: number, clientY: number) {
     const inner = innerRef.current;
     if (!inner) return null;
@@ -124,7 +119,7 @@ export default function ZoomModal({ open, image, tasks, folderPath, onUpdatePins
     const coords = getInnerCoords(e.clientX, e.clientY);
     if (!coords) return;
 
-    const newPin: ImagePin = { id: crypto.randomUUID(), number: getNextPinNumber(), ...coords };
+    const newPin: ImagePin = { id: crypto.randomUUID(), number: nextPinNumber(localPinsRef.current), ...coords };
     const newPins = [...localPinsRef.current, newPin];
     savePins(newPins);
     setSelectedPinId(newPin.id);

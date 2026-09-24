@@ -1,4 +1,5 @@
 mod backup;
+mod figma_bridge;
 
 use tauri::{menu::{Menu, MenuItem, Submenu, PredefinedMenuItem}, Manager, Emitter};
 use tauri_plugin_dialog::DialogExt;
@@ -146,6 +147,13 @@ fn write_text_file(path: String, content: String) -> Result<(), String> {
         .map_err(|e| format!("Erreur écriture fichier: {}", e))
 }
 
+#[tauri::command]
+fn get_figma_bridge_info(
+    info: tauri::State<figma_bridge::FigmaBridgeInfo>,
+) -> figma_bridge::FigmaBridgeInfo {
+    info.inner().clone()
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -177,6 +185,10 @@ pub fn run() {
             ])?;
             let menu = Menu::with_items(app, &[&scope_menu, &edit_menu])?;
             app.set_menu(menu)?;
+
+            let figma_bridge_info = figma_bridge::start(app.handle().clone())
+                .unwrap_or_else(|| figma_bridge::FigmaBridgeInfo { port: 0, token: String::new() });
+            app.manage(figma_bridge_info);
 
             let app_handle = app.handle().clone();
             app.on_menu_event(move |_app, event| {
@@ -218,7 +230,8 @@ pub fn run() {
             save_image_file,
             read_image_as_base64,
             delete_image_file,
-            is_project_folder
+            is_project_folder,
+            get_figma_bridge_info
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
