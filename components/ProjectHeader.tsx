@@ -2,19 +2,17 @@
 
 import { useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Plus, Settings } from 'lucide-react';
+import { Settings } from 'lucide-react';
 import { useState } from 'react';
 import SettingsDialog from '@/components/SettingsDialog';
 
 interface ProjectHeaderProps {
   projectName: string;
-  onNewElement: () => void;
   onRenameProject: (name: string) => void;
 }
 
 export default function ProjectHeader({
   projectName,
-  onNewElement,
   onRenameProject,
 }: ProjectHeaderProps) {
   const [isEditing, setIsEditing] = useState(false);
@@ -72,10 +70,6 @@ export default function ProjectHeader({
         <div className="w-24" />
 
         <div className="flex items-center gap-2">
-          <Button size="sm" onClick={onNewElement}>
-            <Plus className="h-4 w-4 mr-1" />
-            Nouvel element
-          </Button>
           <Button size="sm" variant="ghost" onClick={() => setSettingsOpen(true)}>
             <Settings className="h-4 w-4" />
           </Button>

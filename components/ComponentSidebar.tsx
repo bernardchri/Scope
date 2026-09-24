@@ -7,7 +7,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
-import { ChevronRight, GripVertical, Home, PanelLeftClose } from 'lucide-react';
+import { ChevronRight, GripVertical, Home, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DndContext,
@@ -156,6 +156,7 @@ interface ComponentSidebarProps {
   onReorderComponents: (orderedIds: string[]) => void;
   onGoHome: () => void;
   onToggleSidebar: () => void;
+  onNewElement: () => void;
 }
 
 export default function ComponentSidebar({
@@ -166,6 +167,7 @@ export default function ComponentSidebar({
   onReorderComponents,
   onGoHome,
   onToggleSidebar,
+  onNewElement,
 }: ComponentSidebarProps) {
   const groupedComponents = components.reduce((acc, component) => {
     if (!acc[component.category]) acc[component.category] = [];
@@ -184,6 +186,17 @@ export default function ComponentSidebar({
         >
           <Home className="h-4 w-4" />
           Accueil
+        </Button>
+      </div>
+
+      <div className="p-2 border-b">
+        <Button
+          size="sm"
+          className="w-full justify-start gap-2"
+          onClick={onNewElement}
+        >
+          <Plus className="h-4 w-4" />
+          Nouvel element
         </Button>
       </div>
 

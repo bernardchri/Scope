@@ -35,8 +35,24 @@ export default function ComponentList({ projectId }: ComponentListProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [figmaImportPayload, setFigmaImportPayload] = useState<FigmaImportPayload | null>(null);
   const bulkQueueRef = useRef(Promise.resolve());
+  const detailScrollRef = useRef<HTMLDivElement>(null);
 
   const activeProject = projects.find(p => p.id === projectId);
+
+  const currentDetailId = navHistory.length > 0 ? navHistory[navHistory.length - 1] : null;
+  useEffect(() => {
+    // Le remount (key) + un scrollTo synchrone ne suffisaient pas : WebKit
+    // (webview Tauri) semble réappliquer son propre scroll après le paint,
+    // après le passage de cet effet. On repousse le reset après le rendu du
+    // navigateur (double rAF) pour gagner la course contre cette restauration.
+    const el = detailScrollRef.current;
+    if (!el) return;
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        el.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+      });
+    });
+  }, [currentDetailId]);
 
   useShortcuts({
     'new-element': useCallback(() => setIsModalOpen(true), []),
@@ -150,7 +166,6 @@ export default function ComponentList({ projectId }: ComponentListProps) {
     <div className="flex flex-col h-screen w-full overflow-hidden">
       <ProjectHeader
         projectName={activeProject.name}
-        onNewElement={() => setIsModalOpen(true)}
         onRenameProject={(name) => updateProject(activeProject.id, { name })}
       />
 
@@ -180,6 +195,7 @@ export default function ComponentList({ projectId }: ComponentListProps) {
               onReorderComponents={(ids) => reorderComponents(activeProject.id, ids)}
               onGoHome={() => setNavHistory([])}
               onToggleSidebar={() => setSidebarOpen(false)}
+              onNewElement={() => setIsModalOpen(true)}
             />
           </div>
         ) : (
@@ -195,9 +211,8 @@ export default function ComponentList({ projectId }: ComponentListProps) {
         )}
 
         {selectedItem ? (
-          <div className="flex-1 overflow-y-auto p-8">
+          <div key={selectedItem.id} ref={detailScrollRef} className="flex-1 overflow-y-auto p-8">
               <ScopeItemDetail
-                key={selectedItem.id}
                 projectId={projectId}
                 item={selectedItem}
                 allComponents={activeProject.components}
