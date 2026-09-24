@@ -26,8 +26,8 @@ découverts en testant avec le vrai validateur de manifest Figma :
 Liaison automatique composants ↔ page livrée (sans pins) : en important une
 page/template, le plugin détecte les instances de composant qu'elle contient
 et crée automatiquement les `ComponentInstance` correspondants côté SCOPE
-pour ceux déjà importés (voir « Liaison automatique » dans
-`figma-plugin/README.md`).
+pour ceux déjà importés (voir « Liaison automatique » dans le README de
+[SCOPE-figma-plugin](https://github.com/bernardchri/SCOPE-figma-plugin)).
 
 Prochain axe de travail : positionner un pin pour chaque instance détectée
 (nécessite le calcul de position absolue Figma, pas encore fait — les
@@ -59,7 +59,7 @@ Impact : `lib/types.ts`, `lib/projectSchema.ts` (Zod). Extension additive unique
 refonte du PDF export / markdown export (ils lisent déjà `pins[]`, un `label` en plus ne casse
 rien).
 
-## 2. Plugin Figma (nouveau projet, hors repo SCOPE ou sous-dossier `figma-plugin/`)
+## 2. Plugin Figma — [bernardchri/SCOPE-figma-plugin](https://github.com/bernardchri/SCOPE-figma-plugin) (repo séparé)
 
 - Manifest Figma standard + UI en iframe (HTML/JS, pas besoin de framework lourd).
 - Sélection d'un composant/frame Figma → l'utilisateur :

@@ -39,3 +39,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Plugin Figma — désormais son propre repo : github.com/bernardchri/SCOPE-figma-plugin
+/figma-plugin
