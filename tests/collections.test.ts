@@ -5,7 +5,7 @@ vi.mock('@tauri-apps/plugin-dialog', () => ({ save: vi.fn(), open: vi.fn() }));
 
 import { createCollection, describeField, generateContentModelMd } from '@/lib/collections';
 import { describePin } from '@/lib/pinKinds';
-import { Collection } from '@/lib/types';
+import { Collection, Component } from '@/lib/types';
 
 const projets: Collection = {
   id: 'p', name: 'Projets', slug: 'projet', hasDetailPage: true,
@@ -37,6 +37,11 @@ describe('collections', () => {
     expect(describePin({ kind: 'title', fieldRef: { collectionId: 'p', fieldId: 'f1' } }, all))
       .toBe('Titre — champ « titre » de la collection « Projets »');
     expect(describePin({ kind: 'list', collectionId: 'absente' }, all)).toBe('Liste');
+  });
+
+  it('indique où la collection est utilisée', () => {
+    const comp = { id: 'x', name: 'Liste projets', images: [{ id: 'i', isPrimary: true, pins: [{ id: 'p1', number: 1, x: 0, y: 0, kind: 'list', collectionId: 'p' }] }] } as unknown as Component;
+    expect(generateContentModelMd([projets], '##', [comp])).toContain('Utilisée dans : Liste projets.');
   });
 
   it('génère le modèle de contenu', () => {

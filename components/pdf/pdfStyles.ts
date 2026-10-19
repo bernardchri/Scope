@@ -319,6 +319,63 @@ export const s = StyleSheet.create({
   },
 
   // Composants utilisés
+  pinList: {
+    marginTop: 12,
+  },
+  pinRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 6,
+    marginBottom: 3,
+  },
+  pinBadge: {
+    width: 13,
+    height: 13,
+    borderRadius: 6.5,
+    backgroundColor: '#dbeafe',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pinBadgeText: {
+    fontSize: 6,
+    color: '#1d4ed8',
+  },
+  pinText: {
+    flex: 1,
+    fontSize: 9,
+    color: '#555',
+  },
+  collectionBlock: {
+    marginBottom: 18,
+  },
+  collectionName: {
+    fontSize: 13,
+    fontFamily: 'Inter', fontWeight: 700,
+    marginBottom: 2,
+  },
+  collectionMeta: {
+    fontSize: 8,
+    color: '#888',
+    marginBottom: 6,
+  },
+  fieldRow: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingVertical: 3,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+    borderBottomStyle: 'solid',
+  },
+  fieldName: {
+    width: 110,
+    fontSize: 9,
+    fontFamily: 'Inter', fontWeight: 700,
+  },
+  fieldDesc: {
+    flex: 1,
+    fontSize: 9,
+    color: '#555',
+  },
   instancesSection: {
     marginTop: 12,
   },

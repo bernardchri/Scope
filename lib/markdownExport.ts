@@ -242,7 +242,7 @@ export function generateStoriesMd(project: Project, imageMap: ImageMap = new Map
   headerParts.push('---');
   sections.push(headerParts.join('\n\n'));
   sections.push(READING_GUIDE + '\n\n---');
-  const contentModel = generateContentModelMd(project.collections);
+  const contentModel = generateContentModelMd(project.collections, '##', project.components);
   if (contentModel) sections.push(contentModel + '\n---');
 
   // Grouped by type in display order
@@ -405,7 +405,7 @@ async function exportProjectMarkdownMulti(project: Project, folderPath?: string,
   indexLines.push('');
   indexLines.push(READING_GUIDE);
   indexLines.push('');
-  const contentModel = generateContentModelMd(project.collections);
+  const contentModel = generateContentModelMd(project.collections, '##', project.components);
   if (contentModel) indexLines.push(contentModel, '---', '');
 
   // Noms de fichiers calculés d'avance : les fiches se renvoient les unes aux autres.

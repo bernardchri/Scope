@@ -80,6 +80,9 @@ export async function exportProjectPDF(project: Project, folderPath?: string): P
   const element = (
     <ProjectPDFDocument
       project={preparedProject}
+      pinsByImage={Object.fromEntries(
+        project.components.flatMap(c => (c.images ?? []).map(img => [img.id, img.pins ?? []] as const))
+      )}
       showEstimations={appSettings.pdf.showEstimations}
       exportComments={appSettings.comment.exportComments}
       studioName={appSettings.studioName}

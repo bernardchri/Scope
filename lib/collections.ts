@@ -1,4 +1,4 @@
-import { Collection, CollectionField } from './types';
+import { Collection, CollectionField, Component } from './types';
 import { PIN_KINDS, PinKind, describePinSpecs } from './pinKinds';
 import { findCollection } from './collectionLookup';
 
@@ -69,8 +69,17 @@ export function describeField(field: CollectionField, collections: Collection[] 
   return parts.join(', ');
 }
 
+/** Composants dont au moins un pin utilise la collection (liste ou champ). */
+export function collectionUsage(collection: Collection, components: Component[]): Component[] {
+  return components.filter((comp) =>
+    (comp.images || []).some((img) =>
+      (img.pins || []).some((p) => p.collectionId === collection.id || p.fieldRef?.collectionId === collection.id)
+    )
+  );
+}
+
 /** Section Markdown « Modèle de contenu » (vide s'il n'y a aucune collection). */
-export function generateContentModelMd(collections: Collection[] = [], heading = '##'): string {
+export function generateContentModelMd(collections: Collection[] = [], heading = '##', components: Component[] = []): string {
   if (collections.length === 0) return '';
   const lines: string[] = [
     `${heading} Modèle de contenu`,
@@ -82,12 +91,13 @@ export function generateContentModelMd(collections: Collection[] = [], heading =
     lines.push(`${heading}# Collection « ${c.name} » (\`${c.slug}\`)`, '');
     if (c.description?.trim()) lines.push(c.description.trim(), '');
     if (c.hasDetailPage) lines.push('Chaque entrée a sa propre page de détail.', '');
-    if (c.fields.length === 0) {
-      lines.push('_Aucun champ défini._', '');
-      continue;
+    if (c.fields.length === 0) lines.push('_Aucun champ défini._', '');
+    else {
+      for (const f of c.fields) lines.push(`- \`${f.name || 'sans nom'}\` — ${describeField(f, collections)}`);
+      lines.push('');
     }
-    for (const f of c.fields) lines.push(`- \`${f.name || 'sans nom'}\` — ${describeField(f, collections)}`);
-    lines.push('');
+    const used = collectionUsage(c, components);
+    if (used.length) lines.push(`Utilisée dans : ${used.map((u) => u.name).join(', ')}.`, '');
   }
   return lines.join('\n');
 }

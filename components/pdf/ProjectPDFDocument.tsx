@@ -6,7 +6,9 @@ import {
   Image,
   Link,
 } from '@react-pdf/renderer';
-import { Project, Component, TaskCategory, ComponentCategory } from '@/lib/types';
+import { Project, Component, ImagePin, TaskCategory, ComponentCategory } from '@/lib/types';
+import { collectionUsage, describeField } from '@/lib/collections';
+import { describePin } from '@/lib/pinKinds';
 import { renderMarkdown } from './renderMarkdown';
 import { CoverPage } from './CoverPage';
 import { CATEGORY_SECTION_LABELS, PDF_DISPLAY_ORDER, getActiveWidgets, isTextWidget } from '@/lib/categoryHelpers';
@@ -85,11 +87,15 @@ function ComponentDetailBlock({
   allComponents,
   showEstimations = true,
   exportComments = false,
+  project,
+  pinsByImage = {},
 }: {
   component: Component;
   allComponents: Component[];
   showEstimations?: boolean;
   exportComments?: boolean;
+  project: Project;
+  pinsByImage?: Record<string, ImagePin[]>;
 }) {
   const images = (component.images ?? []).map(img => ({
     ...img,
@@ -137,6 +143,24 @@ function ComponentDetailBlock({
           )}
         </View>
       ))}
+
+      {/* Éléments repérés : type, contraintes et lien avec le modèle de contenu (les pins eux-mêmes sont dans l'image) */}
+      {(component.images ?? []).flatMap(img => pinsByImage[img.id] ?? [])
+        .filter(p => p.kind || p.note || p.collectionId || p.fieldRef).length > 0 && (
+        <View style={s.pinList}>
+          <Text style={s.taskSectionLabel}>Éléments repérés</Text>
+          {(component.images ?? []).flatMap(img => pinsByImage[img.id] ?? [])
+            .filter(p => p.kind || p.note || p.collectionId || p.fieldRef)
+            .map(pin => (
+              <View key={pin.id} style={s.pinRow} wrap={false}>
+                <View style={s.pinBadge}><Text style={s.pinBadgeText}>{pin.number}</Text></View>
+                <Text style={s.pinText}>
+                  {[pin.label, describePin(pin, project.collections)].filter(Boolean).join(' — ')}
+                </Text>
+              </View>
+            ))}
+        </View>
+      )}
 
       {/* Liste des tâches groupées par catégorie */}
       {inScopeTasks.length > 0 && (
@@ -214,6 +238,14 @@ function ComponentDetailBlock({
           );
         })}
 
+      {/* Ressources (SVG) disponibles pour ce composant */}
+      {(component.assets?.length ?? 0) > 0 && (
+        <View style={s.instancesSection}>
+          <Text style={s.instancesSectionLabel}>Ressources</Text>
+          <Text style={s.instanceName}>{component.assets!.map(a => a.name).join(', ')}</Text>
+        </View>
+      )}
+
       {/* Composants utilisés (instances) */}
       {instanceComponents.length > 0 && (
         <View style={s.instancesSection}>
@@ -245,16 +277,20 @@ function ComponentDetailBlock({
 
 interface Props {
   project: Project;
+  /** Pins par id d'image : `preparePdfProject` les retire de l'image une fois cuits dans les pixels. */
+  pinsByImage?: Record<string, ImagePin[]>;
   showEstimations?: boolean;
   exportComments?: boolean;
   studioName?: string;
 }
 
-export function ProjectPDFDocument({ project, showEstimations = true, exportComments = false, studioName }: Props) {
+export function ProjectPDFDocument({ project, pinsByImage, showEstimations = true, exportComments = false, studioName }: Props) {
   const today = formatDate(new Date().toISOString());
 
   // Dédupliquer par ID (sécurité contre les données corrompues)
   const components = project.components.filter((c, i, arr) => arr.findIndex(x => x.id === c.id) === i);
+
+  const collections = project.collections ?? [];
 
   const totalHours = components.reduce((acc, c) => acc + (c.estimatedHours ?? 0), 0);
   const totalTasks = components.reduce((acc, c) => acc + c.tasks.length, 0);
@@ -306,6 +342,12 @@ export function ProjectPDFDocument({ project, showEstimations = true, exportComm
             <Text style={s.statNumber}>{totalTasks}</Text>
             <Text style={s.statDesc}>éléments</Text>
           </View>
+          {collections.length > 0 && (
+            <View style={s.statBox}>
+              <Text style={s.statNumber}>{collections.length}</Text>
+              <Text style={s.statDesc}>collections</Text>
+            </View>
+          )}
         </View>
 
         <PageFooter studioName={studioName} />
@@ -326,6 +368,19 @@ export function ProjectPDFDocument({ project, showEstimations = true, exportComm
           </View>
         ))}
 
+        {collections.length > 0 && (
+          <View style={s.tocCategorySection}>
+            <Text style={s.tocCategoryHeader}>Modèle de contenu</Text>
+            <Link src="#modele-de-contenu">
+              <View style={s.tocRow}>
+                <Text style={s.tocName}>
+                  {collections.map(c => c.name).join(', ')}
+                </Text>
+              </View>
+            </Link>
+          </View>
+        )}
+
         <PageFooter studioName={studioName} />
       </Page>
 
@@ -344,12 +399,57 @@ export function ProjectPDFDocument({ project, showEstimations = true, exportComm
               allComponents={components}
               showEstimations={showEstimations}
               exportComments={exportComments}
+              project={project}
+              pinsByImage={pinsByImage}
             />
           ))}
 
           <PageFooter studioName={studioName} />
         </Page>
       ))}
+
+      {/* ── Modèle de contenu (collections) ─────────────────────────────────── */}
+      {collections.length > 0 && (
+        <Page size="A4" style={s.page}>
+          <PageHeader projectName={project.name} date={today} />
+
+          <View id="modele-de-contenu" style={s.categoryHeader} wrap={false}>
+            <Text style={s.categoryTitle}>Modèle de contenu</Text>
+          </View>
+          <Text style={s.description}>
+            Types de contenu du site (équivalent des custom post types WordPress). Ils décrivent la structure des données, pas les contenus eux-mêmes.
+          </Text>
+
+          {collections.map(collection => {
+            const used = collectionUsage(collection, components);
+            return (
+              <View key={collection.id} style={s.collectionBlock}>
+                <View wrap={false}>
+                  <Text style={s.collectionName}>{collection.name}</Text>
+                  <Text style={s.collectionMeta}>
+                    {[
+                      collection.slug,
+                      collection.hasDetailPage ? 'une page de détail par entrée' : '',
+                      used.length ? `utilisée dans : ${used.map(u => u.name).join(', ')}` : '',
+                    ].filter(Boolean).join(' · ')}
+                  </Text>
+                  {collection.description && <Text style={s.collectionMeta}>{collection.description}</Text>}
+                </View>
+                {collection.fields.length === 0 ? (
+                  <Text style={s.fieldDesc}>Aucun champ défini.</Text>
+                ) : collection.fields.map(field => (
+                  <View key={field.id} style={s.fieldRow} wrap={false}>
+                    <Text style={s.fieldName}>{field.name || 'sans nom'}</Text>
+                    <Text style={s.fieldDesc}>{describeField(field, collections)}</Text>
+                  </View>
+                ))}
+              </View>
+            );
+          })}
+
+          <PageFooter studioName={studioName} />
+        </Page>
+      )}
 
       {/* ── Bon pour accord ─────────────────────────────────────────────────── */}
       <Page size="A4" style={s.page}>
