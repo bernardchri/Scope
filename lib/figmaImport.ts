@@ -70,7 +70,7 @@ export interface FigmaImportResult {
  * celui choisi dans le plugin (`componentId`), sinon celui qui a le même
  * lien Figma (`figmaLink.groupNodeId`). Un pin relié prend le nom du
  * composant comme label et donne un `ComponentInstance` rattaché à ce pin ;
- * un pin non relié reste un simple pin (pas d'import en cascade). Seules les
+ * un composant non relié est ignoré (pas de pin, pas de numéro consommé). Seules les
  * instances auto de l'image renvoyée sont régénérées : celles des autres
  * images du composant (ex. version mobile) sont conservées.
  */
@@ -96,7 +96,10 @@ export async function applyFigmaImport(
       (pin.componentId ? c.id === pin.componentId : !!pin.groupNodeId && c.figmaLink?.groupNodeId === pin.groupNodeId)
     );
 
-  const linkedPins = payload.pins.map((pin) => ({ pin, target: resolveTarget(pin) }));
+  // Un composant non importé dans SCOPE n'a pas de pin : il ne consomme pas de numéro.
+  const linkedPins = payload.pins
+    .map((pin) => ({ pin, target: resolveTarget(pin) }))
+    .filter((l): l is { pin: FigmaImportPin; target: Component } => !!l.target);
   const incomingPins: FigmaImportPin[] = linkedPins.map(({ pin, target }) => ({ ...pin, label: target?.name || pin.label }));
 
   const incomingIds = new Set(incomingPins.map((p) => p.figmaLayerId));
@@ -134,7 +137,6 @@ export async function applyFigmaImport(
     : [...(existing?.images || []), newImage];
 
   const autoInstances: ComponentInstance[] = linkedPins
-    .filter((l): l is { pin: FigmaImportPin; target: Component } => !!l.target)
     .map(({ pin, target }) => {
       const merged = mergedPins.find((p) => p.figmaLayerId === pin.figmaLayerId)!;
       return {

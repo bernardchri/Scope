@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { ComponentImage, ImagePin, Task, CropRect } from '@/lib/types';
+import { Component, ComponentImage, ComponentInstance, ImagePin, Task, CropRect } from '@/lib/types';
 import { usePinEditor } from '@/lib/hooks/usePinEditor';
 import { open } from '@tauri-apps/plugin-dialog';
 import { saveImageFromPath, deleteImage } from '@/lib/imageManager';
@@ -28,9 +28,13 @@ interface ImagePinViewerProps {
   tasks: Task[];
   folderPath: string;
   onUpdateImages: (images: ComponentImage[]) => void;
+  /** Instances de l'élément et catalogue, pour afficher le composant lié à côté de chaque pin. */
+  instances?: ComponentInstance[];
+  allComponents?: Component[];
+  onNavigate?: (componentId: string) => void;
 }
 
-export default function ImagePinViewer({ images, tasks, folderPath, onUpdateImages }: ImagePinViewerProps) {
+export default function ImagePinViewer({ images, tasks, folderPath, onUpdateImages, instances, allComponents, onNavigate }: ImagePinViewerProps) {
   const thumbnailSensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
   );
@@ -219,6 +223,12 @@ export default function ImagePinViewer({ images, tasks, folderPath, onUpdateImag
 
   const imgSrc = resolveImageSrc(currentImage);
 
+  const pinLinks: Record<string, { id: string; name: string }> = {};
+  for (const inst of instances || []) {
+    const linked = inst.pinRef && allComponents?.find(c => c.id === inst.componentId);
+    if (inst.pinRef && linked) pinLinks[inst.pinRef.pinId] = { id: linked.id, name: linked.name };
+  }
+
   // Compute crop container aspect-ratio from natural image dimensions
   const showCropView = currentCrop && !isCropping && naturalSize;
   const cropAspectRatio = (showCropView && naturalSize)
@@ -272,6 +282,8 @@ export default function ImagePinViewer({ images, tasks, folderPath, onUpdateImag
                 crop={currentCrop}
                 onPinPointerDown={handlePinPointerDown}
                 onPinClick={handlePinClick}
+                pinLinks={pinLinks}
+                onNavigate={onNavigate}
               />
             )}
             {isCropping && (

@@ -180,6 +180,9 @@ export default function ScopeItemDetail({
             tasks={item.tasks}
             folderPath={folderPath}
             onUpdateImages={(imgs) => onUpdate(item.id, { images: imgs })}
+            instances={item.instances}
+            allComponents={allComponents}
+            onNavigate={onNavigate}
           />
         );
       case 'notes': {

@@ -33,12 +33,14 @@ function makeComponent(overrides: Partial<Component> = {}): Component {
   };
 }
 
+const cta = makeComponent({ id: 'comp-cta', name: 'CTA', category: 'component' });
+
 describe('applyFigmaImport — pins', () => {
   it('crée une nouvelle image + pins pour un composant sans historique', async () => {
     const payload = basePayload({
-      pins: [{ figmaLayerId: 'layer-1', label: 'CTA', x: 10, y: 20 }],
+      pins: [{ figmaLayerId: 'layer-1', label: 'CTA', componentId: 'comp-cta', x: 10, y: 20 }],
     });
-    const result = await applyFigmaImport('/proj', payload);
+    const result = await applyFigmaImport('/proj', payload, undefined, [cta]);
 
     expect(result.componentUpdates.images).toHaveLength(1);
     const image = result.componentUpdates.images![0];
@@ -64,15 +66,15 @@ describe('applyFigmaImport — pins', () => {
     const existing = makeComponent({ images: [existingImage] });
 
     const payload = basePayload({
-      pins: [{ figmaLayerId: 'layer-1', label: 'CTA (renommé)', x: 15, y: 25 }],
+      pins: [{ figmaLayerId: 'layer-1', label: 'CTA (renommé)', componentId: 'comp-cta', x: 15, y: 25 }],
     });
 
-    const result = await applyFigmaImport('/proj', payload, existing);
+    const result = await applyFigmaImport('/proj', payload, existing, [cta]);
     const image = result.componentUpdates.images!.find((i) => i.id === 'img-1')!;
 
     // pin-a garde son id (préserve un pinRef éventuel), position/label mis à jour
     const updated = image.pins!.find((p) => p.id === 'pin-a');
-    expect(updated).toMatchObject({ label: 'CTA (renommé)', x: 15, y: 25 });
+    expect(updated).toMatchObject({ label: 'CTA', x: 15, y: 25 });
 
     // pin-b (orphelin) reste présent tant qu'on ne confirme pas sa suppression
     expect(image.pins!.some((p) => p.id === 'pin-b')).toBe(true);
@@ -83,9 +85,9 @@ describe('applyFigmaImport — pins', () => {
 describe('dropOrphanedPins', () => {
   it('retire uniquement les pins choisis, sur la bonne image', async () => {
     const payload = basePayload({
-      pins: [{ figmaLayerId: 'layer-1', label: 'CTA', x: 10, y: 20 }],
+      pins: [{ figmaLayerId: 'layer-1', label: 'CTA', componentId: 'comp-cta', x: 10, y: 20 }],
     });
-    const result = await applyFigmaImport('/proj', payload);
+    const result = await applyFigmaImport('/proj', payload, undefined, [cta]);
     const withOrphan = {
       ...result.componentUpdates,
       images: [
@@ -146,13 +148,18 @@ describe('applyFigmaImport — pins de composants → ComponentInstance', () => 
     expect(result.componentUpdates.instances).toEqual([expect.objectContaining({ componentId: 'comp-card' })]);
   });
 
-  it('garde un pin non relié quand le composant est absent de SCOPE (sans instance)', async () => {
+  it('ignore un composant absent de SCOPE : ni pin, ni numéro consommé', async () => {
     const payload = basePayload({
-      pins: [{ figmaLayerId: 'inst-1', label: 'Inconnu', groupNodeId: 'figma-unknown-set', x: 10, y: 20 }],
+      pins: [
+        { figmaLayerId: 'inst-0', label: 'Inconnu', groupNodeId: 'figma-unknown-set', x: 5, y: 5 },
+        { figmaLayerId: 'inst-1', label: 'Button', groupNodeId: 'figma-button-set', x: 10, y: 20 },
+      ],
     });
-    const result = await applyFigmaImport('/proj', payload, undefined, []);
-    expect(result.componentUpdates.instances).toEqual([]);
-    expect(result.componentUpdates.images![0].pins).toEqual([expect.objectContaining({ label: 'Inconnu' })]);
+    const result = await applyFigmaImport('/proj', payload, undefined, [button]);
+    expect(result.componentUpdates.instances).toHaveLength(1);
+    expect(result.componentUpdates.images![0].pins).toEqual([
+      expect.objectContaining({ figmaLayerId: 'inst-1', number: 1 }),
+    ]);
   });
 
   it("au re-sync : garde le pin existant, régénère les instances auto de cette image seulement", async () => {

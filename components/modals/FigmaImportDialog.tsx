@@ -117,7 +117,7 @@ export default function FigmaImportDialog({
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[500px] max-h-[85vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>Import depuis Figma</DialogTitle>
           <DialogDescription>
@@ -128,7 +128,7 @@ export default function FigmaImportDialog({
         </DialogHeader>
 
         {!reviewingOrphans ? (
-          <div className="space-y-4 py-2">
+          <div className="space-y-4 py-2 min-h-0 overflow-y-auto">
             <img
               src={`data:image/png;base64,${payload.image}`}
               alt=""
@@ -178,7 +178,7 @@ export default function FigmaImportDialog({
             {error && <p className="text-sm text-destructive">{error}</p>}
           </div>
         ) : (
-          <div className="space-y-3 py-2">
+          <div className="space-y-3 py-2 min-h-0 overflow-y-auto">
             <p className="text-sm text-muted-foreground">
               Coché = supprimer le pin correspondant dans SCOPE. Décoché = le garder (il restera orphelin, sans calque Figma associé).
             </p>
