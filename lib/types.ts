@@ -53,6 +53,37 @@ export interface ImagePin {
   specs?: Record<string, string>;
   /** Précision libre, exportée avec le pin. */
   note?: string;
+  /** Pin « Liste » : collection dont la liste affiche les entrées. */
+  collectionId?: string;
+  /** Autre pin : champ de collection d'où vient la donnée affichée. */
+  fieldRef?: { collectionId: string; fieldId: string };
+}
+
+/** Champ d'une collection (type de contenu), typé comme un pin. */
+export interface CollectionField {
+  id: string;
+  name: string;
+  /** Type du champ, voir lib/collections.ts. */
+  kind: string;
+  specs?: Record<string, string>;
+  /** Champ « Relation » : collection pointée. */
+  relationTo?: string;
+  /** Relation vers plusieurs entrées (sinon une seule). */
+  multiple?: boolean;
+  required?: boolean;
+  note?: string;
+}
+
+/** Type de contenu du site (custom post type WordPress, collection Webflow…) : sa structure, pas ses entrées. */
+export interface Collection {
+  id: string;
+  name: string;
+  /** Identifiant technique (slug), ex. « projet ». */
+  slug: string;
+  description?: string;
+  /** Chaque entrée a sa propre page de détail. */
+  hasDetailPage?: boolean;
+  fields: CollectionField[];
 }
 
 export interface CropRect {
@@ -131,6 +162,8 @@ export interface Project {
   estimatedDelay?: string;   // délai indicatif, texte libre (ex : "6 à 8 semaines")
   quoteValidityDays?: number; // durée de validité du devis, en jours (ex : 30)
   components: Component[];
+  /** Modèle de contenu du site. */
+  collections?: Collection[];
   createdAt: string;
   formatVersion?: number; // 2 = folder format
 }

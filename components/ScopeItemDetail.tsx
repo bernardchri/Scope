@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Component, FigmaLink, ScopeItemType, WidgetType, WidgetInstance } from '@/lib/types';
+import { Collection, Component, FigmaLink, ScopeItemType, WidgetType, WidgetInstance } from '@/lib/types';
 import { getCategoryLabel, getCategoryColor, getActiveWidgets, getAvailableWidgetTypes, WIDGET_LABELS, WIDGET_ICONS, widgetHasContent, isTextWidget } from '@/lib/categoryHelpers';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -66,6 +66,8 @@ interface ScopeItemDetailProps {
   onDelete: () => void;
   onDuplicate: () => void;
   onNavigate: (componentId: string) => void;
+  collections?: Collection[];
+  onCreateCollection?: (collection: Collection) => void;
 }
 
 export default function ScopeItemDetail({
@@ -77,6 +79,8 @@ export default function ScopeItemDetail({
   onDelete,
   onDuplicate,
   onNavigate,
+  collections,
+  onCreateCollection,
 }: ScopeItemDetailProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -185,6 +189,8 @@ export default function ScopeItemDetail({
             instances={item.instances}
             allComponents={allComponents}
             onNavigate={onNavigate}
+            collections={collections}
+            onCreateCollection={onCreateCollection}
           />
         );
       case 'notes': {

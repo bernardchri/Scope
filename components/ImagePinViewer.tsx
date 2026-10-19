@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Component, ComponentImage, ComponentInstance, ImagePin, Task, CropRect } from '@/lib/types';
+import { Collection, Component, ComponentImage, ComponentInstance, ImagePin, Task, CropRect } from '@/lib/types';
 import { usePinEditor } from '@/lib/hooks/usePinEditor';
 import { open } from '@tauri-apps/plugin-dialog';
 import { saveImageFromPath, deleteImage } from '@/lib/imageManager';
@@ -33,9 +33,12 @@ interface ImagePinViewerProps {
   instances?: ComponentInstance[];
   allComponents?: Component[];
   onNavigate?: (componentId: string) => void;
+  /** Modèle de contenu : permet de relier un pin « Liste » à une collection, ou un pin à un champ. */
+  collections?: Collection[];
+  onCreateCollection?: (collection: Collection) => void;
 }
 
-export default function ImagePinViewer({ images, tasks, folderPath, onUpdateImages, instances, allComponents, onNavigate }: ImagePinViewerProps) {
+export default function ImagePinViewer({ images, tasks, folderPath, onUpdateImages, instances, allComponents, onNavigate, collections, onCreateCollection }: ImagePinViewerProps) {
   const thumbnailSensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
   );
@@ -382,6 +385,8 @@ export default function ImagePinViewer({ images, tasks, folderPath, onUpdateImag
         <PinSpecEditor
           pin={currentPins.find(p => p.id === selectedPinId)!}
           onChange={(pin) => updatePins(currentPins.map(p => (p.id === pin.id ? pin : p)), true)}
+          collections={collections}
+          onCreateCollection={onCreateCollection}
         />
       )}
 

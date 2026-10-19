@@ -1,4 +1,5 @@
-import { ImagePin } from './types';
+import { Collection, ImagePin } from './types';
+import { describePinContent } from './collectionLookup';
 
 export type PinFieldType = 'text' | 'number' | 'select';
 
@@ -112,11 +113,11 @@ export function describePinSpecs(pin: Pick<ImagePin, 'kind' | 'specs'>): string[
   return out;
 }
 
-/** Libellé court d'un pin pour les exports : « Titre — max 128 caractères, SEO : H2 ». */
-export function describePin(pin: Pick<ImagePin, 'kind' | 'specs' | 'note'>): string {
+/** Libellé court d'un pin pour les exports : « Titre — max 128 caractères, SEO : H2 — champ « titre » de la collection « Projets » ». */
+export function describePin(pin: Pick<ImagePin, 'kind' | 'specs' | 'note' | 'collectionId' | 'fieldRef'>, collections?: Collection[]): string {
   const kind = getPinKind(pin.kind);
   const specs = describePinSpecs(pin);
   const parts = [kind ? kind.label : '', specs.join(', ')].filter(Boolean);
   const head = parts.join(' — ');
-  return [head, pin.note?.trim()].filter(Boolean).join(' — ');
+  return [head, describePinContent(pin, collections), pin.note?.trim()].filter(Boolean).join(' — ');
 }

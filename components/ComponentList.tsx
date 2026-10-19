@@ -5,6 +5,8 @@ import { listen } from '@tauri-apps/api/event';
 import { useProjectStore, undo, redo } from '@/lib/projectStore';
 import { Component, ScopeItemType } from '@/lib/types';
 import { FigmaImportPayload, applyFigmaImport, buildComponentFromFigmaUpdates, diffFigmaFields } from '@/lib/figmaImport';
+import CollectionsPage from './CollectionsPage';
+import { Collection } from '@/lib/types';
 import FigmaSyncRecapDialog, { SyncRecapEntry } from './modals/FigmaSyncRecapDialog';
 import { withDefaultEstimate } from '@/lib/persistence';
 import { publishFigmaComponentCatalog } from '@/lib/figmaBridge';
@@ -37,6 +39,7 @@ export default function ComponentList({ projectId }: ComponentListProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [figmaImportPayload, setFigmaImportPayload] = useState<FigmaImportPayload | null>(null);
+  const [collectionsOpen, setCollectionsOpen] = useState(false);
   const [syncRecap, setSyncRecap] = useState<SyncRecapEntry[]>([]);
   const bulkQueueRef = useRef(Promise.resolve());
   const detailScrollRef = useRef<HTMLDivElement>(null);
@@ -121,7 +124,14 @@ export default function ComponentList({ projectId }: ComponentListProps) {
   const selectedComponentId = navHistory.length > 0 ? navHistory[navHistory.length - 1] : null;
   const canGoBack = navHistory.length > 1;
 
+  // Ajout depuis un pin : lit le store au moment de l'appel (plusieurs créations de suite).
+  function handleCreateCollection(collection: Collection) {
+    const project = useProjectStore.getState().projects.find(p => p.id === projectId);
+    updateProject(projectId, { collections: [...(project?.collections || []), collection] });
+  }
+
   function selectFromSidebar(id: string | null) {
+    setCollectionsOpen(false);
     setNavHistory(id ? [id] : []);
   }
 
@@ -226,10 +236,13 @@ export default function ComponentList({ projectId }: ComponentListProps) {
             <ComponentSidebar
               components={activeProject.components}
               selectedComponentId={selectedComponentId}
-              showingDashboard={showingDashboard}
+              showingDashboard={showingDashboard && !collectionsOpen}
               onSelectComponent={selectFromSidebar}
               onReorderComponents={(ids, categoryChange) => reorderComponents(activeProject.id, ids, categoryChange)}
-              onGoHome={() => setNavHistory([])}
+              onGoHome={() => { setCollectionsOpen(false); setNavHistory([]); }}
+              onOpenCollections={() => { setCollectionsOpen(true); setNavHistory([]); }}
+              collectionsActive={collectionsOpen && !selectedComponentId}
+              collectionCount={activeProject.collections?.length}
               onToggleSidebar={() => setSidebarOpen(false)}
               onNewElement={() => setIsModalOpen(true)}
             />
@@ -257,8 +270,18 @@ export default function ComponentList({ projectId }: ComponentListProps) {
                 onDelete={() => handleDeleteComponent(selectedItem.id)}
                 onDuplicate={() => handleDuplicateComponent(selectedItem.id)}
                 onNavigate={navigateTo}
+                collections={activeProject.collections}
+                onCreateCollection={handleCreateCollection}
               />
           </div>
+        ) : collectionsOpen ? (
+          <CollectionsPage
+            collections={activeProject.collections || []}
+            components={activeProject.components}
+            onChange={(collections) => updateProject(activeProject.id, { collections })}
+            onSelectComponent={(id) => { setCollectionsOpen(false); setNavHistory([id]); }}
+            className="flex-1"
+          />
         ) : (
           <ProjectDashboard
             project={activeProject}

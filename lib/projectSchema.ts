@@ -44,6 +44,28 @@ const imagePinSchema = z.object({
   kind: z.string().optional(),
   specs: z.record(z.string(), z.string()).optional(),
   note: z.string().optional(),
+  collectionId: z.string().optional(),
+  fieldRef: z.object({ collectionId: z.string(), fieldId: z.string() }).optional().catch(undefined),
+});
+
+const collectionFieldSchema = z.object({
+  id: z.string(),
+  name: z.string().catch(''),
+  kind: z.string().catch('text'),
+  specs: z.record(z.string(), z.string()).optional(),
+  relationTo: z.string().optional(),
+  multiple: z.boolean().optional(),
+  required: z.boolean().optional(),
+  note: z.string().optional(),
+});
+
+const collectionSchema = z.object({
+  id: z.string(),
+  name: z.string().catch(''),
+  slug: z.string().catch(''),
+  description: z.string().optional(),
+  hasDetailPage: z.boolean().optional(),
+  fields: resilientArray(collectionFieldSchema),
 });
 
 const cropRectSchema = z
@@ -143,6 +165,7 @@ const projectSchema = z.object({
   estimatedDelay: z.string().optional(),
   quoteValidityDays: z.number().optional(),
   components: resilientArray(componentSchema),
+  collections: resilientArray(collectionSchema).optional(),
   createdAt: z.string().catch(() => new Date().toISOString()),
   formatVersion: z.number().optional(),
 });

@@ -8,7 +8,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
-import { ChevronRight, GripVertical, Home, Plus } from 'lucide-react';
+import { ChevronRight, GripVertical, Database, Home, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   CollisionDetection,
@@ -147,6 +147,9 @@ const collisionDetection: CollisionDetection = (args) => {
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
 
 interface ComponentSidebarProps {
+  onOpenCollections?: () => void;
+  collectionsActive?: boolean;
+  collectionCount?: number;
   components: Component[];
   selectedComponentId: string | null;
   showingDashboard: boolean;
@@ -158,6 +161,9 @@ interface ComponentSidebarProps {
 }
 
 export default function ComponentSidebar({
+  onOpenCollections,
+  collectionsActive,
+  collectionCount,
   components,
   selectedComponentId,
   showingDashboard,
@@ -229,6 +235,21 @@ export default function ComponentSidebar({
           Accueil
         </Button>
       </div>
+
+      {onOpenCollections && (
+        <div className="px-2 pt-2">
+          <Button
+            variant={collectionsActive ? 'secondary' : 'ghost'}
+            size="sm"
+            className="w-full justify-start gap-2"
+            onClick={onOpenCollections}
+          >
+            <Database className="h-4 w-4" />
+            Collections
+            {!!collectionCount && <span className="ml-auto text-xs text-muted-foreground">{collectionCount}</span>}
+          </Button>
+        </div>
+      )}
 
       <div className="p-2 border-b">
         <Button

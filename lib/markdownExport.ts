@@ -6,6 +6,8 @@ import { TASK_CATEGORY_ORDER, TASK_CATEGORY_PLAIN_LABELS } from './taskCategoryH
 import { slugify } from './persistence';
 import { renderImageWithPins } from './imageHelpers';
 import { describePin } from './pinKinds';
+import { generateContentModelMd } from './collections';
+import { Collection } from './types';
 import { getImageBase64 } from './imageManager';
 import { getAppSettings } from './persistence';
 
@@ -39,6 +41,7 @@ const READING_GUIDE = [
   '- Les images portent des pins numérotés ; la liste « Éléments repérés (pins) » donne pour chaque numéro son type, ses contraintes (longueur max, contenu éditable ou non, balise SEO…), le composant lié et les précisions.',
   '- Une version sans pins est fournie à côté de chaque image annotée : à utiliser pour reproduire la maquette fidèlement.',
   '- « Composants utilisés » liste les composants à réutiliser plutôt qu\'à recréer ; « Éléments SVG » liste les ressources prêtes à l\'emploi.',
+  '- « Modèle de contenu » décrit les collections (custom post types) et leurs champs ; un pin peut renvoyer à une collection (liste) ou à un champ (donnée affichée).',
   '- « Source Figma » identifie le fichier et le node d\'origine.',
 ].join('\n');
 
@@ -70,7 +73,7 @@ function componentRef(comp: Component, links: LinkMap): string {
   return href ? `[${comp.name}](${href})` : `**${comp.name}**`;
 }
 
-function generateComponentBlock(component: Component, imageMap: ImageMap, allComponents: Component[] = [], exportComments = false, assetMap: AssetMap = new Map(), links: LinkMap = new Map()): string {
+function generateComponentBlock(component: Component, imageMap: ImageMap, allComponents: Component[] = [], exportComments = false, assetMap: AssetMap = new Map(), links: LinkMap = new Map(), collections: Collection[] = []): string {
   const parts: string[] = [];
   parts.push(`# ${component.name}`);
 
@@ -145,7 +148,7 @@ function generateComponentBlock(component: Component, imageMap: ImageMap, allCom
         pin.label && !linkedComponent ? `« ${pin.label} »` : '',
         linkedComponent ? `composant : ${componentRef(linkedComponent, links)}` : '',
         linkedTask ? `tâche : ${linkedTask.name}` : '',
-        describePin(pin),
+        describePin(pin, collections),
       ].filter(Boolean);
       pinsLegendLines.push(`- Pin #${pin.number}${details.length ? ` — ${details.join(' — ')}` : ''}`);
     });
@@ -239,6 +242,8 @@ export function generateStoriesMd(project: Project, imageMap: ImageMap = new Map
   headerParts.push('---');
   sections.push(headerParts.join('\n\n'));
   sections.push(READING_GUIDE + '\n\n---');
+  const contentModel = generateContentModelMd(project.collections);
+  if (contentModel) sections.push(contentModel + '\n---');
 
   // Grouped by type in display order
   for (const category of CATEGORY_ORDER) {
@@ -251,7 +256,7 @@ export function generateStoriesMd(project: Project, imageMap: ImageMap = new Map
       if (hasNotes) {
         sections.push(generateDocumentBlock(comp, imageMap, exportComments, assetMap));
       } else {
-        sections.push(generateComponentBlock(comp, imageMap, project.components, exportComments, assetMap));
+        sections.push(generateComponentBlock(comp, imageMap, project.components, exportComments, assetMap, new Map(), project.collections));
       }
     }
   }
@@ -400,6 +405,8 @@ async function exportProjectMarkdownMulti(project: Project, folderPath?: string,
   indexLines.push('');
   indexLines.push(READING_GUIDE);
   indexLines.push('');
+  const contentModel = generateContentModelMd(project.collections);
+  if (contentModel) indexLines.push(contentModel, '---', '');
 
   // Noms de fichiers calculés d'avance : les fiches se renvoient les unes aux autres.
   const fileNames = new Map<string, string>();
@@ -426,7 +433,7 @@ async function exportProjectMarkdownMulti(project: Project, folderPath?: string,
       const hasNotes = widgets.some(w => w.type === 'notes') && comp.notes?.some(n => n.content);
       const block = hasNotes
         ? generateDocumentBlock(comp, imageMap, exportComments, assetMap)
-        : generateComponentBlock(comp, imageMap, project.components, exportComments, assetMap, links);
+        : generateComponentBlock(comp, imageMap, project.components, exportComments, assetMap, links, project.collections);
 
       await invoke('write_text_file', { path: `${destDir}/${filename}`, content: block });
 
