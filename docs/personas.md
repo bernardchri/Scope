@@ -66,3 +66,20 @@ Audit du 2026-10-19, par lecture du code (plugin, import, export Markdown, PDF).
 Traités le 2026-10-19 : 1 (section « Composants utilisés » dans le Markdown, liens entre fiches en multi-fichiers), 2 (légende des pins avec nom, type, spécifications, composant, tâche), 4 (slugs uniques), 5 (image sans pins exportée à côté de l'image annotée), 6 (ligne « Source Figma »). Ajouts : types de pin avec spécifications (`lib/pinKinds.ts`), pins ajoutés dans SCOPE conservés au re-sync, consignes de lecture en tête de l'export.
 
 Points déjà corrects : le PDF affiche le nom du composant lié à côté de chaque pin ; les blocs dont les données existent sont forcés à l'affichage ; type, nom et description SCOPE sont protégés contre les imports.
+
+## Repasse du 2026-10-19 (après collections, types de pin, synchro)
+
+Audit par lecture du code et d'un export Markdown généré sur un projet d'essai (liste, répéteur, relation cassée, pin vide). Classés par impact.
+
+| # | Constat | Personas touchés | Impact |
+|---|---|---|---|
+| R1 | Rien ne signale les pins à qualifier : un pin sans type ni précision sort « Pin #5 » dans l'export, sans « à préciser ». Aucune vue d'ensemble (combien de pins qualifiés ?). | Chef de projet, IA Claude | Élevé |
+| R2 | Incohérences silencieuses dans le modèle de contenu : relation sans collection cible (« collection non choisie » exporté tel quel), pin Liste dont la collection a été supprimée (le lien disparaît, l'export dit juste « Liste »), champ sans nom, collection jamais utilisée. | Chef de projet, développeur, IA Claude | Élevé |
+| R3 | PDF client : « Éléments repérés » expose le jargon (max 128 caractères, SEO : H2, éditable en backoffice, champ de collection) et la page « Modèle de contenu » montre les identifiants techniques. S'ajoute au constat 11 (catégories de tâches techniques). | Client | Élevé |
+| R4 | Markdown : « collection « Projets » » dans un pin n'est pas un lien vers le modèle de contenu ; en multi-fichiers, les fiches ne renvoient pas à `index.md`. Les relations ne sont visibles que dans un sens (pas de « référencée par »). | Développeur, IA Claude | Moyen |
+| R5 | Changer le type d'un pin efface ses spécifications et ses liens (collection, champ) sans confirmation. | Chef de projet | Moyen |
+| R6 | L'éditeur de pin est absent du zoom plein écran (ZoomModal) : il faut fermer le zoom pour qualifier un pin. | Chef de projet | Moyen |
+| R7 | Toujours ouverts : token régénéré à chaque lancement et erreurs 404/401 sans consigne (8), pas de récapitulatif d'un envoi groupé hors différences de champs (3), pins orphelins jamais revus en envoi groupé (7). | Créatif, chef de projet | Moyen |
+| R8 | Les collections n'apparaissent ni dans les statistiques du tableau de bord ni dans la vue d'ensemble. | Chef de projet | Faible |
+
+Points validés : liaison pin → collection / champ / composant de ligne de répéteur exportée en Markdown et en PDF ; client, version et heures dans l'en-tête Markdown ; synchro champ par champ à l'envoi.
