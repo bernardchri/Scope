@@ -40,6 +40,7 @@ export default function ComponentList({ projectId }: ComponentListProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [figmaImportPayload, setFigmaImportPayload] = useState<FigmaImportPayload | null>(null);
   const [collectionsOpen, setCollectionsOpen] = useState(false);
+  const [focusedCollectionId, setFocusedCollectionId] = useState<string | null>(null);
   const [syncRecap, setSyncRecap] = useState<SyncRecapEntry[]>([]);
   const bulkQueueRef = useRef(Promise.resolve());
   const detailScrollRef = useRef<HTMLDivElement>(null);
@@ -240,7 +241,7 @@ export default function ComponentList({ projectId }: ComponentListProps) {
               onSelectComponent={selectFromSidebar}
               onReorderComponents={(ids, categoryChange) => reorderComponents(activeProject.id, ids, categoryChange)}
               onGoHome={() => { setCollectionsOpen(false); setNavHistory([]); }}
-              onOpenCollections={() => { setCollectionsOpen(true); setNavHistory([]); }}
+              onOpenCollections={() => { setFocusedCollectionId(null); setCollectionsOpen(true); setNavHistory([]); }}
               collectionsActive={collectionsOpen && !selectedComponentId}
               collectionCount={activeProject.collections?.length}
               onToggleSidebar={() => setSidebarOpen(false)}
@@ -276,6 +277,8 @@ export default function ComponentList({ projectId }: ComponentListProps) {
           </div>
         ) : collectionsOpen ? (
           <CollectionsPage
+            key={focusedCollectionId ?? 'all'}
+            initialSelectedId={focusedCollectionId}
             collections={activeProject.collections || []}
             components={activeProject.components}
             onChange={(collections) => updateProject(activeProject.id, { collections })}
@@ -287,6 +290,7 @@ export default function ComponentList({ projectId }: ComponentListProps) {
             project={activeProject}
             folderPath={currentProjectPath || ''}
             onSelectComponent={(id) => setNavHistory([id])}
+            onOpenCollection={(id) => { setFocusedCollectionId(id); setCollectionsOpen(true); }}
             onUpdateProject={(updates) => updateProject(activeProject.id, updates)}
             className="flex-1 min-h-0"
           />

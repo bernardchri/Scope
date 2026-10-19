@@ -146,11 +146,12 @@ export function describePin(
   collections?: Collection[],
   /** Composant relié au pin : une ligne de répéteur peut renvoyer à sa fiche. */
   linkedName?: string,
+  collectionLink?: (c: Collection) => string,
 ): string {
   const kind = getPinKind(pin.kind);
   const specs = describePinSpecs(pin);
   if (pin.specs?.rowSource && linkedName) specs.push(`chaque ligne : composant « ${linkedName} » (voir sa fiche)`);
   const parts = [kind ? kind.label : '', specs.join(', ')].filter(Boolean);
   const head = parts.join(' — ');
-  return [head, describePinContent(pin, collections), pin.note?.trim()].filter(Boolean).join(' — ');
+  return [head, describePinContent(pin, collections, collectionLink), pin.note?.trim()].filter(Boolean).join(' — ');
 }

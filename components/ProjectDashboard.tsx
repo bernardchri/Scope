@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { ChevronRight, Clock, CheckSquare, FileText, FileCode, Euro, TriangleAlert, Pencil } from 'lucide-react';
 import ProjectInfoDialog from './ProjectInfoDialog';
 import ProjectResources from './ProjectResources';
+import ProjectCompleteness from './ProjectCompleteness';
 import { exportProjectPDF } from '@/lib/pdfExport';
 import { exportProjectQuote } from '@/lib/quoteExport';
 import { exportProjectMarkdown } from '@/lib/markdownExport';
@@ -18,6 +19,7 @@ interface ProjectDashboardProps {
   project: Project;
   folderPath: string;
   onSelectComponent: (id: string) => void;
+  onOpenCollection: (id: string) => void;
   onUpdateProject: (updates: Partial<Project>) => void;
   className?: string;
 }
@@ -26,6 +28,7 @@ export default function ProjectDashboard({
   project,
   folderPath,
   onSelectComponent,
+  onOpenCollection,
   onUpdateProject,
   className,
 }: ProjectDashboardProps) {
@@ -238,6 +241,8 @@ export default function ProjectDashboard({
           </>
         )}
       </section>
+
+      <ProjectCompleteness project={project} onSelectComponent={onSelectComponent} onOpenCollection={onOpenCollection} />
 
       <ProjectResources
         components={project.components}

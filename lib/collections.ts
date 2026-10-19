@@ -1,8 +1,8 @@
 import { Collection, CollectionField, Component } from './types';
 import { PIN_KINDS, PinKind, describePinSpecs } from './pinKinds';
-import { findCollection, flattenFields } from './collectionLookup';
+import { collectionAnchor, collectionLink, findCollection, flattenFields } from './collectionLookup';
 
-export { findCollection, findField, flattenFields, describePinContent } from './collectionLookup';
+export { findCollection, findField, flattenFields, describePinContent, collectionAnchor, collectionLink } from './collectionLookup';
 
 const pinKind = (id: string) => PIN_KINDS.find((k) => k.id === id)!;
 
@@ -35,12 +35,12 @@ export function createField(): CollectionField {
 }
 
 /** Champ lisible : « Titre, max 128 caractères, SEO : H2, obligatoire » / « Relation → Catégories (plusieurs) ». */
-export function describeField(field: CollectionField, collections: Collection[] = []): string {
+export function describeField(field: CollectionField, collections: Collection[] = [], link?: (c: Collection) => string): string {
   const kind = getFieldKind(field.kind);
   const parts: string[] = [kind?.label ?? field.kind];
   if (field.kind === 'relation') {
     const target = findCollection(collections, field.relationTo);
-    parts[0] = `Relation → ${target ? target.name : '(collection non choisie)'}${field.multiple ? ' (plusieurs)' : ' (une seule)'}`;
+    parts[0] = `Relation → ${target ? (link ? link(target) : target.name) : '(collection non choisie, à relier)'}${field.multiple ? ' (plusieurs)' : ' (une seule)'}`;
   } else if (kind) {
     const specs = field.specs
       ? kind.fields.flatMap((f) => {
@@ -67,7 +67,13 @@ export function collectionUsage(collection: Collection, components: Component[])
 }
 
 /** Section Markdown « Modèle de contenu » (vide s'il n'y a aucune collection). */
-export function generateContentModelMd(collections: Collection[] = [], heading = '##', components: Component[] = []): string {
+export function generateContentModelMd(
+  collections: Collection[] = [],
+  heading = '##',
+  components: Component[] = [],
+  /** Fiche d'un composant (multi-fichiers) : permet de lier « Utilisée dans ». */
+  componentHref: (c: Component) => string | undefined = () => undefined,
+): string {
   if (collections.length === 0) return '';
   const lines: string[] = [
     `${heading} Modèle de contenu`,
@@ -76,16 +82,22 @@ export function generateContentModelMd(collections: Collection[] = [], heading =
     '',
   ];
   for (const c of collections) {
-    lines.push(`${heading}# Collection « ${c.name} » (\`${c.slug}\`)`, '');
+    lines.push(`<a id="${collectionAnchor(c)}"></a>`, '', `${heading}# Collection « ${c.name} » (\`${c.slug}\`)`, '');
     if (c.description?.trim()) lines.push(c.description.trim(), '');
     if (c.hasDetailPage) lines.push('Chaque entrée a sa propre page de détail.', '');
     if (c.fields.length === 0) lines.push('_Aucun champ défini._', '');
     else {
-      for (const { field: f, depth } of flattenFields(c.fields)) lines.push(`${'  '.repeat(depth)}- \`${f.name || 'sans nom'}\` — ${describeField(f, collections)}`);
+      for (const { field: f, depth } of flattenFields(c.fields)) lines.push(`${'  '.repeat(depth)}- \`${f.name || 'sans nom'}\` — ${describeField(f, collections, (t) => collectionLink(t))}`);
       lines.push('');
     }
     const used = collectionUsage(c, components);
-    if (used.length) lines.push(`Utilisée dans : ${used.map((u) => u.name).join(', ')}.`, '');
+    if (used.length) {
+      lines.push(`Utilisée dans : ${used.map((u) => { const href = componentHref(u); return href ? `[${u.name}](${href})` : u.name; }).join(', ')}.`, '');
+    }
+    const referencedBy = collections
+      .filter((o) => o.id !== c.id)
+      .flatMap((o) => flattenFields(o.fields).filter((f) => f.field.relationTo === c.id).map((f) => `${collectionLink(o)} › ${f.path}`));
+    if (referencedBy.length) lines.push(`Référencée par : ${referencedBy.join(', ')}.`, '');
   }
   return lines.join('\n');
 }

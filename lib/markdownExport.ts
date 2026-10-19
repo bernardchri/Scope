@@ -6,7 +6,8 @@ import { TASK_CATEGORY_ORDER, TASK_CATEGORY_PLAIN_LABELS } from './taskCategoryH
 import { slugify } from './persistence';
 import { renderImageWithPins } from './imageHelpers';
 import { describePin } from './pinKinds';
-import { generateContentModelMd } from './collections';
+import { generateContentModelMd, collectionLink } from './collections';
+import { isPinQualified } from './completeness';
 import { Collection } from './types';
 import { getImageBase64 } from './imageManager';
 import { getAppSettings } from './persistence';
@@ -73,7 +74,7 @@ function componentRef(comp: Component, links: LinkMap): string {
   return href ? `[${comp.name}](${href})` : `**${comp.name}**`;
 }
 
-function generateComponentBlock(component: Component, imageMap: ImageMap, allComponents: Component[] = [], exportComments = false, assetMap: AssetMap = new Map(), links: LinkMap = new Map(), collections: Collection[] = []): string {
+function generateComponentBlock(component: Component, imageMap: ImageMap, allComponents: Component[] = [], exportComments = false, assetMap: AssetMap = new Map(), links: LinkMap = new Map(), collections: Collection[] = [], collectionBase = ''): string {
   const parts: string[] = [];
   parts.push(`# ${component.name}`);
 
@@ -148,7 +149,8 @@ function generateComponentBlock(component: Component, imageMap: ImageMap, allCom
         pin.label && !linkedComponent ? `« ${pin.label} »` : '',
         linkedComponent ? `composant : ${componentRef(linkedComponent, links)}` : '',
         linkedTask ? `tâche : ${linkedTask.name}` : '',
-        describePin(pin, collections, linkedComponent?.name),
+        describePin(pin, collections, linkedComponent?.name, (c) => collectionLink(c, collectionBase)),
+        isPinQualified(pin, component) ? '' : 'à préciser (type, contraintes)',
       ].filter(Boolean);
       pinsLegendLines.push(`- Pin #${pin.number}${details.length ? ` — ${details.join(' — ')}` : ''}`);
     });
@@ -419,8 +421,6 @@ async function exportProjectMarkdownMulti(project: Project, folderPath?: string,
   indexLines.push('');
   indexLines.push(READING_GUIDE);
   indexLines.push('');
-  const contentModel = generateContentModelMd(project.collections, '##', project.components);
-  if (contentModel) indexLines.push(contentModel, '---', '');
 
   // Noms de fichiers calculés d'avance : les fiches se renvoient les unes aux autres.
   const fileNames = new Map<string, string>();
@@ -431,6 +431,9 @@ async function exportProjectMarkdownMulti(project: Project, folderPath?: string,
     }
   }
   const links: LinkMap = new Map([...fileNames].map(([id, name]) => [id, `./${name}`]));
+
+  const contentModel = generateContentModelMd(project.collections, '##', project.components, (c) => links.get(c.id));
+  if (contentModel) indexLines.push(contentModel, '---', '');
 
 
   for (const category of CATEGORY_ORDER) {
@@ -447,7 +450,7 @@ async function exportProjectMarkdownMulti(project: Project, folderPath?: string,
       const hasNotes = widgets.some(w => w.type === 'notes') && comp.notes?.some(n => n.content);
       const block = hasNotes
         ? generateDocumentBlock(comp, imageMap, exportComments, assetMap)
-        : generateComponentBlock(comp, imageMap, project.components, exportComments, assetMap, links, project.collections);
+        : generateComponentBlock(comp, imageMap, project.components, exportComments, assetMap, links, project.collections, './index.md');
 
       await invoke('write_text_file', { path: `${destDir}/${filename}`, content: block });
 

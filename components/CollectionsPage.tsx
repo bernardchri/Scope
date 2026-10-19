@@ -15,12 +15,14 @@ interface CollectionsPageProps {
   components: Component[];
   onChange: (collections: Collection[]) => void;
   onSelectComponent: (id: string) => void;
+  /** Collection à ouvrir à l'arrivée (depuis « À compléter »). */
+  initialSelectedId?: string | null;
   className?: string;
 }
 
 /** Modèle de contenu du site : collections (custom post types) et leurs champs. */
-export default function CollectionsPage({ collections, components, onChange, onSelectComponent, className }: CollectionsPageProps) {
-  const [selectedId, setSelectedId] = useState<string | null>(collections[0]?.id ?? null);
+export default function CollectionsPage({ collections, components, onChange, onSelectComponent, initialSelectedId, className }: CollectionsPageProps) {
+  const [selectedId, setSelectedId] = useState<string | null>(initialSelectedId ?? collections[0]?.id ?? null);
   const [newName, setNewName] = useState('');
   const selected = collections.find((c) => c.id === selectedId) ?? null;
 

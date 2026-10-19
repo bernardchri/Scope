@@ -3,7 +3,7 @@ import { describe, it, expect, vi } from 'vitest';
 vi.mock('@tauri-apps/api/core', () => ({ invoke: vi.fn() }));
 vi.mock('@tauri-apps/plugin-dialog', () => ({ save: vi.fn(), open: vi.fn() }));
 
-import { createCollection, describeField, generateContentModelMd } from '@/lib/collections';
+import { collectionLink, createCollection, describeField, generateContentModelMd } from '@/lib/collections';
 import { describePin } from '@/lib/pinKinds';
 import { Collection, Component } from '@/lib/types';
 
@@ -58,7 +58,7 @@ describe('collections', () => {
     expect(describePin({ kind: 'list', collectionId: 'p' }, all)).toBe('Liste — entrées de la collection « Projets »');
     expect(describePin({ kind: 'title', fieldRef: { collectionId: 'p', fieldId: 'f1' } }, all))
       .toBe('Titre — champ « titre » de la collection « Projets »');
-    expect(describePin({ kind: 'list', collectionId: 'absente' }, all)).toBe('Liste');
+    expect(describePin({ kind: 'list', collectionId: 'absente' }, all)).toBe('Liste — collection supprimée (à relier)');
   });
 
   it('indique où la collection est utilisée', () => {
@@ -84,5 +84,32 @@ describe('projectMetaLine', () => {
     } as never;
     expect(projectMetaLine(project)).toBe('Client : ACME (a@acme.fr) · Version : v1.0 · Estimation totale : 7.5h');
     expect(projectMetaLine({ components: [] } as never)).toBe('');
+  });
+});
+
+describe('liens croisés et complétude', () => {
+  it('lie les collections dans le modèle de contenu', () => {
+    const rel: Collection = { id: 'q', name: 'Pages', slug: 'page', fields: [{ id: 'r', name: 'projets', kind: 'relation', relationTo: 'p' }] };
+    const md = generateContentModelMd([projets, rel]);
+    expect(md).toContain('<a id="collection-projet"></a>');
+    expect(md).toContain('- `projets` — Relation → [Projets](#collection-projet) (une seule)');
+    expect(md).toContain('Référencée par : [Pages](#collection-page) › projets.');
+    expect(describePin({ kind: 'list', collectionId: 'p' }, [projets], undefined, (c) => collectionLink(c, './index.md')))
+      .toBe('Liste — entrées de la collection [Projets](./index.md#collection-projet)');
+  });
+
+  it('repère les pins à préciser et le modèle cassé', async () => {
+    const { findCompletenessIssues } = await import('@/lib/completeness');
+    const comp = {
+      id: 'x', name: 'Home', tasks: [], instances: [],
+      images: [{ id: 'i', isPrimary: true, pins: [
+        { id: 'a', number: 1, x: 0, y: 0 },
+        { id: 'b', number: 2, x: 0, y: 0, kind: 'list' },
+        { id: 'c', number: 3, x: 0, y: 0, kind: 'title', collectionId: 'absente' },
+      ] }],
+    } as unknown as Component;
+    const broken: Collection = { id: 'z', name: 'Cassée', slug: 'cassee', fields: [{ id: 'f', name: 'rel', kind: 'relation' }] };
+    const ids = findCompletenessIssues({ components: [comp], collections: [broken] }).map((i) => i.id);
+    expect(ids).toEqual(expect.arrayContaining(['pins-x', 'pin-nocoll-b', 'pin-dangling-c', 'field-reltarget-f', 'coll-unused-z']));
   });
 });

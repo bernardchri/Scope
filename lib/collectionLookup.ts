@@ -21,12 +21,30 @@ export function findField(collections: Collection[] | undefined, ref?: { collect
   return collection && found ? { collection, field: found.field, path: found.path } : undefined;
 }
 
-/** Lien d'un pin avec le modèle de contenu : « collection « Projets » » / « champ « titre » de la collection « Projets » ». */
-export function describePinContent(pin: Pick<ImagePin, 'collectionId' | 'fieldRef'>, collections?: Collection[]): string {
-  const list = findCollection(collections, pin.collectionId);
-  if (list) return `entrées de la collection « ${list.name} »`;
-  const ref = findField(collections, pin.fieldRef);
-  if (ref) return `champ « ${ref.path} » de la collection « ${ref.collection.name} »`;
+/** Ancre HTML d'une collection dans l'export Markdown. */
+export const collectionAnchor = (c: Pick<Collection, 'slug'>) => `collection-${c.slug}`;
+
+/** Lien Markdown vers une collection (`base` = fichier qui contient le modèle de contenu, vide si c'est le même). */
+export const collectionLink = (c: Collection, base = '') => `[${c.name}](${base}#${collectionAnchor(c)})`;
+
+/**
+ * Lien d'un pin avec le modèle de contenu : « collection « Projets » » / « champ « titre » de la collection « Projets » ».
+ * `link` transforme le nom d'une collection en lien (export Markdown) ; une référence orpheline est signalée.
+ */
+export function describePinContent(
+  pin: Pick<ImagePin, 'collectionId' | 'fieldRef'>,
+  collections?: Collection[],
+  link?: (c: Collection) => string,
+): string {
+  const name = (c: Collection) => (link ? link(c) : `« ${c.name} »`);
+  if (pin.collectionId) {
+    const list = findCollection(collections, pin.collectionId);
+    return list ? `entrées de la collection ${name(list)}` : 'collection supprimée (à relier)';
+  }
+  if (pin.fieldRef) {
+    const ref = findField(collections, pin.fieldRef);
+    return ref ? `champ « ${ref.path} » de la collection ${name(ref.collection)}` : 'champ supprimé (à relier)';
+  }
   return '';
 }
 
