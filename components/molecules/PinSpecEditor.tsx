@@ -54,9 +54,9 @@ export default function PinSpecEditor({ pin, onChange, collections = [], onCreat
 
       {kind && <SpecFields kind={kind} specs={pin.specs} onSetSpec={setSpec} scope={pin.id} />}
 
-      {pin.kind === 'list' && (
+      {(pin.kind === 'list' || pin.kind === 'relation') && (
         <label className="space-y-1 text-xs text-muted-foreground block">
-          Collection affichée
+          {pin.kind === 'list' ? 'Collection affichée' : 'Collection liée'}
           <CollectionPicker
             collections={collections}
             value={pin.collectionId}
@@ -66,7 +66,7 @@ export default function PinSpecEditor({ pin, onChange, collections = [], onCreat
         </label>
       )}
 
-      {pin.kind && pin.kind !== 'list' && fieldOptions.length > 0 && (
+      {pin.kind && pin.kind !== 'list' && pin.kind !== 'relation' && fieldOptions.length > 0 && (
         <label className="space-y-1 text-xs text-muted-foreground block">
           Champ de collection
           <select
