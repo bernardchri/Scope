@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { Component, ScopeItemType } from '@/lib/types';
 import { getCategoryLabel, SCOPE_ITEM_TYPES } from '@/lib/categoryHelpers';
 import {
@@ -10,20 +11,23 @@ import {
 import { ChevronRight, GripVertical, Home, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
+  CollisionDetection,
   DndContext,
   DragEndEvent,
   PointerSensor,
   closestCenter,
+  pointerWithin,
+  useDroppable,
   useSensor,
   useSensors,
 } from '@dnd-kit/core';
 import {
   SortableContext,
-  arrayMove,
   useSortable,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { cn } from '@/lib/utils';
 
 // Display order for the sidebar
 const SIDEBAR_ORDER: ScopeItemType[] = ['document', 'template', 'section', 'component'];
@@ -78,55 +82,38 @@ function SortableItem({ component, isSelected, onSelect }: SortableItemProps) {
 
 // ─── Category section ─────────────────────────────────────────────────────────
 
+const CATEGORY_DROP_PREFIX = 'cat:';
+
 interface CategorySectionProps {
   category: ScopeItemType;
   components: Component[];
-  groupedComponents: Record<string, Component[]>;
   selectedComponentId: string | null;
   onSelectComponent: (id: string) => void;
-  onReorderComponents: (orderedIds: string[]) => void;
+  isDragging: boolean;
 }
 
 function CategorySection({
   category,
   components,
-  groupedComponents,
   selectedComponentId,
   onSelectComponent,
-  onReorderComponents,
+  isDragging,
 }: CategorySectionProps) {
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
-  );
-
-  function handleDragEnd(event: DragEndEvent) {
-    const { active, over } = event;
-    if (!over || active.id === over.id) return;
-
-    const oldIndex = components.findIndex(c => c.id === active.id);
-    const newIndex = components.findIndex(c => c.id === over.id);
-    const reordered = arrayMove(components, oldIndex, newIndex);
-
-    const newIds = SIDEBAR_ORDER.flatMap(cat =>
-      cat === category
-        ? reordered.map(c => c.id)
-        : (groupedComponents[cat] || []).map(c => c.id)
-    );
-    onReorderComponents(newIds);
-  }
+  // Toute la section est une zone de dépôt : permet de déposer sur un titre
+  // ou une section vide pour changer le type d'un élément.
+  const { setNodeRef, isOver } = useDroppable({ id: CATEGORY_DROP_PREFIX + category });
 
   return (
-    <Collapsible key={category} defaultOpen className="space-y-1">
-      <CollapsibleTrigger className="flex w-full items-center justify-between p-2 hover:bg-accent rounded-md group">
-        <span className="font-semibold text-sm">{getCategoryLabel(category)}</span>
-        <ChevronRight className="h-4 w-4 transition-transform group-data-[state=open]:rotate-90" />
-      </CollapsibleTrigger>
-      <CollapsibleContent className="space-y-1 pl-1">
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragEnd={handleDragEnd}
-        >
+    <div
+      ref={setNodeRef}
+      className={cn('rounded-md', isDragging && 'ring-1 ring-border', isOver && 'bg-accent/50 ring-primary')}
+    >
+      <Collapsible key={category} defaultOpen className="space-y-1">
+        <CollapsibleTrigger className="flex w-full items-center justify-between p-2 hover:bg-accent rounded-md group">
+          <span className="font-semibold text-sm">{getCategoryLabel(category)}</span>
+          <ChevronRight className="h-4 w-4 transition-transform group-data-[state=open]:rotate-90" />
+        </CollapsibleTrigger>
+        <CollapsibleContent className="space-y-1 pl-1">
           <SortableContext
             items={components.map(c => c.id)}
             strategy={verticalListSortingStrategy}
@@ -140,11 +127,22 @@ function CategorySection({
               />
             ))}
           </SortableContext>
-        </DndContext>
-      </CollapsibleContent>
-    </Collapsible>
+          {isDragging && components.length === 0 && (
+            <p className="text-xs text-muted-foreground px-2 py-1">Déposer ici</p>
+          )}
+        </CollapsibleContent>
+      </Collapsible>
+    </div>
   );
 }
+
+// Priorité aux éléments sous le pointeur (réordonner), puis aux sections (changer de type).
+const collisionDetection: CollisionDetection = (args) => {
+  const hits = pointerWithin(args);
+  const items = hits.filter(c => !String(c.id).startsWith(CATEGORY_DROP_PREFIX));
+  if (items.length) return items;
+  return hits.length ? hits : closestCenter(args);
+};
 
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
 
@@ -153,7 +151,7 @@ interface ComponentSidebarProps {
   selectedComponentId: string | null;
   showingDashboard: boolean;
   onSelectComponent: (componentId: string | null) => void;
-  onReorderComponents: (orderedIds: string[]) => void;
+  onReorderComponents: (orderedIds: string[], categoryChange?: { id: string; category: ScopeItemType }) => void;
   onGoHome: () => void;
   onToggleSidebar: () => void;
   onNewElement: () => void;
@@ -174,6 +172,49 @@ export default function ComponentSidebar({
     acc[component.category].push(component);
     return acc;
   }, {} as Record<string, Component[]>);
+
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+  );
+
+  function handleDragEnd(event: DragEndEvent) {
+    setDraggingId(null);
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const dragged = components.find(c => c.id === active.id);
+    if (!dragged) return;
+
+    // Cible : un élément (on prend son type) ou une section (fin de liste).
+    const overId = String(over.id);
+    const overItem = overId.startsWith(CATEGORY_DROP_PREFIX)
+      ? undefined
+      : components.find(c => c.id === overId);
+    const targetCategory = overItem
+      ? overItem.category
+      : (overId.slice(CATEGORY_DROP_PREFIX.length) as ScopeItemType);
+
+    const groups: Record<string, string[]> = {};
+    for (const cat of SIDEBAR_ORDER) {
+      groups[cat] = (groupedComponents[cat] || []).map(c => c.id).filter(id => id !== dragged.id);
+    }
+    const target = groups[targetCategory];
+    if (!target) return;
+    let index = overItem ? target.indexOf(overItem.id) : target.length;
+    // Même section, déplacement vers le bas : insérer après l'élément survolé
+    if (overItem && targetCategory === dragged.category) {
+      const before = (groupedComponents[targetCategory] || []).map(c => c.id);
+      if (before.indexOf(dragged.id) < before.indexOf(overItem.id)) index += 1;
+    }
+    target.splice(index, 0, dragged.id);
+
+    const orderedIds = SIDEBAR_ORDER.flatMap(cat => groups[cat]);
+    onReorderComponents(
+      orderedIds,
+      targetCategory !== dragged.category ? { id: dragged.id, category: targetCategory } : undefined,
+    );
+  }
 
   return (
     <div className="flex flex-col h-full">
@@ -201,21 +242,29 @@ export default function ComponentSidebar({
       </div>
 
       <div className="p-4 space-y-2 overflow-y-auto flex-1">
-        {SIDEBAR_ORDER.map(type => {
-          const items = groupedComponents[type] || [];
-          if (items.length === 0) return null;
-          return (
-            <CategorySection
-              key={type}
-              category={type}
-              components={items}
-              groupedComponents={groupedComponents}
-              selectedComponentId={selectedComponentId}
-              onSelectComponent={onSelectComponent}
-              onReorderComponents={onReorderComponents}
-            />
-          );
-        })}
+        <DndContext
+          sensors={sensors}
+          collisionDetection={collisionDetection}
+          onDragStart={e => setDraggingId(String(e.active.id))}
+          onDragCancel={() => setDraggingId(null)}
+          onDragEnd={handleDragEnd}
+        >
+          {SIDEBAR_ORDER.map(type => {
+            const items = groupedComponents[type] || [];
+            // Pendant un drag, toutes les sections s'affichent pour pouvoir changer de type
+            if (items.length === 0 && !draggingId) return null;
+            return (
+              <CategorySection
+                key={type}
+                category={type}
+                components={items}
+                selectedComponentId={selectedComponentId}
+                onSelectComponent={onSelectComponent}
+                isDragging={!!draggingId}
+              />
+            );
+          })}
+        </DndContext>
       </div>
     </div>
   );

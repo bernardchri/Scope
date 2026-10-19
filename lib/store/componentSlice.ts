@@ -1,4 +1,4 @@
-import { Component } from '../types';
+import { Component, ScopeItemType } from '../types';
 import type { SetState, GetState } from './types';
 
 export interface ComponentSlice {
@@ -9,7 +9,7 @@ export interface ComponentSlice {
   duplicateComponent: (projectId: string, componentId: string) => string | null;
   deleteComponent: (projectId: string, componentId: string) => void;
   updateComponent: (projectId: string, componentId: string, updates: Partial<Component>) => void;
-  reorderComponents: (projectId: string, orderedIds: string[]) => void;
+  reorderComponents: (projectId: string, orderedIds: string[], categoryChange?: { id: string; category: ScopeItemType }) => void;
   canDeleteComponent: (projectId: string, componentId: string) => boolean;
 }
 
@@ -138,13 +138,14 @@ export const createComponentSlice = (set: SetState, get: GetState) => ({
     }));
   },
 
-  reorderComponents: (projectId: string, orderedIds: string[]) => {
+  reorderComponents: (projectId: string, orderedIds: string[], categoryChange?: { id: string; category: ScopeItemType }) => {
     set((state) => ({
       projects: state.projects.map((p) => {
         if (p.id !== projectId) return p;
         const ordered = orderedIds
           .map((id) => p.components.find((c) => c.id === id))
-          .filter((c): c is Component => Boolean(c));
+          .filter((c): c is Component => Boolean(c))
+          .map((c) => (categoryChange && c.id === categoryChange.id ? { ...c, category: categoryChange.category } : c));
         return { ...p, components: ordered };
       })
     }));

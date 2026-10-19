@@ -207,7 +207,7 @@ export default function ComponentList({ projectId }: ComponentListProps) {
               selectedComponentId={selectedComponentId}
               showingDashboard={showingDashboard}
               onSelectComponent={selectFromSidebar}
-              onReorderComponents={(ids) => reorderComponents(activeProject.id, ids)}
+              onReorderComponents={(ids, categoryChange) => reorderComponents(activeProject.id, ids, categoryChange)}
               onGoHome={() => setNavHistory([])}
               onToggleSidebar={() => setSidebarOpen(false)}
               onNewElement={() => setIsModalOpen(true)}
