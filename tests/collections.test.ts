@@ -52,3 +52,15 @@ describe('collections', () => {
     expect(generateContentModelMd([])).toBe('');
   });
 });
+
+describe('projectMetaLine', () => {
+  it('résume client, version et heures', async () => {
+    const { projectMetaLine } = await import('@/lib/markdownExport');
+    const project = {
+      client: { name: 'ACME', contact: 'a@acme.fr' }, version: 'v1.0',
+      components: [{ estimatedHours: 3 }, { estimatedHours: 4.5 }, {}],
+    } as never;
+    expect(projectMetaLine(project)).toBe('Client : ACME (a@acme.fr) · Version : v1.0 · Estimation totale : 7.5h');
+    expect(projectMetaLine({ components: [] } as never)).toBe('');
+  });
+});

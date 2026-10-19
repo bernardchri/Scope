@@ -226,6 +226,18 @@ function generateDocumentBlock(component: Component, imageMap: ImageMap, exportC
   return parts.join('\n\n');
 }
 
+/** Client, version et total d'heures estimées, en une ligne (vide si rien n'est renseigné). */
+export function projectMetaLine(project: Project): string {
+  const client = project.client;
+  const clientDetails = [client?.url, client?.contact].filter(Boolean).join(', ');
+  const hours = project.components.reduce((acc, c) => acc + (c.estimatedHours ?? 0), 0);
+  return [
+    client?.name ? `Client : ${client.name}${clientDetails ? ` (${clientDetails})` : ''}` : '',
+    project.version ? `Version : ${project.version}` : '',
+    hours > 0 ? `Estimation totale : ${hours}h` : '',
+  ].filter(Boolean).join(' · ');
+}
+
 export function generateStoriesMd(project: Project, imageMap: ImageMap = new Map(), exportComments = false, assetMap: AssetMap = new Map()): string {
   const date = new Date().toLocaleDateString('fr-FR', {
     day: 'numeric', month: 'long', year: 'numeric',
@@ -239,6 +251,7 @@ export function generateStoriesMd(project: Project, imageMap: ImageMap = new Map
   const headerParts = [`# ${project.name}`];
   if (project.description) headerParts.push(`> ${project.description}`);
   headerParts.push(`Exporté le ${date} · ${total} élément${total > 1 ? 's' : ''}`);
+  if (projectMetaLine(project)) headerParts.push(projectMetaLine(project));
   headerParts.push('---');
   sections.push(headerParts.join('\n\n'));
   sections.push(READING_GUIDE + '\n\n---');
@@ -401,6 +414,7 @@ async function exportProjectMarkdownMulti(project: Project, folderPath?: string,
   indexLines.push(`# ${project.name}`);
   if (project.description) indexLines.push(`> ${project.description}`);
   indexLines.push(`Exporté le ${date} · ${project.components.length} élément${project.components.length > 1 ? 's' : ''}`);
+  if (projectMetaLine(project)) indexLines.push(projectMetaLine(project));
   indexLines.push('---');
   indexLines.push('');
   indexLines.push(READING_GUIDE);
