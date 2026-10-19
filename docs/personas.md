@@ -83,3 +83,5 @@ Audit par lecture du code et d'un export Markdown généré sur un projet d'essa
 | R8 | Les collections n'apparaissent ni dans les statistiques du tableau de bord ni dans la vue d'ensemble. | Chef de projet | Faible |
 
 Points validés : liaison pin → collection / champ / composant de ligne de répéteur exportée en Markdown et en PDF ; client, version et heures dans l'en-tête Markdown ; synchro champ par champ à l'envoi.
+
+Traités après la repasse : R1 et R2 (panneau « À compléter » du tableau de bord, « à préciser » dans le Markdown, références orphelines signalées), R4 (ancres et liens vers le modèle de contenu, « Référencée par », liens vers les fiches en multi-fichiers), R5 (confirmation avant d'effacer les précisions d'un pin), R6 (éditeur de pin dans le zoom), R7 en partie (token conservé entre les lancements, erreurs du pont explicites). Restent : R3 (PDF client lisible), récap d'envoi groupé, pins orphelins en envoi groupé, R8.

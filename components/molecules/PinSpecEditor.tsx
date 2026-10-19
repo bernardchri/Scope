@@ -2,6 +2,7 @@
 
 import { Collection, ImagePin } from '@/lib/types';
 import { PIN_KINDS, PinKind, getPinKind } from '@/lib/pinKinds';
+import { ask } from '@tauri-apps/plugin-dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { flattenFields } from '@/lib/collections';
@@ -55,7 +56,14 @@ export default function PinSpecEditor({ pin, onChange, collections = [], linkedC
             variant={pin.kind === k.id ? 'default' : 'outline'}
             className="h-7 px-2 text-xs"
             // Un deuxième clic retire le type ; les specs d'un autre type ne sont pas conservées.
-            onClick={() => onChange(pin.kind === k.id ? { ...pin, kind: undefined, specs: undefined, collectionId: undefined, fieldRef: undefined } : { ...pin, kind: k.id, specs: undefined, collectionId: undefined, fieldRef: undefined })}
+            onClick={async () => {
+              const hasData = !!(pin.specs || pin.collectionId || pin.fieldRef);
+              if (pin.kind && hasData) {
+                const ok = await ask('Changer le type efface les précisions et les liens de collection de ce pin. Continuer ?', { title: 'Changer le type', kind: 'warning' });
+                if (!ok) return;
+              }
+              onChange(pin.kind === k.id ? { ...pin, kind: undefined, specs: undefined, collectionId: undefined, fieldRef: undefined } : { ...pin, kind: k.id, specs: undefined, collectionId: undefined, fieldRef: undefined });
+            }}
           >
             {k.label}
           </Button>

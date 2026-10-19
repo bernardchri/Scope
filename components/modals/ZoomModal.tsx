@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { ComponentImage, ImagePin, Task } from '@/lib/types';
+import { Collection, ComponentImage, ImagePin, Task } from '@/lib/types';
 import { useImageLoader } from '@/lib/hooks/useImageLoader';
 import { pinToFullSpace } from '@/lib/imageHelpers';
 import { nextPinNumber } from '@/lib/pinHelpers';
@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Eye, EyeOff, ZoomIn, ZoomOut, X } from 'lucide-react';
 import PinsOverlay from '@/components/molecules/PinsOverlay';
+import PinSpecEditor from '@/components/molecules/PinSpecEditor';
 
 interface ZoomModalProps {
   open: boolean;
@@ -16,10 +17,13 @@ interface ZoomModalProps {
   tasks: Task[];
   folderPath: string;
   onUpdatePins: (pins: ImagePin[]) => void;
+  collections?: Collection[];
+  onCreateCollection?: (collection: Collection) => void;
+  linkedNameFor?: (pinId: string) => string | undefined;
   onClose: () => void;
 }
 
-export default function ZoomModal({ open, image, tasks, folderPath, onUpdatePins, onClose }: ZoomModalProps) {
+export default function ZoomModal({ open, image, tasks, folderPath, onUpdatePins, collections, onCreateCollection, linkedNameFor, onClose }: ZoomModalProps) {
   const { resolve: resolveImageSrc } = useImageLoader([image], folderPath);
   const [zoom, setZoom] = useState(1);
   const [showPins, setShowPins] = useState(true);
@@ -92,6 +96,8 @@ export default function ZoomModal({ open, image, tasks, folderPath, onUpdatePins
     if (!open) return;
     function onKeyDown(e: KeyboardEvent) {
       if (e.key !== 'Delete' || !selectedPinId) return;
+      // Effacer un caractère dans l'éditeur de pin ne doit pas supprimer le pin.
+      if ((e.target as HTMLElement | null)?.closest('input, textarea, select')) return;
       const updated = localPinsRef.current.filter(p => p.id !== selectedPinId);
       savePins(updated);
       setSelectedPinId(null);
@@ -250,6 +256,22 @@ export default function ZoomModal({ open, image, tasks, folderPath, onUpdatePins
             )}
           </div>
         </div>
+
+        {selectedPinId && localPins.find(p => p.id === selectedPinId) && (
+          <div className="px-3 py-2 border-t bg-background shrink-0 max-h-[40vh] overflow-y-auto">
+            <PinSpecEditor
+              pin={localPins.find(p => p.id === selectedPinId)!}
+              onChange={(pin) => {
+                const updated = localPinsRef.current.map(p => (p.id === pin.id ? pin : p));
+                savePins(updated);
+                onUpdatePins(updated);
+              }}
+              collections={collections}
+              onCreateCollection={onCreateCollection}
+              linkedComponentName={linkedNameFor?.(selectedPinId)}
+            />
+          </div>
+        )}
 
         {/* ── Barre d'aide ─────────────────────────────────────────────────── */}
         <div className="px-3 py-1.5 border-t bg-background shrink-0 flex items-center justify-between">

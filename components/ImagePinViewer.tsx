@@ -435,6 +435,9 @@ export default function ImagePinViewer({ images, tasks, folderPath, onUpdateImag
         tasks={tasks}
         folderPath={folderPath}
         onUpdatePins={(pins: ImagePin[]) => updatePins(pins, true)}
+        collections={collections}
+        onCreateCollection={onCreateCollection}
+        linkedNameFor={linkedNameFor}
         onClose={() => setZoomOpen(false)}
       />
 

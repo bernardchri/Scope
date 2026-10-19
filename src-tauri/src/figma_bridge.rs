@@ -1,6 +1,7 @@
 //! Petit serveur HTTP local utilisé par le plugin Figma pour pousser un import
 //! (image + pins nommés) vers SCOPE. Écoute uniquement sur 127.0.0.1, protégé
-//! par un jeton généré au démarrage de l'app (affiché dans les Paramètres).
+//! par un jeton généré au premier lancement puis conservé dans le dossier de données
+//! de l'app (affiché dans les Paramètres) : le plugin Figma n'a pas à le recoller à chaque démarrage.
 //!
 //! Expose aussi `GET /scope-components` : la liste des composants du projet
 //! ouvert (publiée par le front via `set_figma_component_catalog`), pour que
@@ -10,7 +11,7 @@ use serde::Serialize;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{SystemTime, UNIX_EPOCH};
-use tauri::{AppHandle, Emitter};
+use tauri::{AppHandle, Emitter, Manager};
 use tiny_http::{Header, Method, Response, StatusCode};
 
 #[derive(Clone, Serialize)]
@@ -45,6 +46,34 @@ fn generate_token() -> String {
     let pid = std::process::id();
 
     format!("{:032x}{:08x}{:016x}", nanos, pid, counter)
+}
+
+/// Jeton conservé d'un lancement à l'autre (fichier `figma_bridge_token` du dossier
+/// de données de l'app, lisible par l'utilisateur seul). En cas d'erreur de lecture
+/// ou d'écriture, on retombe sur un jeton éphémère : le pont reste utilisable.
+fn load_or_create_token(app: &AppHandle) -> String {
+    let path = match app.path().app_data_dir() {
+        Ok(dir) => dir.join("figma_bridge_token"),
+        Err(_) => return generate_token(),
+    };
+    if let Ok(existing) = std::fs::read_to_string(&path) {
+        let existing = existing.trim();
+        if existing.len() >= 32 {
+            return existing.to_string();
+        }
+    }
+    let token = generate_token();
+    if let Some(parent) = path.parent() {
+        let _ = std::fs::create_dir_all(parent);
+    }
+    if std::fs::write(&path, &token).is_ok() {
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let _ = std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600));
+        }
+    }
+    token
 }
 
 /// Le plugin Figma appelle `fetch` depuis le sandbox principal, qui a une
@@ -136,7 +165,7 @@ fn handle_request(
 /// jusqu'à la fermeture de l'app. Retourne `None` si aucun candidat n'est
 /// libre — l'app continue de fonctionner sans le pont plutôt que de planter.
 pub fn start(app: AppHandle, catalog: FigmaComponentCatalog) -> Option<FigmaBridgeInfo> {
-    let token = generate_token();
+    let token = load_or_create_token(&app);
 
     for port in CANDIDATE_PORTS {
         let server = match tiny_http::Server::http(("127.0.0.1", port)) {
