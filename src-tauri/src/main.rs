@@ -154,6 +154,18 @@ fn get_figma_bridge_info(
     info.inner().clone()
 }
 
+/// Met à jour la liste des composants servie au plugin Figma
+/// (`GET /scope-components`).
+#[tauri::command]
+fn set_figma_component_catalog(
+    catalog: serde_json::Value,
+    state: tauri::State<figma_bridge::FigmaComponentCatalog>,
+) -> Result<(), String> {
+    let json = serde_json::to_string(&catalog).map_err(|e| format!("Erreur sérialisation: {}", e))?;
+    *state.0.lock().map_err(|_| "Catalogue verrouillé".to_string())? = json;
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -186,9 +198,11 @@ pub fn run() {
             let menu = Menu::with_items(app, &[&scope_menu, &edit_menu])?;
             app.set_menu(menu)?;
 
-            let figma_bridge_info = figma_bridge::start(app.handle().clone())
+            let figma_catalog = figma_bridge::FigmaComponentCatalog::default();
+            let figma_bridge_info = figma_bridge::start(app.handle().clone(), figma_catalog.clone())
                 .unwrap_or_else(|| figma_bridge::FigmaBridgeInfo { port: 0, token: String::new() });
             app.manage(figma_bridge_info);
+            app.manage(figma_catalog);
 
             let app_handle = app.handle().clone();
             app.on_menu_event(move |_app, event| {
@@ -231,7 +245,8 @@ pub fn run() {
             read_image_as_base64,
             delete_image_file,
             is_project_folder,
-            get_figma_bridge_info
+            get_figma_bridge_info,
+            set_figma_component_catalog
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -2,14 +2,29 @@ import { Component, ComponentImage, ComponentInstance, ImagePin, ScopeItemType }
 import { saveImageFromBase64, deleteImage } from './imageManager';
 import { nextPinNumber } from './pinHelpers';
 
+/**
+ * Occurrence d'un composant Figma cochée dans le plugin (liste aplatie de
+ * tous les composants de la frame/du groupe exporté, à toute profondeur) —
+ * devient un pin sur l'image, relié à un composant SCOPE s'il est retrouvé.
+ */
 export interface FigmaImportPin {
+  /** Id du calque Figma de l'occurrence — clé de fusion des pins entre deux syncs. */
   figmaLayerId: string;
+  /** Nom du composant Figma, utilisé comme label si aucun composant SCOPE n'est relié. */
   label: string;
+  /** Centre de l'occurrence, en % de l'image. */
   x: number;
   y: number;
+  /** Composant SCOPE choisi explicitement dans le plugin (prime sur `groupNodeId`). */
+  componentId?: string;
+  /** Id du component set (ou du composant hors variant) — matché avec `figmaLink.groupNodeId`. */
+  groupNodeId?: string;
 }
 
-/** Payload envoyé par figma-plugin/code.js via POST /scope-push. */
+/** Occurrence non cochée (sans pin) : donne seulement une instance reliée. */
+export type FigmaLinkedOnly = Omit<FigmaImportPin, 'x' | 'y'>;
+
+/** Payload envoyé par le plugin Figma (scope-figma-plugin/code.js) via POST /scope-push. */
 export interface FigmaImportPayload {
   name: string;
   category: string;
@@ -29,13 +44,8 @@ export interface FigmaImportPayload {
   /** PNG en base64 brut (sans préfixe data:). */
   image: string;
   pins: FigmaImportPin[];
-  /**
-   * Ids (groupNodeId) des composants Figma détectés comme instances sur
-   * cette page/frame, dédupliqués. Sert à relier automatiquement le
-   * composant SCOPE cible (matché par `figmaLink.groupNodeId`) — sans lien
-   * si pas encore importé dans SCOPE.
-   */
-  usedComponentIds?: string[];
+  /** Occurrences de composants non cochées (ex. imbriquées) : instances sans pin. */
+  linkedOnly?: FigmaLinkedOnly[];
   /** true = fait partie d'un "Importer tous les états" — appliqué sans popup de revue. */
   bulk?: boolean;
 }
@@ -61,11 +71,13 @@ export interface FigmaImportResult {
  * à jour, `pinRef` vers Task/Instance préservé, pins orphelins signalés sans
  * être supprimés automatiquement.
  *
- * `allComponents` sert à relier automatiquement `payload.usedComponentIds`
- * (composants Figma détectés comme instances sur la page) aux composants
- * SCOPE déjà importés (matché par `figmaLink.groupNodeId`) : un
- * `ComponentInstance` est créé pour chaque composant ainsi retrouvé. Ceux
- * pas encore importés dans SCOPE sont ignorés (pas d'import en cascade).
+ * Chaque pin du payload est relié à un composant SCOPE de `allComponents` :
+ * celui choisi dans le plugin (`componentId`), sinon celui qui a le même
+ * lien Figma (`figmaLink.groupNodeId`). Un pin relié prend le nom du
+ * composant comme label et donne un `ComponentInstance` rattaché à ce pin ;
+ * un pin non relié reste un simple pin (pas d'import en cascade). Seules les
+ * instances auto de l'image renvoyée sont régénérées : celles des autres
+ * images du composant (ex. version mobile) sont conservées.
  */
 export async function applyFigmaImport(
   folderPath: string,
@@ -81,11 +93,22 @@ export async function applyFigmaImport(
     existingImage?.filename ? deleteImage(folderPath, existingImage.filename).catch(() => {}) : null,
   ]);
 
-  const incomingIds = new Set(payload.pins.map((p) => p.figmaLayerId));
+  const imageId = existingImage?.id || crypto.randomUUID();
+
+  const resolveTarget = (pin: Pick<FigmaImportPin, 'componentId' | 'groupNodeId'>) =>
+    allComponents.find((c) =>
+      c.id !== existing?.id &&
+      (pin.componentId ? c.id === pin.componentId : !!pin.groupNodeId && c.figmaLink?.groupNodeId === pin.groupNodeId)
+    );
+
+  const linkedPins = payload.pins.map((pin) => ({ pin, target: resolveTarget(pin) }));
+  const incomingPins: FigmaImportPin[] = linkedPins.map(({ pin, target }) => ({ ...pin, label: target?.name || pin.label }));
+
+  const incomingIds = new Set(incomingPins.map((p) => p.figmaLayerId));
   const orphanedPins = existingPins.filter((p) => p.figmaLayerId && !incomingIds.has(p.figmaLayerId));
 
   let nextNumber = nextPinNumber(existingPins);
-  const mergedPins: ImagePin[] = payload.pins.map((p) => {
+  const mergedPins: ImagePin[] = incomingPins.map((p) => {
     const match = existingPins.find((ep) => ep.figmaLayerId === p.figmaLayerId);
     if (match) {
       return { ...match, label: p.label, x: p.x, y: p.y };
@@ -103,7 +126,7 @@ export async function applyFigmaImport(
   const allPins = [...mergedPins, ...orphanedPins];
 
   const newImage: ComponentImage = {
-    id: existingImage?.id || crypto.randomUUID(),
+    id: imageId,
     filename,
     caption: payload.caption || existingImage?.caption,
     isPrimary: existingImage?.isPrimary ?? !existing?.images?.length,
@@ -115,16 +138,37 @@ export async function applyFigmaImport(
     ? (existing!.images || []).map((img) => (img.id === existingImage.id ? newImage : img))
     : [...(existing?.images || []), newImage];
 
-  const autoInstances: ComponentInstance[] = (payload.usedComponentIds || [])
-    .map((groupNodeId) => allComponents.find((c) => c.figmaLink?.groupNodeId === groupNodeId))
-    .filter((c): c is Component => !!c)
-    .map((targetComponent) => ({
-      id: crypto.randomUUID(),
-      componentId: targetComponent.id,
-      autoFromFigma: true,
-    }));
+  const autoInstances: ComponentInstance[] = linkedPins
+    .filter((l): l is { pin: FigmaImportPin; target: Component } => !!l.target)
+    .map(({ pin, target }) => {
+      const merged = mergedPins.find((p) => p.figmaLayerId === pin.figmaLayerId)!;
+      return {
+        id: crypto.randomUUID(),
+        componentId: target.id,
+        pinRef: { imageId, pinId: merged.id, pinNumber: merged.number },
+        autoFromFigma: true,
+      };
+    });
 
-  const instances = [...(existing?.instances || []).filter((i) => !i.autoFromFigma), ...autoInstances];
+  // Garde les instances manuelles et les instances auto d'autres images ;
+  // les instances auto de cette image (à pin, ou sans pin issues du même node)
+  // et celles sans pinRef ni node (anciens imports) sont régénérées.
+  const keptInstances = (existing?.instances || []).filter(
+    (i) => !i.autoFromFigma || (i.pinRef ? i.pinRef.imageId !== imageId : !!i.figmaNodeId && i.figmaNodeId !== payload.nodeId)
+  );
+
+  // Composants non cochés : une instance sans pin par composant SCOPE cible,
+  // sauf s'il est déjà présent (pin, instance manuelle ou précédent envoi).
+  const present = new Set([...keptInstances, ...autoInstances].map((i) => i.componentId));
+  const linkedOnlyInstances: ComponentInstance[] = [];
+  for (const item of payload.linkedOnly || []) {
+    const target = resolveTarget(item);
+    if (!target || present.has(target.id)) continue;
+    present.add(target.id);
+    linkedOnlyInstances.push({ id: crypto.randomUUID(), componentId: target.id, autoFromFigma: true, figmaNodeId: payload.nodeId });
+  }
+
+  const instances = [...keptInstances, ...autoInstances, ...linkedOnlyInstances];
 
   const componentUpdates: Partial<Component> = {
     name: payload.name || existing?.name,

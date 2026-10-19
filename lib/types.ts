@@ -26,6 +26,8 @@ export interface ComponentInstance {
    * à la main, même si elle a aussi un pinRef.
    */
   autoFromFigma?: boolean;
+  /** Node Figma exporté dont cette instance (sans pin) a été détectée, pour la régénérer au re-sync de ce node seulement. */
+  figmaNodeId?: string;
 }
 
 export interface Task {

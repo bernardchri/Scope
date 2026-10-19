@@ -1,9 +1,14 @@
 //! Petit serveur HTTP local utilisé par le plugin Figma pour pousser un import
 //! (image + pins nommés) vers SCOPE. Écoute uniquement sur 127.0.0.1, protégé
 //! par un jeton généré au démarrage de l'app (affiché dans les Paramètres).
+//!
+//! Expose aussi `GET /scope-components` : la liste des composants du projet
+//! ouvert (publiée par le front via `set_figma_component_catalog`), pour que
+//! le plugin propose de lier une zone d'intérêt à un composant SCOPE.
 
 use serde::Serialize;
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::{Arc, Mutex};
 use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::{AppHandle, Emitter};
 use tiny_http::{Header, Method, Response, StatusCode};
@@ -13,6 +18,11 @@ pub struct FigmaBridgeInfo {
     pub port: u16,
     pub token: String,
 }
+
+/// Catalogue des composants du projet ouvert (tableau JSON sérialisé),
+/// partagé entre la commande Tauri qui le met à jour et le thread du pont.
+#[derive(Clone, Default)]
+pub struct FigmaComponentCatalog(pub Arc<Mutex<String>>);
 
 /// Ports candidats, dans l'ordre. Fixes (pas un port OS-assigné) pour que le
 /// manifest du plugin Figma puisse les lister explicitement dans
@@ -55,8 +65,17 @@ fn text_response(body: &str, status: u16) -> Response<std::io::Cursor<Vec<u8>>> 
         .with_header(cors_header())
 }
 
+fn json_response(body: String) -> Response<std::io::Cursor<Vec<u8>>> {
+    let content_type = Header::from_bytes(&b"Content-Type"[..], &b"application/json; charset=utf-8"[..])
+        .expect("en-tête statique valide");
+    Response::from_string(body)
+        .with_status_code(StatusCode(200))
+        .with_header(content_type)
+        .with_header(cors_header())
+}
+
 fn preflight_response() -> Response<std::io::Cursor<Vec<u8>>> {
-    let methods = Header::from_bytes(&b"Access-Control-Allow-Methods"[..], &b"POST, OPTIONS"[..])
+    let methods = Header::from_bytes(&b"Access-Control-Allow-Methods"[..], &b"GET, POST, OPTIONS"[..])
         .expect("en-tête statique valide");
     let headers = Header::from_bytes(&b"Access-Control-Allow-Headers"[..], &b"Content-Type, Authorization"[..])
         .expect("en-tête statique valide");
@@ -71,12 +90,15 @@ fn handle_request(
     request: &mut tiny_http::Request,
     app: &AppHandle,
     token: &str,
+    catalog: &FigmaComponentCatalog,
 ) -> Response<std::io::Cursor<Vec<u8>>> {
     if request.method() == &Method::Options {
         return preflight_response();
     }
 
-    if request.method() != &Method::Post || request.url() != "/scope-push" {
+    let is_push = request.method() == &Method::Post && request.url() == "/scope-push";
+    let is_catalog = request.method() == &Method::Get && request.url() == "/scope-components";
+    if !is_push && !is_catalog {
         return text_response("not found", 404);
     }
 
@@ -87,6 +109,11 @@ fn handle_request(
         .any(|h| h.field.to_string().eq_ignore_ascii_case("authorization") && h.value.to_string() == expected);
     if !authorized {
         return text_response("unauthorized", 401);
+    }
+
+    if is_catalog {
+        let body = catalog.0.lock().map(|c| c.clone()).unwrap_or_default();
+        return json_response(if body.is_empty() { "[]".to_string() } else { body });
     }
 
     let mut body = String::new();
@@ -108,7 +135,7 @@ fn handle_request(
 /// retourne les infos de connexion. Le serveur tourne dans son propre thread
 /// jusqu'à la fermeture de l'app. Retourne `None` si aucun candidat n'est
 /// libre — l'app continue de fonctionner sans le pont plutôt que de planter.
-pub fn start(app: AppHandle) -> Option<FigmaBridgeInfo> {
+pub fn start(app: AppHandle, catalog: FigmaComponentCatalog) -> Option<FigmaBridgeInfo> {
     let token = generate_token();
 
     for port in CANDIDATE_PORTS {
@@ -120,9 +147,10 @@ pub fn start(app: AppHandle) -> Option<FigmaBridgeInfo> {
         println!("[figma_bridge] listening on http://localhost:{}/scope-push (token in Paramètres)", port);
 
         let token_for_thread = token.clone();
+        let catalog_for_thread = catalog.clone();
         std::thread::spawn(move || {
             for mut request in server.incoming_requests() {
-                let response = handle_request(&mut request, &app, &token_for_thread);
+                let response = handle_request(&mut request, &app, &token_for_thread, &catalog_for_thread);
                 let _ = request.respond(response);
             }
         });

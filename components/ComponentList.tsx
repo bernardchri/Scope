@@ -5,6 +5,7 @@ import { listen } from '@tauri-apps/api/event';
 import { useProjectStore, undo, redo } from '@/lib/projectStore';
 import { Component, ScopeItemType } from '@/lib/types';
 import { FigmaImportPayload, applyFigmaImport, buildComponentFromFigmaUpdates } from '@/lib/figmaImport';
+import { publishFigmaComponentCatalog } from '@/lib/figmaBridge';
 import { useShortcuts } from '@/lib/hooks/useShortcuts';
 import ComponentSidebar from './ComponentSidebar';
 import ScopeItemDetail from './ScopeItemDetail';
@@ -92,6 +93,19 @@ export default function ComponentList({ projectId }: ComponentListProps) {
     });
     return () => { unlisten.then(fn => fn()); };
   }, [autoApplyFigmaImport]);
+
+  // Liste servie au plugin Figma (GET /scope-components) pour lier chaque
+  // composant coché dans une frame à un composant SCOPE.
+  const catalogComponents = activeProject?.components;
+  useEffect(() => {
+    const catalog = (catalogComponents || []).map(c => ({
+      id: c.id,
+      name: c.name,
+      category: c.category,
+      figmaGroupNodeId: c.figmaLink?.groupNodeId,
+    }));
+    publishFigmaComponentCatalog(catalog).catch(() => {});
+  }, [catalogComponents]);
 
   if (!activeProject) return null;
 
