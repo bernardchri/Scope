@@ -205,7 +205,7 @@ Tailwind CSS 4, OKLch color space, CSS variables in `styles/global.css`. Use `cn
 
 ### Vision
 
-SCOPE = cadrage client (composants, mockups, estimations, PDF). Story-compiler = développement. Lien = export `STORIES.md`. Voir `docs/philosophie-et-integrations.md`.
+SCOPE = cadrage client (composants, mockups, estimations, PDF). Story-compiler = développement. Lien = export `STORIES.md`. Voir `docs/philosophie-et-integrations.md`. Les profils qui parcourent ce flux (créatif, chef de projet, développeur, IA Claude, client) sont décrits dans `docs/personas.md`.
 
 ## Roadmap
 

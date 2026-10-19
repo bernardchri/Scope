@@ -1,7 +1,7 @@
 export type ScopeItemType = 'document' | 'component' | 'template' | 'section';
 export type ComponentCategory = ScopeItemType;
 
-export type WidgetType = 'notes' | 'images' | 'tasks' | 'instances' | 'paragraph' | 'comment';
+export type WidgetType = 'notes' | 'images' | 'tasks' | 'instances' | 'resources' | 'paragraph' | 'comment';
 
 export interface WidgetInstance {
   id: string;
@@ -47,6 +47,12 @@ export interface ImagePin {
   label?: string;
   /** id du calque Figma d'origine, utilisé pour le matching lors d'un re-sync. */
   figmaLayerId?: string;
+  /** Type d'élément (titre, texte, image…), voir lib/pinKinds.ts. */
+  kind?: string;
+  /** Spécifications propres au type (longueur max, balise SEO…), clé = id du champ. */
+  specs?: Record<string, string>;
+  /** Précision libre, exportée avec le pin. */
+  note?: string;
 }
 
 export interface CropRect {
@@ -66,6 +72,17 @@ export interface ComponentImage {
   crop?: CropRect;
   /** id du node Figma dont cette image est issue, si importée. */
   figmaNodeId?: string;
+  /** Transitoire (export PDF) : largeur native en px, pour ne pas agrandir une petite image. */
+  pdfWidth?: number;
+}
+
+/** Élément SVG extrait d'un calque Figma (flèche, icône…), fichier dans img/. */
+export interface ComponentAsset {
+  id: string;
+  name: string;
+  filename: string;
+  /** id du calque Figma d'origine, clé de fusion entre deux syncs. */
+  figmaLayerId?: string;
 }
 
 /** Lien vers un composant/frame Figma, pour import initial et re-sync ultérieur. */
@@ -83,6 +100,8 @@ export interface Component {
   category: ScopeItemType;
 
   images?: ComponentImage[];
+  /** SVG extraits de Figma, exportés dans le dossier d'items du Markdown. */
+  assets?: ComponentAsset[];
 
   estimatedHours?: number;
   notes?: NoteData[];

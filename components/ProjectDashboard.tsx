@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ChevronRight, Clock, CheckSquare, FileText, FileCode, Euro, TriangleAlert, Pencil } from 'lucide-react';
 import ProjectInfoDialog from './ProjectInfoDialog';
+import ProjectResources from './ProjectResources';
 import { exportProjectPDF } from '@/lib/pdfExport';
 import { exportProjectQuote } from '@/lib/quoteExport';
 import { exportProjectMarkdown } from '@/lib/markdownExport';
@@ -85,6 +86,7 @@ export default function ProjectDashboard({
   if (project.depositPercent) infoRows.push({ label: 'Acompte', value: `${project.depositPercent} %` });
   if (project.estimatedDelay) infoRows.push({ label: 'Délai indicatif', value: project.estimatedDelay });
   if (project.quoteValidityDays) infoRows.push({ label: 'Validité du devis', value: `${project.quoteValidityDays} jours` });
+  const totalAssets = project.components.reduce((acc, c) => acc + (c.assets?.length ?? 0), 0);
   const totalTasks = project.components.reduce(
     (acc, c) => acc + c.tasks.length, 0
   );
@@ -216,6 +218,15 @@ export default function ProjectDashboard({
           <span className="font-semibold text-lg">{project.components.length}</span>
           <span className="text-muted-foreground">composant{project.components.length > 1 ? 's' : ''}</span>
         </div>
+        {totalAssets > 0 && (
+          <>
+            <div className="w-px bg-border" />
+            <div className="flex items-center gap-2 text-sm">
+              <span className="font-semibold text-lg">{totalAssets}</span>
+              <span className="text-muted-foreground">ressource{totalAssets > 1 ? 's' : ''}</span>
+            </div>
+          </>
+        )}
         {totalCost !== null && (
           <>
             <div className="w-px bg-border" />
@@ -228,7 +239,11 @@ export default function ProjectDashboard({
         )}
       </section>
 
-
+      <ProjectResources
+        components={project.components}
+        folderPath={folderPath}
+        onSelectComponent={onSelectComponent}
+      />
 
       {/* Listing composants */}
       {project.components.length === 0 ? (

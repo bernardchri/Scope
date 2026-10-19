@@ -102,6 +102,22 @@ export async function saveImageFromBase64(folderPath: string, base64: string, ex
 }
 
 /**
+ * Save an SVG (markup as a string, e.g. exported by the Figma plugin) in img/
+ * under a new UUID filename. No resize: an SVG is kept as is.
+ */
+export async function saveSvgFromString(folderPath: string, svg: string): Promise<string> {
+  const bytes = new TextEncoder().encode(svg);
+  let binary = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  }
+  const base64 = btoa(binary);
+  const filename = `${crypto.randomUUID()}.svg`;
+  await invoke('save_image_file', { folderPath, filename, base64Data: base64 });
+  return filename;
+}
+
+/**
  * Get a displayable src for an image.
  * Returns cached base64 if available, otherwise empty string.
  * Use loadImageSrc() to async-load from disk.

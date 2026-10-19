@@ -5,13 +5,42 @@ import { CATEGORY_SECTION_LABELS, PDF_DISPLAY_ORDER, getActiveWidgets } from './
 import { TASK_CATEGORY_ORDER, TASK_CATEGORY_PLAIN_LABELS } from './taskCategoryHelpers';
 import { slugify } from './persistence';
 import { renderImageWithPins } from './imageHelpers';
+import { describePin } from './pinKinds';
 import { getImageBase64 } from './imageManager';
 import { getAppSettings } from './persistence';
 
 const CATEGORY_ORDER = PDF_DISPLAY_ORDER;
 
-type ImageRef = { filename: string; caption?: string; imageIndex: number };
+type ImageRef = { filename: string; /** Même image sans pins incrustés, si des pins sont dessinés. */ cleanFilename?: string; caption?: string; imageIndex: number };
 type ImageMap = Map<string, ImageRef[]>;
+/** Chemins relatifs (depuis le Markdown) des SVG exportés, par composant. */
+type AssetRef = { path: string; name: string };
+type AssetMap = Map<string, AssetRef[]>;
+
+/** Slug unique par composant (suffixe -2, -3… si deux composants portent le même nom). */
+export function uniqueSlugs(components: Component[]): Map<string, string> {
+  const used = new Set<string>();
+  const slugs = new Map<string, string>();
+  for (const comp of components) {
+    const base = slugify(comp.name) || 'element';
+    let slug = base;
+    for (let n = 2; used.has(slug); n++) slug = `${base}-${n}`;
+    used.add(slug);
+    slugs.set(comp.id, slug);
+  }
+  return slugs;
+}
+
+/** Consignes de lecture, en tête du document : le Markdown sert aussi de prompt (IA, développeur). */
+const READING_GUIDE = [
+  '## Comment lire ce document',
+  '',
+  '- Chaque section décrit un élément (composant, template, section, document) : description, images, éléments repérés, composants utilisés, tâches.',
+  '- Les images portent des pins numérotés ; la liste « Éléments repérés (pins) » donne pour chaque numéro son type, ses contraintes (longueur max, contenu éditable ou non, balise SEO…), le composant lié et les précisions.',
+  '- Une version sans pins est fournie à côté de chaque image annotée : à utiliser pour reproduire la maquette fidèlement.',
+  '- « Composants utilisés » liste les composants à réutiliser plutôt qu\'à recréer ; « Éléments SVG » liste les ressources prêtes à l\'emploi.',
+  '- « Source Figma » identifie le fichier et le node d\'origine.',
+].join('\n');
 
 function getImageExtension(base64: string): string {
   if (base64.startsWith('data:image/png')) return 'png';
@@ -24,11 +53,24 @@ function imagesSection(refs: ImageRef[], fallbackAlt: string): string {
   const lines = ['## Images', ''];
   for (const ref of refs) {
     lines.push(`![${ref.caption ?? fallbackAlt}](stories-img/${ref.filename})`);
+    if (ref.cleanFilename) lines.push(`_Même image sans pins : [${ref.cleanFilename}](stories-img/${ref.cleanFilename})_`);
   }
   return lines.join('\n');
 }
 
-function generateComponentBlock(component: Component, imageMap: ImageMap, allComponents: Component[] = [], exportComments = false): string {
+function assetsSection(refs: AssetRef[]): string {
+  return ['## Éléments SVG', '', ...refs.map((r) => `- [${r.name}](${r.path})`)].join('\n');
+}
+
+/** Href vers la fiche d'un composant (multi-fichiers), par id de composant. */
+type LinkMap = Map<string, string>;
+
+function componentRef(comp: Component, links: LinkMap): string {
+  const href = links.get(comp.id);
+  return href ? `[${comp.name}](${href})` : `**${comp.name}**`;
+}
+
+function generateComponentBlock(component: Component, imageMap: ImageMap, allComponents: Component[] = [], exportComments = false, assetMap: AssetMap = new Map(), links: LinkMap = new Map()): string {
   const parts: string[] = [];
   parts.push(`# ${component.name}`);
 
@@ -40,9 +82,18 @@ function generateComponentBlock(component: Component, imageMap: ImageMap, allCom
     parts.push(`## Description\n\n${component.description}`);
   }
 
+  if (component.figmaLink?.fileKey || component.figmaLink?.groupNodeId) {
+    parts.push(`Source Figma : fichier \`${component.figmaLink.fileKey}\`, node \`${component.figmaLink.groupNodeId}\``);
+  }
+
   const imageRefs = imageMap.get(component.id) ?? [];
   if (imageRefs.length > 0) {
     parts.push(imagesSection(imageRefs, component.name));
+  }
+
+  const assetRefs = assetMap.get(component.id) ?? [];
+  if (assetRefs.length > 0) {
+    parts.push(assetsSection(assetRefs));
   }
 
   if (component.tasks.length > 0) {
@@ -74,38 +125,59 @@ function generateComponentBlock(component: Component, imageMap: ImageMap, allCom
     }
   }
 
-  // Légende des pins (une section par image qui a des pins)
+  // Éléments repérés par des pins (une liste par image qui a des pins) : type,
+  // spécifications, composant ou tâche liés, précision libre.
   const compImages = component.images ?? [];
   const pinsLegendLines: string[] = [];
   compImages.forEach((img, i) => {
     const pins = img.pins ?? [];
     if (pins.length === 0) return;
-    const ref = imageRefs[i];
+    const ref = imageRefs.find(r => r.imageIndex === i);
     const imgLabel = ref ? `Image ${i + 1} — ${ref.filename}` : `Image ${i + 1}`;
     pinsLegendLines.push(`**${imgLabel}**`);
-    pins.forEach(pin => {
+    [...pins].sort((a, b) => a.number - b.number).forEach(pin => {
       const linkedTask = component.tasks.find(t => t.pinRef?.pinId === pin.id);
       const linkedInstance = component.instances.find(i => i.pinRef?.pinId === pin.id);
       const linkedComponent = linkedInstance
         ? allComponents.find(c => c.id === linkedInstance.componentId)
         : undefined;
-      const label = linkedTask
-        ? ` → ${linkedTask.name}`
-        : linkedComponent
-          ? ` → composant : ${linkedComponent.name}`
-          : '';
-      pinsLegendLines.push(`- Pin #${pin.number}${label}`);
+      const details = [
+        pin.label && !linkedComponent ? `« ${pin.label} »` : '',
+        linkedComponent ? `composant : ${componentRef(linkedComponent, links)}` : '',
+        linkedTask ? `tâche : ${linkedTask.name}` : '',
+        describePin(pin),
+      ].filter(Boolean);
+      pinsLegendLines.push(`- Pin #${pin.number}${details.length ? ` — ${details.join(' — ')}` : ''}`);
     });
   });
   if (pinsLegendLines.length > 0) {
-    parts.push(`## Légende des pins\n\n${pinsLegendLines.join('\n')}`);
+    parts.push(`## Éléments repérés (pins)\n\n${pinsLegendLines.join('\n')}`);
+  }
+
+  // Composants utilisés : un par composant, avec leurs pins ; les instances
+  // sans pin y figurent aussi (elles n'apparaissent pas dans la liste des pins).
+  const usedComponents = new Map<string, { comp: Component; pins: number[] }>();
+  for (const inst of component.instances) {
+    const comp = allComponents.find(c => c.id === inst.componentId);
+    if (!comp) continue;
+    const entry = usedComponents.get(comp.id) ?? { comp, pins: [] };
+    if (inst.pinRef) entry.pins.push(inst.pinRef.pinNumber);
+    usedComponents.set(comp.id, entry);
+  }
+  if (usedComponents.size > 0) {
+    const lines = ['## Composants utilisés', ''];
+    for (const { comp, pins } of usedComponents.values()) {
+      const where = pins.length > 0 ? ` — pin${pins.length > 1 ? 's' : ''} ${[...pins].sort((a, b) => a - b).map(n => `#${n}`).join(', ')}` : '';
+      lines.push(`- ${componentRef(comp, links)}${where}`);
+    }
+    parts.push(lines.join('\n'));
   }
 
   parts.push('---');
   return parts.join('\n\n');
 }
 
-function generateDocumentBlock(component: Component, imageMap: ImageMap, exportComments = false): string {
+function generateDocumentBlock(component: Component, imageMap: ImageMap, exportComments = false, assetMap: AssetMap = new Map()): string {
   const parts: string[] = [];
   parts.push(`# ${component.name}`);
 
@@ -120,6 +192,11 @@ function generateDocumentBlock(component: Component, imageMap: ImageMap, exportC
   const images = imageMap.get(component.id);
   if (images && images.length > 0) {
     parts.push(imagesSection(images, component.name));
+  }
+
+  const documentAssets = assetMap.get(component.id) ?? [];
+  if (documentAssets.length > 0) {
+    parts.push(assetsSection(documentAssets));
   }
 
   // Notes (markdown content)
@@ -146,7 +223,7 @@ function generateDocumentBlock(component: Component, imageMap: ImageMap, exportC
   return parts.join('\n\n');
 }
 
-export function generateStoriesMd(project: Project, imageMap: ImageMap = new Map(), exportComments = false): string {
+export function generateStoriesMd(project: Project, imageMap: ImageMap = new Map(), exportComments = false, assetMap: AssetMap = new Map()): string {
   const date = new Date().toLocaleDateString('fr-FR', {
     day: 'numeric', month: 'long', year: 'numeric',
   });
@@ -161,6 +238,7 @@ export function generateStoriesMd(project: Project, imageMap: ImageMap = new Map
   headerParts.push(`Exporté le ${date} · ${total} élément${total > 1 ? 's' : ''}`);
   headerParts.push('---');
   sections.push(headerParts.join('\n\n'));
+  sections.push(READING_GUIDE + '\n\n---');
 
   // Grouped by type in display order
   for (const category of CATEGORY_ORDER) {
@@ -171,9 +249,9 @@ export function generateStoriesMd(project: Project, imageMap: ImageMap = new Map
       const widgets = getActiveWidgets(comp);
       const hasNotes = widgets.some(w => w.type === 'notes') && comp.notes?.some(n => n.content);
       if (hasNotes) {
-        sections.push(generateDocumentBlock(comp, imageMap, exportComments));
+        sections.push(generateDocumentBlock(comp, imageMap, exportComments, assetMap));
       } else {
-        sections.push(generateComponentBlock(comp, imageMap, project.components, exportComments));
+        sections.push(generateComponentBlock(comp, imageMap, project.components, exportComments, assetMap));
       }
     }
   }
@@ -181,14 +259,14 @@ export function generateStoriesMd(project: Project, imageMap: ImageMap = new Map
   return sections.join('\n\n');
 }
 
-async function collectImages(project: Project, dir: string, folderPath?: string): Promise<ImageMap> {
+async function collectImages(project: Project, dir: string, folderPath: string | undefined, slugs: Map<string, string>): Promise<ImageMap> {
   const imageMap: ImageMap = new Map();
 
   for (const comp of project.components) {
     const compImages = comp.images ?? [];
     if (compImages.length === 0) continue;
 
-    const compSlug = slugify(comp.name);
+    const compSlug = slugs.get(comp.id) ?? slugify(comp.name);
     const refs: ImageRef[] = [];
 
     for (let i = 0; i < compImages.length; i++) {
@@ -213,13 +291,61 @@ async function collectImages(project: Project, dir: string, folderPath?: string)
       const filename = `${compSlug}-${i}.${ext}`;
       const imgPath = `${dir}/stories-img/${filename}`;
       await invoke('write_binary_file', { path: imgPath, base64Data: base64ToWrite });
-      refs.push({ filename, caption: img.caption, imageIndex: i });
+      // Pins incrustés : la même image sans pins est exportée à côté, pour reproduire la maquette.
+      let cleanFilename: string | undefined;
+      if (hasPins) {
+        const cleanBase64 = hasCrop ? await renderImageWithPins(base64, [], img.crop) : base64;
+        cleanFilename = `${compSlug}-${i}-clean.${hasCrop ? 'png' : getImageExtension(base64)}`;
+        await invoke('write_binary_file', { path: `${dir}/stories-img/${cleanFilename}`, base64Data: cleanBase64 });
+      }
+      refs.push({ filename, cleanFilename, caption: img.caption, imageIndex: i });
     }
 
     imageMap.set(comp.id, refs);
   }
 
   return imageMap;
+}
+
+/**
+ * Écrit les SVG extraits de Figma dans `stories-svg/<composant>/<nom>.svg`
+ * (dossier d'items) et renvoie leurs chemins relatifs pour le Markdown.
+ */
+async function collectAssets(project: Project, dir: string, folderPath: string | undefined, slugs: Map<string, string>): Promise<AssetMap> {
+  const assetMap: AssetMap = new Map();
+  if (!folderPath) return assetMap;
+
+  for (const comp of project.components) {
+    const assets = comp.assets ?? [];
+    if (assets.length === 0) continue;
+
+    const compSlug = slugs.get(comp.id) ?? slugify(comp.name);
+    const used = new Set<string>();
+    const refs: AssetRef[] = [];
+
+    for (const asset of assets) {
+      let base64 = '';
+      try {
+        base64 = await getImageBase64(folderPath, asset.filename);
+      } catch {
+        console.warn(`[STORIES] SVG introuvable: ${asset.filename}`);
+      }
+      if (!base64) continue;
+
+      const baseName = slugify(asset.name) || 'element';
+      let fileName = baseName;
+      for (let n = 2; used.has(fileName); n++) fileName = `${baseName}-${n}`;
+      used.add(fileName);
+
+      const relPath = `stories-svg/${compSlug}/${fileName}.svg`;
+      await invoke('write_binary_file', { path: `${dir}/${relPath}`, base64Data: base64 });
+      refs.push({ path: relPath, name: asset.name });
+    }
+
+    if (refs.length > 0) assetMap.set(comp.id, refs);
+  }
+
+  return assetMap;
 }
 
 export async function exportProjectMarkdown(project: Project, folderPath?: string): Promise<void> {
@@ -241,8 +367,10 @@ export async function exportProjectMarkdown(project: Project, folderPath?: strin
   if (!filePath) return;
 
   const dir = filePath.substring(0, filePath.lastIndexOf('/'));
-  const imageMap = await collectImages(project, dir, folderPath);
-  const content = generateStoriesMd(project, imageMap, settings.comment.exportComments);
+  const slugs = uniqueSlugs(project.components);
+  const imageMap = await collectImages(project, dir, folderPath, slugs);
+  const assetMap = await collectAssets(project, dir, folderPath, slugs);
+  const content = generateStoriesMd(project, imageMap, settings.comment.exportComments, assetMap);
   await invoke('write_text_file', { path: filePath, content });
 }
 
@@ -256,7 +384,9 @@ async function exportProjectMarkdownMulti(project: Project, folderPath?: string,
   });
   if (!destDir) return;
 
-  const imageMap = await collectImages(project, destDir as string, folderPath);
+  const slugs = uniqueSlugs(project.components);
+  const imageMap = await collectImages(project, destDir as string, folderPath, slugs);
+  const assetMap = await collectAssets(project, destDir as string, folderPath, slugs);
 
   const date = new Date().toLocaleDateString('fr-FR', {
     day: 'numeric', month: 'long', year: 'numeric',
@@ -268,8 +398,19 @@ async function exportProjectMarkdownMulti(project: Project, folderPath?: string,
   indexLines.push(`Exporté le ${date} · ${project.components.length} élément${project.components.length > 1 ? 's' : ''}`);
   indexLines.push('---');
   indexLines.push('');
+  indexLines.push(READING_GUIDE);
+  indexLines.push('');
 
-  let fileIndex = 1;
+  // Noms de fichiers calculés d'avance : les fiches se renvoient les unes aux autres.
+  const fileNames = new Map<string, string>();
+  let counter = 1;
+  for (const category of CATEGORY_ORDER) {
+    for (const comp of project.components.filter(c => c.category === category)) {
+      fileNames.set(comp.id, `${String(counter++).padStart(2, '0')}_${comp.category}_${slugs.get(comp.id)}.md`);
+    }
+  }
+  const links: LinkMap = new Map([...fileNames].map(([id, name]) => [id, `./${name}`]));
+
 
   for (const category of CATEGORY_ORDER) {
     const group = project.components.filter(c => c.category === category);
@@ -279,20 +420,17 @@ async function exportProjectMarkdownMulti(project: Project, folderPath?: string,
     indexLines.push('');
 
     for (const comp of group) {
-      const nn = String(fileIndex).padStart(2, '0');
-      const compSlug = slugify(comp.name);
-      const filename = `${nn}_${comp.category}_${compSlug}.md`;
+      const filename = fileNames.get(comp.id)!;
 
       const widgets = getActiveWidgets(comp);
       const hasNotes = widgets.some(w => w.type === 'notes') && comp.notes?.some(n => n.content);
       const block = hasNotes
-        ? generateDocumentBlock(comp, imageMap, exportComments)
-        : generateComponentBlock(comp, imageMap, project.components, exportComments);
+        ? generateDocumentBlock(comp, imageMap, exportComments, assetMap)
+        : generateComponentBlock(comp, imageMap, project.components, exportComments, assetMap, links);
 
       await invoke('write_text_file', { path: `${destDir}/${filename}`, content: block });
 
       indexLines.push(`- [${comp.name}](./${filename})`);
-      fileIndex++;
     }
 
     indexLines.push('');

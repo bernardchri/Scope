@@ -2,6 +2,7 @@
 
 import { ImagePin, Task, CropRect } from '@/lib/types';
 import { pinToCroppedSpace } from '@/lib/imageHelpers';
+import { getPinKind } from '@/lib/pinKinds';
 
 interface PinsOverlayProps {
   pins: ImagePin[];
@@ -65,6 +66,11 @@ export default function PinsOverlay({
             `}
           >
             {pin.number}
+            {!link && getPinKind(pin.kind) && (
+              <span className="absolute left-full ml-1.5 whitespace-nowrap rounded bg-background/90 px-1.5 py-0.5 text-xs font-medium text-foreground shadow ring-1 ring-border pointer-events-none">
+                {getPinKind(pin.kind)!.label}
+              </span>
+            )}
             {link && (
               <button
                 type="button"

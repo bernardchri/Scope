@@ -31,6 +31,8 @@ export function usePinEditor({
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       if (e.key !== 'Delete' || !selectedPinId) return;
+      // Supprimer un caractère dans un champ (éditeur de pin) ne doit pas effacer le pin.
+      if ((e.target as HTMLElement | null)?.closest('input, textarea, select')) return;
       const updated = localImages.map((img, i) =>
         i === currentIndex
           ? { ...img, pins: (img.pins ?? []).filter(p => p.id !== selectedPinId) }

@@ -7,6 +7,7 @@ import { open } from '@tauri-apps/plugin-dialog';
 import { saveImageFromPath, deleteImage } from '@/lib/imageManager';
 import { useImageLoader } from '@/lib/hooks/useImageLoader';
 import PinsOverlay from '@/components/molecules/PinsOverlay';
+import PinSpecEditor from '@/components/molecules/PinSpecEditor';
 import CropOverlay from '@/components/molecules/CropOverlay';
 import SortableThumbnail from '@/components/molecules/SortableThumbnail';
 import ZoomModal from '@/components/modals/ZoomModal';
@@ -376,6 +377,13 @@ export default function ImagePinViewer({ images, tasks, folderPath, onUpdateImag
           </div>
         </div>
       </div>
+
+      {showPins && !isCropping && selectedPinId && currentPins.find(p => p.id === selectedPinId) && (
+        <PinSpecEditor
+          pin={currentPins.find(p => p.id === selectedPinId)!}
+          onChange={(pin) => updatePins(currentPins.map(p => (p.id === pin.id ? pin : p)), true)}
+        />
+      )}
 
       {imageError && <p className="text-destructive text-sm">{imageError}</p>}
 

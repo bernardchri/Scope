@@ -1,5 +1,5 @@
 import { ScopeItemType, WidgetType, WidgetInstance, Component } from './types';
-import { FileText, Image, ListChecks, Layers, AlignLeft, MessageSquare, type LucideIcon } from 'lucide-react';
+import { FileText, Image, ListChecks, Layers, Package, AlignLeft, MessageSquare, type LucideIcon } from 'lucide-react';
 import scopeConfig from './scope.config.json';
 
 // --- Derived from scope.config.json ---
@@ -48,6 +48,7 @@ export const WIDGET_ICONS: Record<WidgetType, LucideIcon> = {
   images: Image,
   tasks: ListChecks,
   instances: Layers,
+  resources: Package,
   paragraph: AlignLeft,
   comment: MessageSquare,
 };
@@ -61,6 +62,7 @@ export function widgetHasContent(item: Component, widget: WidgetInstance): boole
     case 'images':    return (item.images?.length ?? 0) > 0;
     case 'tasks':     return item.tasks.length > 0;
     case 'instances': return item.instances.length > 0;
+    case 'resources': return (item.assets?.length ?? 0) > 0;
     default: return false;
   }
 }
@@ -79,8 +81,21 @@ function buildDefaultWidgets(category: ScopeItemType, notes?: Component['notes']
   });
 }
 
+/** Blocs dont les données arrivent sans passer par l'utilisateur (import
+ * Figma) : retirer le bloc efface ses données, donc des données sans bloc
+ * veulent dire qu'il doit s'afficher. */
+const FORCED_WIDGETS: { type: WidgetType; hasData: (item: Component) => boolean }[] = [
+  { type: 'images', hasData: (item) => (item.images?.length ?? 0) > 0 },
+  { type: 'instances', hasData: (item) => item.instances.length > 0 },
+  { type: 'resources', hasData: (item) => (item.assets?.length ?? 0) > 0 },
+];
+
 export function getActiveWidgets(item: Component): WidgetInstance[] {
-  return item.widgets ?? buildDefaultWidgets(item.category, item.notes);
+  const widgets = item.widgets ?? buildDefaultWidgets(item.category, item.notes);
+  const forced = FORCED_WIDGETS
+    .filter(({ type, hasData }) => hasData(item) && !widgets.some((w) => w.type === type))
+    .map(({ type }) => ({ id: type, type }));
+  return forced.length ? [...widgets, ...forced] : widgets;
 }
 
 /** Widget types available to add — singletons only if not present, text widgets always */

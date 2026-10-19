@@ -37,6 +37,7 @@ import ParagraphWidget from './ParagraphWidget';
 import CommentWidget from './CommentWidget';
 import TaskList from './TaskList';
 import ComponentInstanceList from './ComponentInstanceList';
+import ComponentAssets from './ComponentAssets';
 import SortableWidget from './molecules/SortableWidget';
 import SlashCommandMenu from './molecules/SlashCommandMenu';
 
@@ -149,6 +150,7 @@ export default function ScopeItemDetail({
         case 'images': updates.images = []; break;
         case 'tasks': updates.tasks = []; break;
         case 'instances': updates.instances = []; break;
+        case 'resources': updates.assets = undefined; break;
       }
     }
     onUpdate(item.id, updates);
@@ -224,6 +226,15 @@ export default function ScopeItemDetail({
             allComponents={allComponents}
             images={activeWidgets.some(w => w.type === 'images') ? images : undefined}
             onNavigate={onNavigate}
+          />
+        );
+      case 'resources':
+        return (
+          <ComponentAssets
+            key={widget.id}
+            assets={item.assets || []}
+            folderPath={folderPath}
+            onUpdateAssets={(assets) => onUpdate(item.id, { assets: assets.length ? assets : undefined })}
           />
         );
       default: {

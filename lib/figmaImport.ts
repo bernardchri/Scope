@@ -1,5 +1,5 @@
-import { Component, ComponentImage, ComponentInstance, ImagePin, ScopeItemType } from './types';
-import { saveImageFromBase64, deleteImage } from './imageManager';
+import { Component, ComponentAsset, ComponentImage, ComponentInstance, ImagePin, ScopeItemType } from './types';
+import { saveImageFromBase64, saveSvgFromString, deleteImage } from './imageManager';
 import { nextPinNumber } from './pinHelpers';
 
 /**
@@ -19,6 +19,14 @@ export interface FigmaImportPin {
   componentId?: string;
   /** Id du component set (ou du composant hors variant) — matché avec `figmaLink.groupNodeId`. */
   groupNodeId?: string;
+}
+
+/** Calque Figma marqué dans le plugin, exporté en SVG. */
+export interface FigmaImportSvg {
+  figmaLayerId: string;
+  name: string;
+  /** Code SVG (SVG_STRING de Figma). */
+  svg: string;
 }
 
 /** Payload envoyé par le plugin Figma (scope-figma-plugin/code.js) via POST /scope-push. */
@@ -42,6 +50,8 @@ export interface FigmaImportPayload {
   /** PNG en base64 brut (sans préfixe data:). */
   image: string;
   pins: FigmaImportPin[];
+  /** SVG des calques cochés dans le plugin : ajoutés/mis à jour dans `assets`, jamais supprimés. */
+  svgs?: FigmaImportSvg[];
   /** true = fait partie d'un "Importer tous les états" — appliqué sans popup de revue. */
   bulk?: boolean;
 }
@@ -105,6 +115,8 @@ export async function applyFigmaImport(
 
   const incomingIds = new Set(incomingPins.map((p) => p.figmaLayerId));
   const orphanedPins = existingPins.filter((p) => p.figmaLayerId && !incomingIds.has(p.figmaLayerId));
+  // Pins ajoutés dans SCOPE (sans calque Figma) : jamais touchés par un re-sync.
+  const manualPins = existingPins.filter((p) => !p.figmaLayerId);
 
   let nextNumber = nextPinNumber(existingPins);
   const mergedPins: ImagePin[] = incomingPins.map((p) => {
@@ -122,7 +134,7 @@ export async function applyFigmaImport(
     };
   });
 
-  const allPins = [...mergedPins, ...orphanedPins];
+  const allPins = [...mergedPins, ...manualPins, ...orphanedPins];
 
   const newImage: ComponentImage = {
     id: imageId,
@@ -155,6 +167,20 @@ export async function applyFigmaImport(
   );
   const instances = [...keptInstances, ...autoInstances];
 
+  // SVG : un fichier par calque, remplacé au re-sync (id et nom conservés) ;
+  // ceux absents du payload restent (le plugin ne renvoie que les cochés).
+  const assets: ComponentAsset[] = [...(existing?.assets || [])];
+  for (const item of payload.svgs || []) {
+    const filename = await saveSvgFromString(folderPath, item.svg);
+    const idx = assets.findIndex((a) => a.figmaLayerId === item.figmaLayerId);
+    if (idx >= 0) {
+      deleteImage(folderPath, assets[idx].filename).catch(() => {});
+      assets[idx] = { ...assets[idx], filename };
+    } else {
+      assets.push({ id: crypto.randomUUID(), name: item.name, filename, figmaLayerId: item.figmaLayerId });
+    }
+  }
+
   const componentUpdates: Partial<Component> = {
     // Nom et description de Figma ne servent qu'à créer le composant (la
     // description aussi à combler un champ vide) : pas d'écrasement des
@@ -164,6 +190,7 @@ export async function applyFigmaImport(
     // Un type jamais tagué dans Figma ne doit pas écraser celui choisi dans SCOPE.
     category: payload.category || !existing ? normalizeFigmaCategory(payload.category) : existing.category,
     images,
+    assets: assets.length ? assets : undefined,
     instances,
     figmaLink: { fileKey: payload.fileKey, groupNodeId: payload.groupNodeId, lastSyncAt: new Date().toISOString() },
   };

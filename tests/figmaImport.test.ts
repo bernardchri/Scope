@@ -4,6 +4,7 @@ import type { FigmaImportPayload } from '@/lib/figmaImport';
 
 vi.mock('@/lib/imageManager', () => ({
   saveImageFromBase64: vi.fn().mockResolvedValue('new-image.png'),
+  saveSvgFromString: vi.fn().mockResolvedValue('new-icon.svg'),
   deleteImage: vi.fn().mockResolvedValue(undefined),
 }));
 
@@ -240,5 +241,37 @@ describe('applyFigmaImport — nom et description conservés', () => {
   it('utilise le nom Figma pour un nouveau composant', async () => {
     const result = await applyFigmaImport('/proj', basePayload({ name: 'Nom Figma' }));
     expect(result.componentUpdates.name).toBe('Nom Figma');
+  });
+});
+
+describe('applyFigmaImport — SVG', () => {
+  it('crée un asset par calque, puis le remplace au re-sync en gardant id et nom', async () => {
+    const svgs = [{ figmaLayerId: 'v-1', name: 'Flèche', svg: '<svg/>' }];
+    const first = await applyFigmaImport('/proj', basePayload({ svgs }));
+    const asset = first.componentUpdates.assets![0];
+    expect(asset).toMatchObject({ name: 'Flèche', filename: 'new-icon.svg', figmaLayerId: 'v-1' });
+
+    const existing = makeComponent({ assets: [{ ...asset, name: 'Ma flèche' }] });
+    const second = await applyFigmaImport('/proj', basePayload({ svgs: [{ ...svgs[0], name: 'Autre' }] }), existing);
+    expect(second.componentUpdates.assets).toEqual([expect.objectContaining({ id: asset.id, name: 'Ma flèche' })]);
+  });
+
+  it("garde les assets existants absents du payload", async () => {
+    const existing = makeComponent({ assets: [{ id: 'a1', name: 'Vieux', filename: 'old.svg', figmaLayerId: 'v-old' }] });
+    const result = await applyFigmaImport('/proj', basePayload(), existing);
+    expect(result.componentUpdates.assets).toHaveLength(1);
+  });
+});
+
+describe('applyFigmaImport — pins ajoutés dans SCOPE', () => {
+  it("conserve les pins sans calque Figma et leurs spécifications au re-sync", async () => {
+    const existing = makeComponent({
+      images: [{ id: 'img', isPrimary: true, filename: 'x.png', figmaNodeId: 'node-1', pins: [
+        { id: 'manual', number: 1, x: 5, y: 5, kind: 'title', specs: { seo: 'H2' } },
+      ] }],
+    });
+    const result = await applyFigmaImport('/proj', basePayload({ nodeId: 'node-1', pins: [] }), existing);
+    expect(result.componentUpdates.images![0].pins).toEqual([expect.objectContaining({ id: 'manual', kind: 'title' })]);
+    expect(result.orphanedPins).toEqual([]);
   });
 });

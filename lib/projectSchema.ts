@@ -41,6 +41,9 @@ const imagePinSchema = z.object({
   y: z.number().catch(0),
   label: z.string().optional(),
   figmaLayerId: z.string().optional(),
+  kind: z.string().optional(),
+  specs: z.record(z.string(), z.string()).optional(),
+  note: z.string().optional(),
 });
 
 const cropRectSchema = z
@@ -61,6 +64,13 @@ const componentImageSchema = z.object({
   pins: resilientArray(imagePinSchema).optional(),
   crop: cropRectSchema,
   figmaNodeId: z.string().optional(),
+});
+
+const assetSchema = z.object({
+  id: z.string(),
+  name: z.string().catch(''),
+  filename: z.string(),
+  figmaLayerId: z.string().optional(),
 });
 
 const figmaLinkSchema = z
@@ -90,7 +100,7 @@ const instanceSchema = z.object({
 const widgetInstanceSchema = z.object({
   id: z.string(),
   type: z
-    .enum(['notes', 'images', 'tasks', 'instances', 'paragraph', 'comment'])
+    .enum(['notes', 'images', 'tasks', 'instances', 'resources', 'paragraph', 'comment'])
     .catch('notes'),
 });
 
@@ -105,6 +115,7 @@ const componentSchema = z.object({
   description: z.string().optional(),
   category: z.enum(['document', 'component', 'template', 'section']).catch('component'),
   images: resilientArray(componentImageSchema).optional(),
+  assets: resilientArray(assetSchema).optional(),
   estimatedHours: z.number().optional(),
   notes: resilientArray(noteDataSchema).optional(),
   widgets: resilientArray(widgetInstanceSchema).optional(),

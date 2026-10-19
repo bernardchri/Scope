@@ -30,6 +30,7 @@
     { "id": "images",    "label": "Maquettes" },
     { "id": "tasks",     "label": "Tâches" },
     { "id": "instances", "label": "Composants utilisés" },
+    { "id": "resources", "label": "Ressources" },
     { "id": "paragraph", "label": "Paragraphe",         "storage": "notes" },
     { "id": "comment",   "label": "Commentaire",        "storage": "notes" }
   ],
