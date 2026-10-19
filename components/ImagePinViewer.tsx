@@ -225,6 +225,11 @@ export default function ImagePinViewer({ images, tasks, folderPath, onUpdateImag
     ? `${currentCrop!.width * naturalSize.w} / ${currentCrop!.height * naturalSize.h}`
     : undefined;
 
+  // Une petite image ne doit pas être agrandie : largeur max = sa propre largeur (recadrée le cas échéant)
+  const ownWidth = naturalSize
+    ? Math.round(showCropView ? (currentCrop!.width / 100) * naturalSize.w : naturalSize.w)
+    : undefined;
+
   return (
     <div className="space-y-4">
       {/* ── Image principale avec overlay pins ─────────────────────────────── */}
@@ -234,6 +239,7 @@ export default function ImagePinViewer({ images, tasks, folderPath, onUpdateImag
             ref={imageContainerRef}
             className="relative max-w-[840px] w-full"
             style={{
+              ...(ownWidth ? { maxWidth: `min(840px, ${ownWidth}px)` } : {}),
               cursor: isCropping ? 'default' : draggingPinId ? 'grabbing' : showPins ? 'crosshair' : 'default',
               ...(showCropView ? { overflow: 'hidden', aspectRatio: cropAspectRatio } : {}),
             }}
