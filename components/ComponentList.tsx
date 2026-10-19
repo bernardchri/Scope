@@ -4,7 +4,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { listen } from '@tauri-apps/api/event';
 import { useProjectStore, undo, redo } from '@/lib/projectStore';
 import { Component, ScopeItemType } from '@/lib/types';
-import { FigmaImportPayload, applyFigmaImport, buildComponentFromFigmaUpdates } from '@/lib/figmaImport';
+import { FigmaImportPayload, applyFigmaImport, buildComponentFromFigmaUpdates, diffFigmaFields } from '@/lib/figmaImport';
+import FigmaSyncRecapDialog, { SyncRecapEntry } from './modals/FigmaSyncRecapDialog';
 import { withDefaultEstimate } from '@/lib/persistence';
 import { publishFigmaComponentCatalog } from '@/lib/figmaBridge';
 import { useShortcuts } from '@/lib/hooks/useShortcuts';
@@ -36,6 +37,7 @@ export default function ComponentList({ projectId }: ComponentListProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [figmaImportPayload, setFigmaImportPayload] = useState<FigmaImportPayload | null>(null);
+  const [syncRecap, setSyncRecap] = useState<SyncRecapEntry[]>([]);
   const bulkQueueRef = useRef(Promise.resolve());
   const detailScrollRef = useRef<HTMLDivElement>(null);
 
@@ -75,6 +77,12 @@ export default function ComponentList({ projectId }: ComponentListProps) {
     try {
       const result = await applyFigmaImport(state.currentProjectPath || '', payload, existing, project.components);
       if (existing) {
+        const diffs = diffFigmaFields(payload, existing);
+        if (diffs.length) {
+          setSyncRecap(prev => prev.some(e => e.componentId === existing.id)
+            ? prev
+            : [...prev, { componentId: existing.id, name: existing.name, diffs }]);
+        }
         state.updateComponent(project.id, existing.id, result.componentUpdates);
       } else {
         state.addComponent(project.id, await withDefaultEstimate(buildComponentFromFigmaUpdates(result.componentUpdates)));
@@ -190,6 +198,19 @@ export default function ComponentList({ projectId }: ComponentListProps) {
         onSubmit={handleCreateComponent}
       />
 
+      <FigmaSyncRecapDialog
+        entries={syncRecap}
+        onApply={(id, updates) => {
+          updateComponent(activeProject.id, id, updates);
+          // Le champ appliqué ne doit plus être proposé.
+          const field = Object.keys(updates)[0];
+          setSyncRecap(prev => prev
+            .map(e => e.componentId === id ? { ...e, diffs: e.diffs.filter(d => d.field !== field) } : e)
+            .filter(e => e.diffs.length));
+        }}
+        onDismiss={(id) => setSyncRecap(prev => prev.filter(e => e.componentId !== id))}
+        onClose={() => setSyncRecap([])}
+      />
       <FigmaImportDialog
         payload={figmaImportPayload}
         components={activeProject.components}

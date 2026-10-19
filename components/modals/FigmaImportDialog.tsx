@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Component } from '@/lib/types';
-import { FigmaImportPayload, FigmaImportResult, applyFigmaImport, dropOrphanedPins, normalizeFigmaCategory } from '@/lib/figmaImport';
+import { Component, ScopeItemType } from '@/lib/types';
+import {
+  FigmaImportPayload, FigmaImportResult, FigmaSyncField, SYNC_FIELD_LABELS,
+  applyFieldOverwrites, applyFigmaImport, diffFigmaFields, dropOrphanedPins, normalizeFigmaCategory,
+} from '@/lib/figmaImport';
 import { SCOPE_ITEM_TYPES, TYPE_LABELS } from '@/lib/categoryHelpers';
 import {
   Dialog,
@@ -17,6 +20,9 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const NEW_COMPONENT_VALUE = '__new__';
+
+const fieldValue = (field: FigmaSyncField, value: string) =>
+  field === 'category' ? TYPE_LABELS[value as ScopeItemType] ?? value : value;
 
 interface FigmaImportDialogProps {
   payload: FigmaImportPayload | null;
@@ -53,11 +59,14 @@ export default function FigmaImportDialog({
   // ensemble, d'où un seul state plutôt que trois à garder synchronisés).
   const [pendingResult, setPendingResult] = useState<FigmaImportResult | null>(null);
   const [pinsToDelete, setPinsToDelete] = useState<Set<string>>(new Set());
+  // Champs dont la valeur Figma remplace celle de SCOPE : rien n'est écrasé sans case cochée.
+  const [overwrite, setOverwrite] = useState<Set<FigmaSyncField>>(new Set());
 
   useEffect(() => {
     if (!payload) return;
     setName(payload.name);
-    setCategory(payload.category || !matchedExisting ? normalizeFigmaCategory(payload.category) : matchedExisting.category);
+    setCategory(matchedExisting ? matchedExisting.category : normalizeFigmaCategory(payload.category));
+    setOverwrite(new Set());
     setTarget(matchedExisting?.id || NEW_COMPONENT_VALUE);
     setError(null);
     setPendingResult(null);
@@ -67,6 +76,7 @@ export default function FigmaImportDialog({
 
   const existing = target === NEW_COMPONENT_VALUE ? undefined : components.find((c) => c.id === target);
   const reviewingOrphans = pendingResult !== null;
+  const diffs = diffFigmaFields(payload, existing);
 
   async function handleImport() {
     if (!payload) return;
@@ -75,10 +85,11 @@ export default function FigmaImportDialog({
     try {
       const result = await applyFigmaImport(
         folderPath,
-        { ...payload, name, category },
+        { ...payload, name, category: existing ? '' : category },
         existing,
         components
       );
+      result.componentUpdates = applyFieldOverwrites(result.componentUpdates, diffs, overwrite);
       if (result.orphanedPins.length > 0) {
         setPendingResult(result);
         setPinsToDelete(new Set(result.orphanedPins.map((p) => p.id)));
@@ -105,6 +116,14 @@ export default function FigmaImportDialog({
     if (!pendingResult) return;
     const finalUpdates = dropOrphanedPins(pendingResult.componentUpdates, pendingResult.imageId, Array.from(pinsToDelete));
     commit(finalUpdates);
+  }
+
+  function toggleOverwrite(field: FigmaSyncField) {
+    setOverwrite((prev) => {
+      const next = new Set(prev);
+      if (next.has(field)) next.delete(field); else next.add(field);
+      return next;
+    });
   }
 
   function togglePin(id: string) {
@@ -159,7 +178,7 @@ export default function FigmaImportDialog({
 
             <div className="space-y-2">
               <Label htmlFor="figma-type">Type</Label>
-              <Select value={category} onValueChange={setCategory}>
+              <Select value={category} onValueChange={setCategory} disabled={!!existing}>
                 <SelectTrigger id="figma-type">
                   <SelectValue />
                 </SelectTrigger>
@@ -170,6 +189,30 @@ export default function FigmaImportDialog({
                 </SelectContent>
               </Select>
             </div>
+
+            {diffs.length > 0 && (
+              <div className="space-y-2 rounded border border-amber-500/50 bg-amber-500/5 p-3">
+                <p className="text-sm font-medium">Différences avec Figma</p>
+                <p className="text-xs text-muted-foreground">
+                  Ces champs ont été modifiés dans SCOPE. Par défaut ils sont conservés ; coche pour les remplacer par la valeur Figma.
+                </p>
+                {diffs.map((d) => (
+                  <div key={d.field} className="flex items-start gap-2">
+                    <Checkbox
+                      id={`overwrite-${d.field}`}
+                      checked={overwrite.has(d.field)}
+                      onCheckedChange={() => toggleOverwrite(d.field)}
+                      className="mt-0.5"
+                    />
+                    <Label htmlFor={`overwrite-${d.field}`} className="font-normal cursor-pointer text-xs space-y-0.5">
+                      <span className="block font-medium">Écraser {SYNC_FIELD_LABELS[d.field].toLowerCase()}</span>
+                      <span className="block text-muted-foreground">SCOPE : {fieldValue(d.field, d.scope)}</span>
+                      <span className="block">Figma : {fieldValue(d.field, d.figma)}</span>
+                    </Label>
+                  </div>
+                ))}
+              </div>
+            )}
 
             <p className="text-sm text-muted-foreground">
               {payload.pins.length} zone(s) d&apos;intérêt taguée(s) dans Figma.

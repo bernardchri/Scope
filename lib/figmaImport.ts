@@ -62,6 +62,56 @@ export function normalizeFigmaCategory(value: string): ScopeItemType {
   return (VALID_CATEGORIES as string[]).includes(value) ? (value as ScopeItemType) : 'component';
 }
 
+export type FigmaSyncField = 'name' | 'description' | 'category';
+
+export const SYNC_FIELD_LABELS: Record<FigmaSyncField, string> = {
+  name: 'Nom',
+  description: 'Description',
+  category: 'Type',
+};
+
+/** Champ dont la valeur SCOPE diffère de celle poussée depuis Figma. */
+export interface FigmaFieldDiff {
+  field: FigmaSyncField;
+  scope: string;
+  figma: string;
+}
+
+/**
+ * Compare les champs partagés (nom, description, type) entre le composant
+ * SCOPE existant et le payload. Une valeur vide côté Figma (jamais tagué,
+ * pas de description) ou côté SCOPE n'est pas un décalage : rien à protéger
+ * ni à écraser.
+ */
+export function diffFigmaFields(payload: FigmaImportPayload, existing?: Component): FigmaFieldDiff[] {
+  if (!existing) return [];
+  const diffs: FigmaFieldDiff[] = [];
+  const check = (field: FigmaSyncField, scope: string | undefined, figma: string | undefined) => {
+    const s = (scope || '').trim();
+    const f = (figma || '').trim();
+    if (s && f && s !== f) diffs.push({ field, scope: s, figma: f });
+  };
+  check('name', existing.name, payload.name);
+  check('description', existing.description, payload.description);
+  check('category', existing.category, payload.category ? normalizeFigmaCategory(payload.category) : '');
+  return diffs;
+}
+
+/** Applique les valeurs Figma des champs cochés sur les updates déjà calculées. */
+export function applyFieldOverwrites(
+  updates: Partial<Component>,
+  diffs: FigmaFieldDiff[],
+  overwrite: ReadonlySet<FigmaSyncField>,
+): Partial<Component> {
+  const next = { ...updates };
+  for (const d of diffs) {
+    if (!overwrite.has(d.field)) continue;
+    if (d.field === 'category') next.category = d.figma as ScopeItemType;
+    else next[d.field] = d.figma;
+  }
+  return next;
+}
+
 export interface FigmaImportResult {
   componentUpdates: Partial<Component>;
   /** id de l'image dans componentUpdates.images dont les pins peuvent contenir des orphelins. */

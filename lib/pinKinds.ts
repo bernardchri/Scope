@@ -23,7 +23,7 @@ const EDITABLE: PinField = {
   id: 'editable',
   label: 'Contenu',
   type: 'select',
-  options: ['éditable en backoffice', 'fixe (en dur)', 'issu du CMS / dynamique'],
+  options: ["éditable en backoffice", "fixe (en dur dans le code)", "dynamique (donnée liée : titre d'article, prix…)"],
 };
 
 /** Types de pin proposés en un clic, avec les champs de spécification propres à chacun. */
