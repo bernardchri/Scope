@@ -31,6 +31,22 @@ describe('collections', () => {
     expect(describeField(field)).toBe('Catégorie, sélection : plusieurs catégories, valeurs connues : Web, Print');
   });
 
+  it('décrit un répéteur et ses sous-champs', () => {
+    const repeater: Collection = {
+      id: 'r', name: 'Pages', slug: 'page',
+      fields: [{
+        id: 'g', name: 'galerie', kind: 'repeater', specs: { minRows: '1', maxRows: '6' },
+        subFields: [{ id: 'g1', name: 'image', kind: 'image' }, { id: 'g2', name: 'légende', kind: 'text' }],
+      }],
+    };
+    expect(describeField(repeater.fields[0])).toBe('Répéteur, min 1 ligne(s), max 6 ligne(s)');
+    const md = generateContentModelMd([repeater]);
+    expect(md).toContain('- `galerie` — Répéteur');
+    expect(md).toContain('  - `image` — Image');
+    expect(describePin({ kind: 'repeater', specs: { maxRows: '6', rowFields: 'image, légende' } })).toBe('Répéteur — max 6 ligne(s), chaque ligne : image, légende');
+    expect(describePin({ kind: 'image', fieldRef: { collectionId: 'r', fieldId: 'g1' } }, [repeater])).toBe('Image — champ « galerie › image » de la collection « Pages »');
+  });
+
   it('relie un pin à une collection ou à un champ', () => {
     const all = [projets, categories];
     expect(describePin({ kind: 'list', collectionId: 'p' }, all)).toBe('Liste — entrées de la collection « Projets »');

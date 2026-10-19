@@ -1,8 +1,8 @@
 import { Collection, CollectionField, Component } from './types';
 import { PIN_KINDS, PinKind, describePinSpecs } from './pinKinds';
-import { findCollection } from './collectionLookup';
+import { findCollection, flattenFields } from './collectionLookup';
 
-export { findCollection, findField, describePinContent } from './collectionLookup';
+export { findCollection, findField, flattenFields, describePinContent } from './collectionLookup';
 
 const pinKind = (id: string) => PIN_KINDS.find((k) => k.id === id)!;
 
@@ -11,6 +11,8 @@ export const FIELD_KINDS: PinKind[] = [
   ...['title', 'text', 'image', 'link', 'number', 'date', 'category', 'boolean'].map(pinKind),
   // La cible d'une relation se choisit dans le champ (relationTo), pas dans des spécifications.
   { id: 'relation', label: 'Relation', fields: [] },
+  // Les champs d'une ligne sont de vrais sous-champs (subFields), pas du texte libre.
+  { id: 'repeater', label: 'Répéteur', fields: pinKind('repeater').fields.filter((f) => f.id !== 'rowFields') },
   pinKind('other'),
 ];
 
@@ -79,7 +81,7 @@ export function generateContentModelMd(collections: Collection[] = [], heading =
     if (c.hasDetailPage) lines.push('Chaque entrée a sa propre page de détail.', '');
     if (c.fields.length === 0) lines.push('_Aucun champ défini._', '');
     else {
-      for (const f of c.fields) lines.push(`- \`${f.name || 'sans nom'}\` — ${describeField(f, collections)}`);
+      for (const { field: f, depth } of flattenFields(c.fields)) lines.push(`${'  '.repeat(depth)}- \`${f.name || 'sans nom'}\` — ${describeField(f, collections)}`);
       lines.push('');
     }
     const used = collectionUsage(c, components);

@@ -72,6 +72,8 @@ export interface CollectionField {
   multiple?: boolean;
   required?: boolean;
   note?: string;
+  /** Champ « Répéteur » : champs d'une ligne (peuvent eux-mêmes contenir un répéteur). */
+  subFields?: CollectionField[];
 }
 
 /** Type de contenu du site (custom post type WordPress, collection Webflow…) : sa structure, pas ses entrées. */

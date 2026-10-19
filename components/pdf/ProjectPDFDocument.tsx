@@ -7,7 +7,7 @@ import {
   Link,
 } from '@react-pdf/renderer';
 import { Project, Component, ImagePin, TaskCategory, ComponentCategory } from '@/lib/types';
-import { collectionUsage, describeField } from '@/lib/collections';
+import { collectionUsage, describeField, flattenFields } from '@/lib/collections';
 import { describePin } from '@/lib/pinKinds';
 import { renderMarkdown } from './renderMarkdown';
 import { CoverPage } from './CoverPage';
@@ -437,8 +437,8 @@ export function ProjectPDFDocument({ project, pinsByImage, showEstimations = tru
                 </View>
                 {collection.fields.length === 0 ? (
                   <Text style={s.fieldDesc}>Aucun champ défini.</Text>
-                ) : collection.fields.map(field => (
-                  <View key={field.id} style={s.fieldRow} wrap={false}>
+                ) : flattenFields(collection.fields).map(({ field, depth }) => (
+                  <View key={field.id} style={[s.fieldRow, { paddingLeft: depth * 12 }]} wrap={false}>
                     <Text style={s.fieldName}>{field.name || 'sans nom'}</Text>
                     <Text style={s.fieldDesc}>{describeField(field, collections)}</Text>
                   </View>

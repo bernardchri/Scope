@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { Project } from './types';
+import type { CollectionField, Project } from './types';
 
 /**
  * Schéma de validation défensive pour `scope.json`.
@@ -48,16 +48,19 @@ const imagePinSchema = z.object({
   fieldRef: z.object({ collectionId: z.string(), fieldId: z.string() }).optional().catch(undefined),
 });
 
-const collectionFieldSchema = z.object({
-  id: z.string(),
-  name: z.string().catch(''),
-  kind: z.string().catch('text'),
-  specs: z.record(z.string(), z.string()).optional(),
-  relationTo: z.string().optional(),
-  multiple: z.boolean().optional(),
-  required: z.boolean().optional(),
-  note: z.string().optional(),
-});
+const collectionFieldSchema: z.ZodType<CollectionField> = z.lazy(() =>
+  z.object({
+    id: z.string(),
+    name: z.string().catch(''),
+    kind: z.string().catch('text'),
+    specs: z.record(z.string(), z.string()).optional(),
+    relationTo: z.string().optional(),
+    multiple: z.boolean().optional(),
+    required: z.boolean().optional(),
+    note: z.string().optional(),
+    subFields: resilientArray(collectionFieldSchema).optional(),
+  })
+);
 
 const collectionSchema = z.object({
   id: z.string(),

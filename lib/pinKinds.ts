@@ -103,6 +103,15 @@ export const PIN_KINDS: PinKind[] = [
   },
   { id: 'boolean', label: 'Oui / non', fields: [EDITABLE] },
   { id: 'relation', label: 'Relation', fields: [{ id: 'multiple', label: 'Entrées', type: 'select', options: ['une seule', 'plusieurs'] }] },
+  {
+    id: 'repeater',
+    label: 'Répéteur',
+    fields: [
+      { id: 'minRows', label: 'Lignes min', type: 'number' },
+      { id: 'maxRows', label: 'Lignes max', type: 'number' },
+      { id: 'rowFields', label: 'Champs d\'une ligne', type: 'text', placeholder: 'titre, image, lien…' },
+    ],
+  },
   { id: 'other', label: 'Autre', fields: [] },
 ];
 
@@ -120,6 +129,9 @@ export function describePinSpecs(pin: Pick<ImagePin, 'kind' | 'specs'>): string[
     if (!value) continue;
     if (field.id === 'maxLength') out.push(`max ${value} ${field.unit ?? ''}`.trim());
     else if (field.id === 'seo') out.push(`SEO : ${value}`);
+    else if (field.id === 'minRows') out.push(`min ${value} ligne(s)`);
+    else if (field.id === 'maxRows') out.push(`max ${value} ligne(s)`);
+    else if (field.id === 'rowFields') out.push(`chaque ligne : ${value}`);
     else if (field.type === 'select' && field.id === 'editable') out.push(value);
     else out.push(`${field.label.toLowerCase()} : ${value}${field.unit ? ` ${field.unit}` : ''}`);
   }

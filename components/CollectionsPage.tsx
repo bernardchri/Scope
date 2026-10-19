@@ -3,8 +3,8 @@
 import { useState } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import { Collection, CollectionField, Component } from '@/lib/types';
-import { FIELD_KINDS, createCollection, createField, getFieldKind } from '@/lib/collections';
-import SpecFields from '@/components/molecules/SpecFields';
+import { createCollection, createField } from '@/lib/collections';
+import FieldEditor from '@/components/molecules/FieldEditor';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -141,95 +141,15 @@ export default function CollectionsPage({ collections, components, onChange, onS
 
             <div className="space-y-3">
               <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Champs</h3>
-              {selected.fields.map((field) => {
-                const kind = getFieldKind(field.kind);
-                return (
-                  <div key={field.id} className="rounded-lg border p-3 space-y-3">
-                    <div className="flex gap-2 items-center">
-                      <Input
-                        key={`${field.id}-name`}
-                        className="h-8 text-sm"
-                        placeholder="Nom du champ (ex. titre)"
-                        defaultValue={field.name}
-                        onBlur={(e) => updateField(selected, field.id, { name: e.target.value.trim() })}
-                      />
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        <Checkbox
-                          id={`req-${field.id}`}
-                          checked={!!field.required}
-                          onCheckedChange={(v) => updateField(selected, field.id, { required: v === true })}
-                        />
-                        <Label htmlFor={`req-${field.id}`} className="font-normal text-xs cursor-pointer">Obligatoire</Label>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 shrink-0"
-                        title="Supprimer le champ"
-                        onClick={() => update(selected.id, { fields: selected.fields.filter((f) => f.id !== field.id) })}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                    <div className="flex flex-wrap gap-1.5">
-                      {FIELD_KINDS.map((k) => (
-                        <Button
-                          key={k.id}
-                          type="button"
-                          size="sm"
-                          variant={field.kind === k.id ? 'default' : 'outline'}
-                          className="h-7 px-2 text-xs"
-                          onClick={() => updateField(selected, field.id, { kind: k.id, specs: undefined, relationTo: undefined, multiple: undefined })}
-                        >
-                          {k.label}
-                        </Button>
-                      ))}
-                    </div>
-                    {kind && (
-                      <SpecFields
-                        kind={kind}
-                        specs={field.specs}
-                        scope={field.id}
-                        onSetSpec={(id, value) => {
-                          const specs = { ...(field.specs || {}) };
-                          if (value) specs[id] = value; else delete specs[id];
-                          updateField(selected, field.id, { specs: Object.keys(specs).length ? specs : undefined });
-                        }}
-                      />
-                    )}
-                    {field.kind === 'relation' && (
-                      <div className="flex gap-3 items-end">
-                        <label className="space-y-1 text-xs text-muted-foreground flex-1">
-                          Pointe vers
-                          <select
-                            className="flex h-8 w-full rounded-md border border-input bg-background px-2 text-sm text-foreground"
-                            value={field.relationTo ?? ''}
-                            onChange={(e) => updateField(selected, field.id, { relationTo: e.target.value || undefined })}
-                          >
-                            <option value="">—</option>
-                            {collections.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                          </select>
-                        </label>
-                        <div className="flex items-center gap-1.5 pb-1.5">
-                          <Checkbox
-                            id={`multi-${field.id}`}
-                            checked={!!field.multiple}
-                            onCheckedChange={(v) => updateField(selected, field.id, { multiple: v === true })}
-                          />
-                          <Label htmlFor={`multi-${field.id}`} className="font-normal text-xs cursor-pointer">Plusieurs entrées</Label>
-                        </div>
-                      </div>
-                    )}
-                    <Input
-                      key={`${field.id}-note`}
-                      className="h-8 text-sm"
-                      placeholder="Précision libre"
-                      defaultValue={field.note ?? ''}
-                      onBlur={(e) => updateField(selected, field.id, { note: e.target.value.trim() || undefined })}
-                    />
-                  </div>
-                );
-              })}
+              {selected.fields.map((field) => (
+                <FieldEditor
+                  key={field.id}
+                  field={field}
+                  collections={collections}
+                  onChange={(patch) => updateField(selected, field.id, patch)}
+                  onRemove={() => update(selected.id, { fields: selected.fields.filter((f) => f.id !== field.id) })}
+                />
+              ))}
               <Button
                 variant="outline"
                 size="sm"

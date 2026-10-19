@@ -4,6 +4,7 @@ import { Collection, ImagePin } from '@/lib/types';
 import { PIN_KINDS, getPinKind } from '@/lib/pinKinds';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { flattenFields } from '@/lib/collections';
 import SpecFields from './SpecFields';
 import CollectionPicker from './CollectionPicker';
 
@@ -23,7 +24,7 @@ interface PinSpecEditorProps {
 export default function PinSpecEditor({ pin, onChange, collections = [], onCreateCollection = () => {} }: PinSpecEditorProps) {
   const kind = getPinKind(pin.kind);
   const fieldOptions = collections.flatMap((c) =>
-    c.fields.filter((f) => f.name).map((f) => ({ value: `${c.id}:${f.id}`, label: `${c.name} › ${f.name}` }))
+    flattenFields(c.fields).filter((f) => f.field.name).map((f) => ({ value: `${c.id}:${f.field.id}`, label: `${c.name} › ${f.path}` }))
   );
 
   function setSpec(fieldId: string, value: string) {
