@@ -24,6 +24,7 @@ export interface FigmaImportPin {
 /** Payload envoyé par le plugin Figma (scope-figma-plugin/code.js) via POST /scope-push. */
 export interface FigmaImportPayload {
   name: string;
+  /** Type tagué dans Figma (scopeType) ; vide si jamais tagué — le type SCOPE existant est alors conservé. */
   category: string;
   /** Tagué sur le node Figma (scopeCaption) ; vide si jamais renseigné côté Figma. */
   caption?: string;
@@ -155,9 +156,13 @@ export async function applyFigmaImport(
   const instances = [...keptInstances, ...autoInstances];
 
   const componentUpdates: Partial<Component> = {
-    name: payload.name || existing?.name,
-    description: payload.description || existing?.description,
-    category: normalizeFigmaCategory(payload.category),
+    // Nom et description de Figma ne servent qu'à créer le composant (la
+    // description aussi à combler un champ vide) : pas d'écrasement des
+    // modifications faites dans SCOPE.
+    name: existing?.name || payload.name,
+    description: existing?.description || payload.description,
+    // Un type jamais tagué dans Figma ne doit pas écraser celui choisi dans SCOPE.
+    category: payload.category || !existing ? normalizeFigmaCategory(payload.category) : existing.category,
     images,
     instances,
     figmaLink: { fileKey: payload.fileKey, groupNodeId: payload.groupNodeId, lastSyncAt: new Date().toISOString() },

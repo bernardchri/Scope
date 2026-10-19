@@ -57,7 +57,7 @@ export default function FigmaImportDialog({
   useEffect(() => {
     if (!payload) return;
     setName(payload.name);
-    setCategory(normalizeFigmaCategory(payload.category));
+    setCategory(payload.category || !matchedExisting ? normalizeFigmaCategory(payload.category) : matchedExisting.category);
     setTarget(matchedExisting?.id || NEW_COMPONENT_VALUE);
     setError(null);
     setPendingResult(null);
@@ -154,7 +154,7 @@ export default function FigmaImportDialog({
 
             <div className="space-y-2">
               <Label htmlFor="figma-name">Nom</Label>
-              <Input id="figma-name" value={name} onChange={(e) => setName(e.target.value)} />
+              <Input id="figma-name" value={existing ? existing.name : name} disabled={!!existing} onChange={(e) => setName(e.target.value)} />
             </div>
 
             <div className="space-y-2">

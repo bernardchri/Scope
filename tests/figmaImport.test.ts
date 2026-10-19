@@ -212,3 +212,33 @@ describe('applyFigmaImport — pins de composants → ComponentInstance', () => 
     expect(result.componentUpdates.instances).toEqual([]);
   });
 });
+
+describe('applyFigmaImport — type SCOPE conservé', () => {
+  it("garde le type d'un composant existant quand Figma n'en tague aucun", async () => {
+    const existing = makeComponent({ category: 'section' });
+    const result = await applyFigmaImport('/proj', basePayload({ category: '' }), existing);
+    expect(result.componentUpdates.category).toBe('section');
+  });
+
+  it("applique le type tagué dans Figma, et 'component' par défaut pour un nouveau composant", async () => {
+    const existing = makeComponent({ category: 'section' });
+    expect((await applyFigmaImport('/proj', basePayload({ category: 'document' }), existing)).componentUpdates.category).toBe('document');
+    expect((await applyFigmaImport('/proj', basePayload({ category: '' }))).componentUpdates.category).toBe('component');
+  });
+});
+
+describe('applyFigmaImport — nom et description conservés', () => {
+  it("garde nom/description d'un composant existant, comble une description vide", async () => {
+    const payload = basePayload({ name: 'Nom Figma', description: 'Desc Figma' });
+    const kept = await applyFigmaImport('/proj', payload, makeComponent({ name: 'Nom SCOPE', description: 'Desc SCOPE' }));
+    expect(kept.componentUpdates).toMatchObject({ name: 'Nom SCOPE', description: 'Desc SCOPE' });
+
+    const filled = await applyFigmaImport('/proj', payload, makeComponent({ name: 'Nom SCOPE', description: '' }));
+    expect(filled.componentUpdates).toMatchObject({ name: 'Nom SCOPE', description: 'Desc Figma' });
+  });
+
+  it('utilise le nom Figma pour un nouveau composant', async () => {
+    const result = await applyFigmaImport('/proj', basePayload({ name: 'Nom Figma' }));
+    expect(result.componentUpdates.name).toBe('Nom Figma');
+  });
+});
