@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { getAppSettings, saveAppSettings } from '@/lib/persistence';
 import { getFigmaBridgeInfo, FigmaBridgeInfo } from '@/lib/figmaBridge';
 import { AppSettings, DEFAULT_APP_SETTINGS } from '@/lib/types';
+import { SCOPE_ITEM_TYPES, TYPE_LABELS } from '@/lib/categoryHelpers';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -64,6 +65,37 @@ export default function SettingsDialog({ open, onOpenChange }: Props) {
                 }
                 placeholder="Mon Studio"
               />
+            </div>
+
+            <div className="space-y-3">
+              <Label className="text-sm font-semibold">Estimation par défaut (heures)</Label>
+              <p className="text-sm text-muted-foreground">
+                Appliquée à la création d&apos;un élément du type correspondant. Vide = aucune.
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                {SCOPE_ITEM_TYPES.map(type => (
+                  <div key={type} className="flex items-center gap-2">
+                    <Label htmlFor={`estimate-${type}`} className="w-24 font-normal">
+                      {TYPE_LABELS[type]}
+                    </Label>
+                    <Input
+                      id={`estimate-${type}`}
+                      type="number"
+                      min="0"
+                      step="0.5"
+                      value={settings.defaultEstimates?.[type] ?? ''}
+                      onChange={e => {
+                        const next = { ...settings.defaultEstimates };
+                        const v = parseFloat(e.target.value);
+                        if (Number.isFinite(v) && v > 0) next[type] = v;
+                        else delete next[type];
+                        setSettings({ ...settings, defaultEstimates: next });
+                      }}
+                      placeholder="—"
+                    />
+                  </div>
+                ))}
+              </div>
             </div>
 
             <div className="space-y-3">

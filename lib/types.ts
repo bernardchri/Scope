@@ -127,6 +127,8 @@ export interface AppSettings {
   comment: {
     exportComments: boolean;
   };
+  /** Estimation (heures) appliquée à la création d'un élément, par type. Absent = aucune. */
+  defaultEstimates?: Partial<Record<ScopeItemType, number>>;
 }
 
 export const DEFAULT_APP_SETTINGS: AppSettings = {
@@ -134,4 +136,5 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
   pdf: { showEstimations: true },
   markdown: { multiFile: false },
   comment: { exportComments: false },
+  defaultEstimates: {},
 };

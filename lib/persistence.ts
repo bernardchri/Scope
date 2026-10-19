@@ -1,7 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { save } from '@tauri-apps/plugin-dialog';
 import { getConfigStore } from './store';
-import { Project, ComponentImage, AppSettings, DEFAULT_APP_SETTINGS } from './types';
+import { Project, Component, ComponentImage, AppSettings, DEFAULT_APP_SETTINGS } from './types';
 import { parseProject } from './projectSchema';
 
 /**
@@ -152,7 +152,19 @@ export async function getAppSettings(): Promise<AppSettings> {
     pdf: { ...DEFAULT_APP_SETTINGS.pdf, ...saved?.pdf },
     markdown: { ...DEFAULT_APP_SETTINGS.markdown, ...saved?.markdown },
     comment: { ...DEFAULT_APP_SETTINGS.comment, ...saved?.comment },
+    defaultEstimates: { ...DEFAULT_APP_SETTINGS.defaultEstimates, ...saved?.defaultEstimates },
   };
+}
+
+/** Applique l'estimation par défaut du type (réglages) à un nouvel élément, sauf s'il en a déjà une. */
+export async function withDefaultEstimate(component: Component): Promise<Component> {
+  if (component.estimatedHours !== undefined) return component;
+  try {
+    const hours = (await getAppSettings()).defaultEstimates?.[component.category];
+    return hours && hours > 0 ? { ...component, estimatedHours: hours } : component;
+  } catch {
+    return component;
+  }
 }
 
 export async function saveAppSettings(settings: AppSettings): Promise<void> {

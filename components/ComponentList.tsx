@@ -5,6 +5,7 @@ import { listen } from '@tauri-apps/api/event';
 import { useProjectStore, undo, redo } from '@/lib/projectStore';
 import { Component, ScopeItemType } from '@/lib/types';
 import { FigmaImportPayload, applyFigmaImport, buildComponentFromFigmaUpdates } from '@/lib/figmaImport';
+import { withDefaultEstimate } from '@/lib/persistence';
 import { publishFigmaComponentCatalog } from '@/lib/figmaBridge';
 import { useShortcuts } from '@/lib/hooks/useShortcuts';
 import ComponentSidebar from './ComponentSidebar';
@@ -76,7 +77,7 @@ export default function ComponentList({ projectId }: ComponentListProps) {
       if (existing) {
         state.updateComponent(project.id, existing.id, result.componentUpdates);
       } else {
-        state.addComponent(project.id, buildComponentFromFigmaUpdates(result.componentUpdates));
+        state.addComponent(project.id, await withDefaultEstimate(buildComponentFromFigmaUpdates(result.componentUpdates)));
       }
     } catch (e) {
       console.error('[figma-import bulk] échec pour', payload.nodeId, e);
@@ -130,16 +131,16 @@ export default function ComponentList({ projectId }: ComponentListProps) {
 
   const showingDashboard = !selectedComponentId;
 
-  function handleCreateComponent(name: string, description: string, category: ScopeItemType) {
+  async function handleCreateComponent(name: string, description: string, category: ScopeItemType) {
     if (!activeProject) return;
-    const newComponent: Component = {
+    const newComponent = await withDefaultEstimate({
       id: crypto.randomUUID(),
       name,
       description: description || undefined,
       category,
       instances: [],
       tasks: [],
-    };
+    });
     addComponent(activeProject.id, newComponent);
     setIsModalOpen(false);
     setNavHistory([newComponent.id]);
@@ -169,9 +170,9 @@ export default function ComponentList({ projectId }: ComponentListProps) {
     updateComponent(activeProject.id, componentId, updates);
   }
 
-  function handleFigmaImportCreate(updates: Partial<Component>) {
+  async function handleFigmaImportCreate(updates: Partial<Component>) {
     if (!activeProject) return;
-    const newComponent = buildComponentFromFigmaUpdates(updates);
+    const newComponent = await withDefaultEstimate(buildComponentFromFigmaUpdates(updates));
     addComponent(activeProject.id, newComponent);
     setNavHistory([newComponent.id]);
   }
