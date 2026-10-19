@@ -148,7 +148,7 @@ function generateComponentBlock(component: Component, imageMap: ImageMap, allCom
         pin.label && !linkedComponent ? `« ${pin.label} »` : '',
         linkedComponent ? `composant : ${componentRef(linkedComponent, links)}` : '',
         linkedTask ? `tâche : ${linkedTask.name}` : '',
-        describePin(pin, collections),
+        describePin(pin, collections, linkedComponent?.name),
       ].filter(Boolean);
       pinsLegendLines.push(`- Pin #${pin.number}${details.length ? ` — ${details.join(' — ')}` : ''}`);
     });

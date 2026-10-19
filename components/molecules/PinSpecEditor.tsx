@@ -1,7 +1,7 @@
 'use client';
 
 import { Collection, ImagePin } from '@/lib/types';
-import { PIN_KINDS, getPinKind } from '@/lib/pinKinds';
+import { PIN_KINDS, PinKind, getPinKind } from '@/lib/pinKinds';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { flattenFields } from '@/lib/collections';
@@ -13,7 +13,16 @@ interface PinSpecEditorProps {
   onChange: (pin: ImagePin) => void;
   /** Modèle de contenu du projet : collections à lier au pin. */
   collections?: Collection[];
+  /** Nom du composant relié à ce pin (permet « chaque ligne = ce composant » pour un répéteur). */
+  linkedComponentName?: string;
   onCreateCollection?: (collection: Collection) => void;
+}
+
+/** Répéteur : « Contenu d'une ligne » n'a de sens que relié à un composant, et remplace la liste libre des champs. */
+function visibleKind(kind: PinKind, pin: ImagePin, linked: boolean): PinKind {
+  if (kind.id !== 'repeater') return kind;
+  const rowFromComponent = linked && !!pin.specs?.rowSource;
+  return { ...kind, fields: kind.fields.filter((f) => (f.id === 'rowSource' ? linked : f.id === 'rowFields' ? !rowFromComponent : true)) };
 }
 
 /**
@@ -21,7 +30,7 @@ interface PinSpecEditorProps {
  * au type (longueur max, éditable en backoffice, balise SEO…). Exporté dans le
  * Markdown (prompt IA) et lu par le développeur.
  */
-export default function PinSpecEditor({ pin, onChange, collections = [], onCreateCollection = () => {} }: PinSpecEditorProps) {
+export default function PinSpecEditor({ pin, onChange, collections = [], linkedComponentName, onCreateCollection = () => {} }: PinSpecEditorProps) {
   const kind = getPinKind(pin.kind);
   const fieldOptions = collections.flatMap((c) =>
     flattenFields(c.fields).filter((f) => f.field.name).map((f) => ({ value: `${c.id}:${f.field.id}`, label: `${c.name} › ${f.path}` }))
@@ -53,7 +62,7 @@ export default function PinSpecEditor({ pin, onChange, collections = [], onCreat
         ))}
       </div>
 
-      {kind && <SpecFields kind={kind} specs={pin.specs} onSetSpec={setSpec} scope={pin.id} />}
+      {kind && <SpecFields kind={visibleKind(kind, pin, !!linkedComponentName)} specs={pin.specs} onSetSpec={setSpec} scope={pin.id} />}
 
       {(pin.kind === 'list' || pin.kind === 'relation') && (
         <label className="space-y-1 text-xs text-muted-foreground block">

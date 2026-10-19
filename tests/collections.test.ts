@@ -47,6 +47,12 @@ describe('collections', () => {
     expect(describePin({ kind: 'image', fieldRef: { collectionId: 'r', fieldId: 'g1' } }, [repeater])).toBe('Image — champ « galerie › image » de la collection « Pages »');
   });
 
+  it('un répéteur peut renvoyer au composant lié', () => {
+    const pin = { kind: 'repeater', specs: { minRows: '3', maxRows: '6', rowSource: 'x' } };
+    expect(describePin(pin, [], 'Slider')).toBe('Répéteur — min 3 ligne(s), max 6 ligne(s), chaque ligne : composant « Slider » (voir sa fiche)');
+    expect(describePin(pin)).toBe('Répéteur — min 3 ligne(s), max 6 ligne(s)');
+  });
+
   it('relie un pin à une collection ou à un champ', () => {
     const all = [projets, categories];
     expect(describePin({ kind: 'list', collectionId: 'p' }, all)).toBe('Liste — entrées de la collection « Projets »');

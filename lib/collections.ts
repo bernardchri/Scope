@@ -12,7 +12,7 @@ export const FIELD_KINDS: PinKind[] = [
   // La cible d'une relation se choisit dans le champ (relationTo), pas dans des spécifications.
   { id: 'relation', label: 'Relation', fields: [] },
   // Les champs d'une ligne sont de vrais sous-champs (subFields), pas du texte libre.
-  { id: 'repeater', label: 'Répéteur', fields: pinKind('repeater').fields.filter((f) => f.id !== 'rowFields') },
+  { id: 'repeater', label: 'Répéteur', fields: pinKind('repeater').fields.filter((f) => f.id !== 'rowFields' && f.id !== 'rowSource') },
   pinKind('other'),
 ];
 

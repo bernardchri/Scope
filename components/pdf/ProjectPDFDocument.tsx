@@ -155,7 +155,7 @@ function ComponentDetailBlock({
               <View key={pin.id} style={s.pinRow} wrap={false}>
                 <View style={s.pinBadge}><Text style={s.pinBadgeText}>{pin.number}</Text></View>
                 <Text style={s.pinText}>
-                  {[pin.label, describePin(pin, project.collections)].filter(Boolean).join(' — ')}
+                  {[pin.label, describePin(pin, project.collections, allComponents.find(c => c.id === component.instances.find(i => i.pinRef?.pinId === pin.id)?.componentId)?.name)].filter(Boolean).join(' — ')}
                 </Text>
               </View>
             ))}

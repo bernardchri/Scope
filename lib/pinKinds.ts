@@ -109,6 +109,7 @@ export const PIN_KINDS: PinKind[] = [
     fields: [
       { id: 'minRows', label: 'Lignes min', type: 'number' },
       { id: 'maxRows', label: 'Lignes max', type: 'number' },
+      { id: 'rowSource', label: 'Contenu d\'une ligne', type: 'select', options: ['le composant lié (ses pins décrivent une ligne)'] },
       { id: 'rowFields', label: 'Champs d\'une ligne', type: 'text', placeholder: 'titre, image, lien…' },
     ],
   },
@@ -131,6 +132,7 @@ export function describePinSpecs(pin: Pick<ImagePin, 'kind' | 'specs'>): string[
     else if (field.id === 'seo') out.push(`SEO : ${value}`);
     else if (field.id === 'minRows') out.push(`min ${value} ligne(s)`);
     else if (field.id === 'maxRows') out.push(`max ${value} ligne(s)`);
+    else if (field.id === 'rowSource') continue; // décrit par describePin, qui connaît le composant lié
     else if (field.id === 'rowFields') out.push(`chaque ligne : ${value}`);
     else if (field.type === 'select' && field.id === 'editable') out.push(value);
     else out.push(`${field.label.toLowerCase()} : ${value}${field.unit ? ` ${field.unit}` : ''}`);
@@ -139,9 +141,15 @@ export function describePinSpecs(pin: Pick<ImagePin, 'kind' | 'specs'>): string[
 }
 
 /** Libellé court d'un pin pour les exports : « Titre — max 128 caractères, SEO : H2 — champ « titre » de la collection « Projets » ». */
-export function describePin(pin: Pick<ImagePin, 'kind' | 'specs' | 'note' | 'collectionId' | 'fieldRef'>, collections?: Collection[]): string {
+export function describePin(
+  pin: Pick<ImagePin, 'kind' | 'specs' | 'note' | 'collectionId' | 'fieldRef'>,
+  collections?: Collection[],
+  /** Composant relié au pin : une ligne de répéteur peut renvoyer à sa fiche. */
+  linkedName?: string,
+): string {
   const kind = getPinKind(pin.kind);
   const specs = describePinSpecs(pin);
+  if (pin.specs?.rowSource && linkedName) specs.push(`chaque ligne : composant « ${linkedName} » (voir sa fiche)`);
   const parts = [kind ? kind.label : '', specs.join(', ')].filter(Boolean);
   const head = parts.join(' — ');
   return [head, describePinContent(pin, collections), pin.note?.trim()].filter(Boolean).join(' — ');

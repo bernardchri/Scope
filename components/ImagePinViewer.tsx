@@ -244,6 +244,11 @@ export default function ImagePinViewer({ images, tasks, folderPath, onUpdateImag
     ? Math.round(showCropView ? (currentCrop!.width / 100) * naturalSize.w : naturalSize.w)
     : undefined;
 
+  const linkedNameFor = (pinId: string) => {
+    const inst = (instances || []).find(x => x.pinRef?.pinId === pinId);
+    return inst ? allComponents?.find(c => c.id === inst.componentId)?.name : undefined;
+  };
+
   return (
     <div className="space-y-4">
       {/* ── Image principale avec overlay pins ─────────────────────────────── */}
@@ -387,6 +392,7 @@ export default function ImagePinViewer({ images, tasks, folderPath, onUpdateImag
           onChange={(pin) => updatePins(currentPins.map(p => (p.id === pin.id ? pin : p)), true)}
           collections={collections}
           onCreateCollection={onCreateCollection}
+          linkedComponentName={linkedNameFor(selectedPinId)}
         />
       )}
 
