@@ -205,39 +205,3 @@ describe('applyFigmaImport — pins de composants → ComponentInstance', () => 
     expect(result.componentUpdates.instances).toEqual([]);
   });
 });
-
-describe('applyFigmaImport — composants non cochés (linkedOnly)', () => {
-  const button = makeComponent({
-    id: 'comp-button', name: 'Bouton',
-    figmaLink: { fileKey: 'file-1', groupNodeId: 'figma-button-set' },
-  });
-
-  it('crée une instance sans pin, dédupliquée, sans ajouter de pin', async () => {
-    const payload = basePayload({
-      pins: [],
-      linkedOnly: [
-        { figmaLayerId: 'n-1', label: 'Button', groupNodeId: 'figma-button-set' },
-        { figmaLayerId: 'n-2', label: 'Button', groupNodeId: 'figma-button-set' },
-        { figmaLayerId: 'n-3', label: 'Inconnu', groupNodeId: 'figma-absent' },
-      ],
-    });
-
-    const result = await applyFigmaImport('/proj', payload, undefined, [button]);
-
-    expect(result.componentUpdates.images![0].pins).toBeUndefined();
-    expect(result.componentUpdates.instances).toEqual([
-      expect.objectContaining({ componentId: 'comp-button', autoFromFigma: true }),
-    ]);
-  });
-
-  it('ne duplique pas une instance déjà présente via un pin', async () => {
-    const payload = basePayload({
-      pins: [{ figmaLayerId: 'i-1', label: 'Button', groupNodeId: 'figma-button-set', x: 1, y: 2 }],
-      linkedOnly: [{ figmaLayerId: 'n-1', label: 'Button', groupNodeId: 'figma-button-set' }],
-    });
-
-    const result = await applyFigmaImport('/proj', payload, undefined, [button]);
-
-    expect(result.componentUpdates.instances).toHaveLength(1);
-  });
-});

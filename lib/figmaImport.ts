@@ -21,9 +21,6 @@ export interface FigmaImportPin {
   groupNodeId?: string;
 }
 
-/** Occurrence non cochée (sans pin) : donne seulement une instance reliée. */
-export type FigmaLinkedOnly = Omit<FigmaImportPin, 'x' | 'y'>;
-
 /** Payload envoyé par le plugin Figma (scope-figma-plugin/code.js) via POST /scope-push. */
 export interface FigmaImportPayload {
   name: string;
@@ -44,8 +41,6 @@ export interface FigmaImportPayload {
   /** PNG en base64 brut (sans préfixe data:). */
   image: string;
   pins: FigmaImportPin[];
-  /** Occurrences de composants non cochées (ex. imbriquées) : instances sans pin. */
-  linkedOnly?: FigmaLinkedOnly[];
   /** true = fait partie d'un "Importer tous les états" — appliqué sans popup de revue. */
   bulk?: boolean;
 }
@@ -95,7 +90,7 @@ export async function applyFigmaImport(
 
   const imageId = existingImage?.id || crypto.randomUUID();
 
-  const resolveTarget = (pin: Pick<FigmaImportPin, 'componentId' | 'groupNodeId'>) =>
+  const resolveTarget = (pin: FigmaImportPin) =>
     allComponents.find((c) =>
       c.id !== existing?.id &&
       (pin.componentId ? c.id === pin.componentId : !!pin.groupNodeId && c.figmaLink?.groupNodeId === pin.groupNodeId)
@@ -151,24 +146,11 @@ export async function applyFigmaImport(
     });
 
   // Garde les instances manuelles et les instances auto d'autres images ;
-  // les instances auto de cette image (à pin, ou sans pin issues du même node)
-  // et celles sans pinRef ni node (anciens imports) sont régénérées.
+  // les instances auto sans pinRef (anciens imports) sont régénérées.
   const keptInstances = (existing?.instances || []).filter(
-    (i) => !i.autoFromFigma || (i.pinRef ? i.pinRef.imageId !== imageId : !!i.figmaNodeId && i.figmaNodeId !== payload.nodeId)
+    (i) => !i.autoFromFigma || (i.pinRef && i.pinRef.imageId !== imageId)
   );
-
-  // Composants non cochés : une instance sans pin par composant SCOPE cible,
-  // sauf s'il est déjà présent (pin, instance manuelle ou précédent envoi).
-  const present = new Set([...keptInstances, ...autoInstances].map((i) => i.componentId));
-  const linkedOnlyInstances: ComponentInstance[] = [];
-  for (const item of payload.linkedOnly || []) {
-    const target = resolveTarget(item);
-    if (!target || present.has(target.id)) continue;
-    present.add(target.id);
-    linkedOnlyInstances.push({ id: crypto.randomUUID(), componentId: target.id, autoFromFigma: true, figmaNodeId: payload.nodeId });
-  }
-
-  const instances = [...keptInstances, ...autoInstances, ...linkedOnlyInstances];
+  const instances = [...keptInstances, ...autoInstances];
 
   const componentUpdates: Partial<Component> = {
     name: payload.name || existing?.name,
