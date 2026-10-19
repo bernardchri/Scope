@@ -14,6 +14,15 @@ export const FIELD_KINDS: PinKind[] = [
   pinKind('link'),
   { id: 'number', label: 'Nombre', fields: [{ id: 'range', label: 'Min / max', type: 'text', placeholder: '0 à 100' }, { id: 'unit', label: 'Unité', type: 'text', placeholder: '€, m²…' }] },
   { id: 'date', label: 'Date', fields: [{ id: 'format', label: 'Format', type: 'text', placeholder: 'JJ/MM/AAAA, mois + année…' }] },
+  {
+    id: 'category',
+    label: 'Catégorie',
+    fields: [
+      { id: 'choice', label: 'Sélection', type: 'select', options: ['une seule catégorie', 'plusieurs catégories'] },
+      { id: 'values', label: 'Valeurs connues', type: 'text', placeholder: 'Web, Print, Vidéo…' },
+      { id: 'hierarchy', label: 'Hiérarchie', type: 'select', options: ['à plat', 'avec sous-catégories'] },
+    ],
+  },
   { id: 'boolean', label: 'Oui / non', fields: [] },
   { id: 'relation', label: 'Relation', fields: [] },
   { id: 'other', label: 'Autre', fields: [] },

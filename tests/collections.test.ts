@@ -26,6 +26,11 @@ describe('collections', () => {
     expect(describeField(projets.fields[1], [projets, categories])).toBe('Relation → Catégories (plusieurs)');
   });
 
+  it('décrit un champ catégorie', () => {
+    const field = { id: 'f', name: 'type', kind: 'category', specs: { choice: 'plusieurs catégories', values: 'Web, Print' } };
+    expect(describeField(field)).toBe('Catégorie, sélection : plusieurs catégories, valeurs connues : Web, Print');
+  });
+
   it('relie un pin à une collection ou à un champ', () => {
     const all = [projets, categories];
     expect(describePin({ kind: 'list', collectionId: 'p' }, all)).toBe('Liste — entrées de la collection « Projets »');
