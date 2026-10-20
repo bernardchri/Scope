@@ -3,6 +3,7 @@ import { Component, Project } from './types';
 import { getActiveWidgets, isTextWidget } from './categoryHelpers';
 import { describePin } from './pinKinds';
 import { figmaNodeUrl } from './figmaUrl';
+import { componentProgress, pinState, projectProgress } from './progress';
 import { tokensToCss, tokensToJson, tokensToMarkdown } from './designTokens';
 import { findCompletenessIssues, isPinQualified } from './completeness';
 
@@ -20,6 +21,7 @@ export function buildMcpSnapshot(project: Project, folderPath?: string) {
     category: comp.category,
     description: comp.description,
     estimatedHours: comp.estimatedHours,
+    progress: componentProgress(comp),
     page: comp.page,
     // Contenu texte des documents et blocs de texte, dans l'ordre de la fiche.
     texts: getActiveWidgets(comp)
@@ -56,6 +58,7 @@ export function buildMcpSnapshot(project: Project, folderPath?: string) {
           linkedComponent: linked,
           description: describePin(pin, collections, linked),
           qualified: isPinQualified(pin, comp),
+          state: pinState(comp, pin),
         };
       }),
     })),
@@ -69,6 +72,7 @@ export function buildMcpSnapshot(project: Project, folderPath?: string) {
       description: project.description,
       client: project.client,
       version: project.version,
+      progress: projectProgress(project),
     },
     components,
     collections,

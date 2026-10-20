@@ -29,6 +29,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { cn } from '@/lib/utils';
+import { componentProgress } from '@/lib/progress';
 import { CATEGORY_DROP_PREFIX, SIDEBAR_ORDER, computeReorder } from '@/lib/sidebarReorder';
 
 
@@ -41,6 +42,7 @@ interface SortableItemProps {
 }
 
 function SortableItem({ component, isSelected, onSelect }: SortableItemProps) {
+  const progress = componentProgress(component);
   const {
     attributes,
     listeners,
@@ -75,6 +77,11 @@ function SortableItem({ component, isSelected, onSelect }: SortableItemProps) {
         title={component.description}
       >
         {component.name}
+        {progress.total > 0 && (
+          <span className={cn('ml-auto pl-2 text-[11px] font-normal tabular-nums', progress.done === progress.total ? 'text-green-600' : 'text-muted-foreground')} title={`${progress.done} tâche(s) faite(s) sur ${progress.total}`}>
+            {progress.done === progress.total ? '✓' : `${progress.done}/${progress.total}`}
+          </span>
+        )}
       </Button>
     </div>
   );

@@ -1,5 +1,6 @@
 'use client';
 
+import { pinState } from '@/lib/progress';
 import { ImagePin, Task, CropRect } from '@/lib/types';
 import { pinToCroppedSpace } from '@/lib/imageHelpers';
 import { getPinKind } from '@/lib/pinKinds';
@@ -39,6 +40,7 @@ export default function PinsOverlay({
     <>
       {displayPins.map(pin => {
         const linkedTask = tasks.find(t => t.pinRef?.pinId === pin.id);
+        const state = pinState({ tasks }, pin);
         const isSelected = pin.id === selectedPinId;
         const link = pinLinks?.[pin.id];
         return (
@@ -55,13 +57,17 @@ export default function PinsOverlay({
             }}
             onPointerDown={(e) => onPinPointerDown(e, pin.id)}
             onClick={(e) => onPinClick(e, pin.id)}
-            title={linkedTask ? `Pin #${pin.number} — ${linkedTask.name}` : `Pin #${pin.number}`}
+            title={linkedTask ? `Pin #${pin.number} — ${linkedTask.name}${state === 'done' ? ' (fait)' : state === 'partial' ? ' (en cours)' : ''}` : `Pin #${pin.number}`}
             className={`
               w-7 h-7 rounded-full flex items-center justify-center
               relative text-xs font-bold shadow-md transition-colors
               ${isSelected
                 ? 'bg-destructive text-destructive-foreground ring-2 ring-white'
-                : 'bg-primary text-primary-foreground hover:bg-primary/80'
+                : state === 'done'
+                  ? 'bg-green-600 text-white hover:bg-green-600/80'
+                  : state === 'partial'
+                    ? 'bg-amber-500 text-white hover:bg-amber-500/80'
+                    : 'bg-primary text-primary-foreground hover:bg-primary/80'
               }
             `}
           >

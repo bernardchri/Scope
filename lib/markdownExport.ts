@@ -12,6 +12,7 @@ import { generateBuildOrderMd, usedBy } from './buildOrder';
 import { isPinQualified } from './completeness';
 import { Collection } from './types';
 import { figmaNodeUrl } from './figmaUrl';
+import { componentProgress, projectProgress, progressLabel } from './progress';
 import { tokensToCss, tokensToJson, tokensToMarkdown } from './designTokens';
 import { getImageBase64 } from './imageManager';
 import { getAppSettings } from './persistence';
@@ -152,7 +153,12 @@ function generateComponentBlock(component: Component, imageMap: ImageMap, allCom
   const parts: string[] = [];
   parts.push(`# ${component.name}`);
   // Identifiant stable : retrouve l'élément quel que soit son nom (et dans les outils MCP).
-  parts.push(`**Type :** ${TYPE_LABELS[component.category] ?? component.category}\n\n<!-- scope-id: ${component.id} · type: ${component.category} -->`);
+  const progress = componentProgress(component);
+  parts.push(
+    `**Type :** ${TYPE_LABELS[component.category] ?? component.category}` +
+    (progress.total > 0 ? ` · **Avancement :** ${progressLabel(progress)} tâches` : '') +
+    `\n\n<!-- scope-id: ${component.id} · type: ${component.category} -->`,
+  );
 
   if (component.estimatedHours && component.estimatedHours > 0) {
     parts.push(`<!-- estimate: ${component.estimatedHours}h -->`);
@@ -235,7 +241,7 @@ function generateComponentBlock(component: Component, imageMap: ImageMap, allCom
       const details = [
         pin.label && !linkedComponent ? `« ${pin.label} »` : '',
         linkedComponent ? `composant : ${componentRef(linkedComponent, links)}` : '',
-        linkedTask ? `tâche : ${linkedTask.name}` : '',
+        linkedTask ? `tâche : ${linkedTask.name}${linkedTask.completed ? ' (fait)' : ''}` : '',
         describePin(pin, collections, linkedComponent?.name, (c) => collectionLink(c, collectionBase)),
         isPinQualified(pin, component) ? '' : 'à préciser (type, contraintes)',
         // Position sur la maquette : repère le pin sur l'image sans pins incrustés.
@@ -296,10 +302,12 @@ export function projectMetaLine(project: Project): string {
   const client = project.client;
   const clientDetails = [client?.url, client?.contact].filter(Boolean).join(', ');
   const hours = project.components.reduce((acc, c) => acc + (c.estimatedHours ?? 0), 0);
+  const progress = projectProgress(project);
   return [
     client?.name ? `Client : ${client.name}${clientDetails ? ` (${clientDetails})` : ''}` : '',
     project.version ? `Version : ${project.version}` : '',
     hours > 0 ? `Estimation totale : ${hours}h` : '',
+    progress.totalTasks > 0 ? `Avancement : ${progress.percent} % (${progress.totalHours > 0 ? `${progress.doneHours} h faites sur ${progress.totalHours} h estimées · ` : ''}${progress.doneTasks}/${progress.totalTasks} tâches)` : '',
   ].filter(Boolean).join(' · ');
 }
 

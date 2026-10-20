@@ -179,3 +179,22 @@ describe('noms de fichiers de l\'export multi-fichiers', () => {
     expect(generateStoriesMd(makeProject([doc]))).toContain('**Type :** Document');
   });
 });
+
+describe('generateStoriesMd — avancement', () => {
+  it('indique l\'avancement du projet et de chaque élément, et l\'état des tâches liées aux pins', () => {
+    const slider = makeComponent({
+      id: 's', name: 'Slider', category: 'section', estimatedHours: 4,
+      tasks: [
+        { id: 't1', name: 'Structure', completed: true, category: 'frontend', pinRef: { imageId: 'i', pinId: 'p1', pinNumber: 1 } },
+        { id: 't2', name: 'Navigation', completed: false, category: 'frontend' },
+      ],
+      images: [{ id: 'i', isPrimary: true, pins: [{ id: 'p1', number: 1, x: 10, y: 10, kind: 'title' }] }],
+    });
+    const md = generateStoriesMd(makeProject([slider, makeComponent({ id: 'x', name: 'Sans tâche', category: 'component' })]));
+    expect(md).toContain('Avancement : 50 % (2 h faites sur 4 h estimées · 1/2 tâches)');
+    expect(md).toContain('**Avancement :** 1/2 · 50 % tâches');
+    expect(md).toContain('tâche : Structure (fait)');
+    const block = md.slice(md.indexOf('\n# Sans tâche'));
+    expect(block.slice(0, block.indexOf('---'))).not.toContain('Avancement');
+  });
+});

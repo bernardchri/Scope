@@ -39,6 +39,8 @@ import TaskList from './TaskList';
 import ComponentInstanceList from './ComponentInstanceList';
 import ComponentAssets from './ComponentAssets';
 import PageInfoWidget from './PageInfoWidget';
+import ProgressBar from './ProgressBar';
+import { componentProgress, progressLabel } from '@/lib/progress';
 import SortableWidget from './molecules/SortableWidget';
 import SlashCommandMenu from './molecules/SlashCommandMenu';
 import type { TextBlockHandlers } from './TextBlock';
@@ -121,6 +123,7 @@ export default function ScopeItemDetail({
   } | null>(null);
 
   const activeWidgets = getActiveWidgets(item);
+  const itemProgress = componentProgress(item);
   const available = getAvailableWidgetTypes(activeWidgets);
   const images = item.images || [];
 
@@ -550,6 +553,15 @@ export default function ScopeItemDetail({
             <Clock className="h-4 w-4" />
             Estimation : {item.estimatedHours}h
           </p>
+        )}
+        {itemProgress.total > 0 && (
+          <div className="w-full max-w-md space-y-1">
+            <div className="flex items-baseline justify-between text-sm">
+              <span className="font-medium">Avancement</span>
+              <span className="tabular-nums text-muted-foreground">{progressLabel(itemProgress)}</span>
+            </div>
+            <ProgressBar ratio={itemProgress.ratio} />
+          </div>
         )}
       </div>
 

@@ -9,6 +9,8 @@ import { ChevronRight, Clock, CheckSquare, FileText, FileCode, Euro, TriangleAle
 import ProjectInfoDialog from './ProjectInfoDialog';
 import ProjectResources from './ProjectResources';
 import ProjectCompleteness from './ProjectCompleteness';
+import ProgressBar from './ProgressBar';
+import { projectProgress } from '@/lib/progress';
 import { exportProjectPDF } from '@/lib/pdfExport';
 import { exportProjectQuote } from '@/lib/quoteExport';
 import { exportProjectMarkdown } from '@/lib/markdownExport';
@@ -76,6 +78,7 @@ export default function ProjectDashboard({
     (acc, c) => acc + (c.estimatedHours ?? 0), 0
   );
   const totalCost = project.hourlyRate ? totalHours * project.hourlyRate : null;
+  const progress = projectProgress(project);
   const overBudget = totalCost !== null && project.budgetCap !== undefined && totalCost > project.budgetCap;
 
   // Lignes d'infos affichées en lecture seule (édition via ProjectInfoDialog)
@@ -241,6 +244,21 @@ export default function ProjectDashboard({
           </>
         )}
       </section>
+
+      {progress.totalTasks > 0 && (
+        <section className="space-y-3">
+          <div className="flex items-baseline justify-between gap-4">
+            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Avancement</h3>
+            <span className="text-2xl font-bold tabular-nums">{progress.percent} %</span>
+          </div>
+          <ProgressBar ratio={progress.percent / 100} />
+          <p className="text-sm text-muted-foreground">
+            {progress.totalHours > 0 && <>{progress.doneHours} h faites sur {progress.totalHours} h estimées · </>}
+            {progress.doneTasks}/{progress.totalTasks} tâches
+            {progress.estimatedElements > 0 && <> · {progress.plannedElements}/{progress.estimatedElements} éléments chiffrés ont une todo-liste</>}
+          </p>
+        </section>
+      )}
 
       <ProjectCompleteness project={project} onSelectComponent={onSelectComponent} onOpenCollection={onOpenCollection} />
 
