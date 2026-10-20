@@ -34,6 +34,9 @@ export function findCompletenessIssues(project: Pick<Project, 'components' | 'co
   const collections = project.collections ?? [];
 
   for (const comp of project.components) {
+    if (comp.category === 'template' && !comp.page?.route?.trim()) {
+      issues.push({ id: `page-noroute-${comp.id}`, level: 'info', message: `Template « ${comp.name} » : adresse (route) non renseignée`, componentId: comp.id });
+    }
     const images = comp.images ?? [];
     // Les numéros repartent de 1 sur chaque image : on précise l'image dès qu'il y en a plusieurs.
     const open = images.flatMap((img, index) =>
@@ -91,6 +94,9 @@ export function findCompletenessIssues(project: Pick<Project, 'components' | 'co
         issues.push({ id: `field-repeater-${field.id}`, level: 'warning', message: `${where} : répéteur sans sous-champ`, collectionId: c.id });
       }
     }
+    if (c.hasDetailPage && !project.components.some(t => t.page?.collectionId === c.id && t.page.collectionRole === 'single')) {
+      issues.push({ id: `coll-nodetail-${c.id}`, level: 'warning', message: `Collection « ${c.name} » : une page de détail est prévue mais aucun template ne l'affiche (rôle « fiche d'une entrée »)`, collectionId: c.id });
+    }
     if (!usedAnywhere(c, collections, project.components)) {
       issues.push({ id: `coll-unused-${c.id}`, level: 'info', message: `Collection « ${c.name} » : aucun pin ni relation ne l'utilise`, collectionId: c.id });
     }
@@ -106,5 +112,6 @@ function usedAnywhere(c: Collection, collections: Collection[], components: Comp
     )
   );
   const byRelation = collections.some((o) => o.id !== c.id && flattenFields(o.fields).some((f) => f.field.relationTo === c.id));
-  return byPin || byRelation;
+  const byPage = components.some(comp => comp.page?.collectionId === c.id);
+  return byPin || byRelation || byPage;
 }

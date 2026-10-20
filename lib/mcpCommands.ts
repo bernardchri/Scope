@@ -1,4 +1,4 @@
-import { Collection, Component, ComponentImage, ImagePin, Project, ScopeItemType, Task, TaskCategory, WidgetInstance } from './types';
+import { Collection, Component, ComponentImage, ImagePin, PageInfo, Project, ScopeItemType, Task, TaskCategory, WidgetInstance } from './types';
 import { getActiveWidgets, isTextWidget } from './categoryHelpers';
 import { PIN_KINDS, describePin, getPinKind } from './pinKinds';
 import { findCollection, flattenFields } from './collectionLookup';
@@ -184,7 +184,7 @@ function runPinCommand(project: Project, component: Component, tool: string, arg
 }
 
 /** Champs propres à l'élément : nom, description, type, estimation. */
-function runUpdateComponent(component: Component, args: McpArgs): McpOutcome {
+function runUpdateComponent(component: Component, args: McpArgs, collections: Collection[]): McpOutcome {
   const updates: Partial<Component> = {};
   if (args.name !== undefined) {
     const name = str(args.name)?.trim();
@@ -201,13 +201,37 @@ function runUpdateComponent(component: Component, args: McpArgs): McpOutcome {
     if (hours !== undefined && !(Number.isFinite(hours) && hours >= 0)) return fail('`estimatedHours` doit être un nombre positif (ou null pour effacer).');
     updates.estimatedHours = hours;
   }
-  if (Object.keys(updates).length === 0) return fail('Rien à modifier : donne `name`, `description`, `category` ou `estimatedHours`.');
+  const pageKeys = ['route', 'seoTitle', 'seoDescription', 'collection', 'collectionRole'] as const;
+  if (pageKeys.some((key) => args[key] !== undefined)) {
+    const page: PageInfo = { ...(component.page ?? {}) };
+    for (const key of ['route', 'seoTitle', 'seoDescription'] as const) {
+      if (args[key] !== undefined) page[key] = str(args[key])?.trim() || undefined;
+    }
+    if (args.collection !== undefined) {
+      const ref = str(args.collection)?.trim();
+      if (ref) {
+        const collection = resolveCollection(collections, ref);
+        if (typeof collection === 'string') return fail(collection);
+        page.collectionId = collection.id;
+      } else {
+        page.collectionId = undefined;
+      }
+    }
+    if (args.collectionRole !== undefined) {
+      if (args.collectionRole !== '' && args.collectionRole !== 'single' && args.collectionRole !== 'list') return fail('`collectionRole` : single (fiche d\'une entrée) ou list (liste).');
+      page.collectionRole = args.collectionRole === '' ? undefined : (args.collectionRole as PageInfo['collectionRole']);
+    }
+    if (!page.collectionId) page.collectionRole = undefined;
+    const clean = Object.fromEntries(Object.entries(page).filter(([, v]) => v !== undefined)) as PageInfo;
+    updates.page = Object.keys(clean).length ? clean : undefined;
+  }
+  if (Object.keys(updates).length === 0) return fail('Rien à modifier : donne `name`, `description`, `category`, `estimatedHours` ou des informations de page (`route`, `seoTitle`, `seoDescription`, `collection`, `collectionRole`).');
   const next = { ...component, ...updates };
   return {
     ok: true,
     componentId: component.id,
     updates,
-    result: { id: next.id, name: next.name, category: next.category, description: next.description, estimatedHours: next.estimatedHours },
+    result: { id: next.id, name: next.name, category: next.category, description: next.description, estimatedHours: next.estimatedHours, page: next.page },
   };
 }
 
@@ -352,7 +376,7 @@ export function runMcpCommand(project: Project, tool: string, args: McpArgs): Mc
     case 'add_pin':
       return runPinCommand(project, component, tool, args);
     case 'update_component':
-      return runUpdateComponent(component, args);
+      return runUpdateComponent(component, args, project.collections ?? []);
     case 'add_task':
     case 'update_task':
     case 'delete_task':

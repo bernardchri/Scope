@@ -19,6 +19,7 @@ export function buildMcpSnapshot(project: Project, folderPath?: string) {
     category: comp.category,
     description: comp.description,
     estimatedHours: comp.estimatedHours,
+    page: comp.page,
     // Contenu texte des documents et blocs de texte, dans l'ordre de la fiche.
     texts: getActiveWidgets(comp)
       .map((w) => ({ id: w.id, widget: w.type, content: comp.notes?.find((n) => n.id === w.id)?.content }))

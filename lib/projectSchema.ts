@@ -127,7 +127,7 @@ const instanceSchema = z.object({
 const widgetInstanceSchema = z.object({
   id: z.string(),
   type: z
-    .enum(['notes', 'images', 'tasks', 'instances', 'resources', 'paragraph', 'heading1', 'heading2', 'heading3', 'bullet', 'comment'])
+    .enum(['notes', 'images', 'tasks', 'instances', 'resources', 'page', 'paragraph', 'heading1', 'heading2', 'heading3', 'bullet', 'comment'])
     .catch('notes'),
 });
 
@@ -135,6 +135,16 @@ const noteDataSchema = z.object({
   id: z.string(),
   content: z.string().catch(''),
 });
+
+const pageSchema = z
+  .object({
+    route: z.string().optional(),
+    seoTitle: z.string().optional(),
+    seoDescription: z.string().optional(),
+    collectionId: z.string().optional(),
+    collectionRole: z.enum(['single', 'list']).optional().catch(undefined),
+  })
+  .optional();
 
 const componentSchema = z.object({
   id: z.string(),
@@ -149,6 +159,7 @@ const componentSchema = z.object({
   instances: resilientArray(instanceSchema),
   tasks: resilientArray(taskSchema),
   figmaLink: figmaLinkSchema,
+  page: pageSchema,
 });
 
 const projectSchema = z.object({

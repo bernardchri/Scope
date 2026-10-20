@@ -1,5 +1,5 @@
 import { ScopeItemType, WidgetType, WidgetInstance, Component } from './types';
-import { FileText, Image, ListChecks, Layers, Package, AlignLeft, MessageSquare, Heading1, Heading2, Heading3, List, type LucideIcon } from 'lucide-react';
+import { FileText, Image, ListChecks, Layers, Package, AlignLeft, MessageSquare, Heading1, Heading2, Heading3, List, Globe, type LucideIcon } from 'lucide-react';
 import scopeConfig from './scope.config.json';
 
 // --- Derived from scope.config.json ---
@@ -49,6 +49,7 @@ export const WIDGET_ICONS: Record<WidgetType, LucideIcon> = {
   tasks: ListChecks,
   instances: Layers,
   resources: Package,
+  page: Globe,
   paragraph: AlignLeft,
   heading1: Heading1,
   heading2: Heading2,
@@ -82,11 +83,18 @@ export function widgetHasContent(item: Component, widget: WidgetInstance): boole
     case 'tasks':     return item.tasks.length > 0;
     case 'instances': return item.instances.length > 0;
     case 'resources': return (item.assets?.length ?? 0) > 0;
+    case 'page':      return hasPageInfo(item);
     default: return false;
   }
 }
 
 // --- Helpers ---
+
+/** Au moins une information de page (route, SEO, collection) renseignée. */
+export function hasPageInfo(item: Component): boolean {
+  const page = item.page;
+  return !!page && Object.values(page).some(v => typeof v === 'string' ? v.trim() !== '' : !!v);
+}
 
 /** Build default WidgetInstance[] from type defaults */
 function buildDefaultWidgets(category: ScopeItemType, notes?: Component['notes']): WidgetInstance[] {
@@ -107,6 +115,7 @@ const FORCED_WIDGETS: { type: WidgetType; hasData: (item: Component) => boolean 
   { type: 'images', hasData: (item) => (item.images?.length ?? 0) > 0 },
   { type: 'instances', hasData: (item) => item.instances.length > 0 },
   { type: 'resources', hasData: (item) => (item.assets?.length ?? 0) > 0 },
+  { type: 'page', hasData: hasPageInfo },
 ];
 
 export function getActiveWidgets(item: Component): WidgetInstance[] {

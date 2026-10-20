@@ -7,6 +7,8 @@ import { slugify } from './persistence';
 import { renderImageWithPins } from './imageHelpers';
 import { describePin } from './pinKinds';
 import { generateContentModelMd, collectionLink } from './collections';
+import { findCollection } from './collectionLookup';
+import { generateBuildOrderMd, usedBy } from './buildOrder';
 import { isPinQualified } from './completeness';
 import { Collection } from './types';
 import { figmaNodeUrl } from './figmaUrl';
@@ -54,7 +56,8 @@ const READING_GUIDE = [
   '- Une version sans pins est fournie à côté de chaque image annotée : à utiliser pour reproduire la maquette fidèlement.',
   '- « Composants utilisés » liste les composants à réutiliser plutôt qu\'à recréer ; « Éléments SVG » liste les ressources prêtes à l\'emploi.',
   '- « Modèle de contenu » décrit les collections (custom post types) et leurs champs ; un pin peut renvoyer à une collection (liste) ou à un champ (donnée affichée).',
-  '- « Source Figma » identifie le fichier et le node d\'origine.',
+  '- « Page » (templates) donne l\'adresse, le SEO et la collection affichée ; « Utilisé dans » liste les éléments qui réutilisent celui-ci ; « Ordre de construction suggéré » dit par quoi commencer.',
+  '- « Source Figma » donne le fichier d\'origine ; chaque image indique sa taille (point de rupture) et le lien de sa frame.',
 ].join('\n');
 
 function getImageExtension(base64: string): string {
@@ -101,6 +104,9 @@ function generateComponentBlock(component: Component, imageMap: ImageMap, allCom
   if (component.description) {
     parts.push(`## Description\n\n${component.description}`);
   }
+
+  const pageSection = pageInfoLines(component, collections, collectionBase);
+  if (pageSection) parts.push(pageSection);
 
   if (component.figmaLink?.fileKey || component.figmaLink?.groupNodeId) {
     // Le « node » d'un groupe d'états (desktop/mobile) est fabriqué par le plugin : seuls les liens des images sont exploitables.
@@ -199,8 +205,28 @@ function generateComponentBlock(component: Component, imageMap: ImageMap, allCom
     parts.push(lines.join('\n'));
   }
 
+  const parents = usedBy(component, allComponents);
+  if (parents.length > 0) {
+    parts.push(['## Utilisé dans', '', ...parents.map(p => `- ${componentRef(p, links)}`)].join('\n'));
+  }
+
   parts.push('---');
   return parts.join('\n\n');
+}
+
+/** Section « Page » d'un template : adresse, SEO, collection affichée (vide si rien n'est renseigné). */
+function pageInfoLines(component: Component, collections: Collection[], collectionBase: string): string {
+  const page = component.page;
+  if (!page) return '';
+  const collection = findCollection(collections, page.collectionId);
+  const role = page.collectionRole === 'single' ? 'la fiche d\'une entrée' : page.collectionRole === 'list' ? 'la liste des entrées' : 'les entrées';
+  const lines = [
+    page.route?.trim() ? `- Adresse : \`${page.route.trim()}\`` : '',
+    page.seoTitle?.trim() ? `- Titre SEO : ${page.seoTitle.trim()}` : '',
+    page.seoDescription?.trim() ? `- Méta description : ${page.seoDescription.trim()}` : '',
+    collection ? `- Affiche ${role} de la collection ${collectionLink(collection, collectionBase)}` : '',
+  ].filter(Boolean);
+  return lines.length ? ['## Page', '', ...lines].join('\n') : '';
 }
 
 function generateDocumentBlock(component: Component, imageMap: ImageMap, exportComments = false, assetMap: AssetMap = new Map()): string {
@@ -280,6 +306,8 @@ export function generateStoriesMd(project: Project, imageMap: ImageMap = new Map
   sections.push(READING_GUIDE + '\n\n---');
   const contentModel = generateContentModelMd(project.collections, '##', project.components);
   if (contentModel) sections.push(contentModel + '\n---');
+  const buildOrder = generateBuildOrderMd(project.components);
+  if (buildOrder) sections.push(buildOrder + '\n---');
 
   // Grouped by type in display order
   for (const category of CATEGORY_ORDER) {
@@ -463,6 +491,8 @@ async function exportProjectMarkdownMulti(project: Project, folderPath?: string,
 
   const contentModel = generateContentModelMd(project.collections, '##', project.components, (c) => links.get(c.id));
   if (contentModel) indexLines.push(contentModel, '---', '');
+  const buildOrder = generateBuildOrderMd(project.components, '##', (c) => links.get(c.id));
+  if (buildOrder) indexLines.push(buildOrder, '---', '');
 
 
   for (const category of CATEGORY_ORDER) {

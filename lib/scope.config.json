@@ -16,7 +16,7 @@
       "id": "template",
       "label": "Template",
       "color": "bg-purple-100 text-purple-700",
-      "defaultWidgets": ["images", "notes", "tasks", "instances"]
+      "defaultWidgets": ["images", "page", "notes", "tasks", "instances"]
     },
     {
       "id": "section",
@@ -31,6 +31,7 @@
     { "id": "tasks",     "label": "Tâches" },
     { "id": "instances", "label": "Composants utilisés" },
     { "id": "resources", "label": "Ressources" },
+    { "id": "page",      "label": "Page (route, SEO)" },
     { "id": "paragraph", "label": "Paragraphe",         "storage": "notes" },
     { "id": "heading1",  "label": "Titre 1",            "storage": "notes" },
     { "id": "heading2",  "label": "Titre 2",            "storage": "notes" },

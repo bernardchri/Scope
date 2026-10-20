@@ -94,6 +94,17 @@ export function generateContentModelMd(
     if (used.length) {
       lines.push(`Utilisée dans : ${used.map((u) => { const href = componentHref(u); return href ? `[${u.name}](${href})` : u.name; }).join(', ')}.`, '');
     }
+    const shownBy = components.filter(comp => comp.page?.collectionId === c.id);
+    if (shownBy.length) {
+      const pageLabel = (comp: Component) => {
+        const href = componentHref(comp);
+        const name = href ? `[${comp.name}](${href})` : comp.name;
+        const role = comp.page?.collectionRole === 'single' ? 'fiche d\'une entrée' : comp.page?.collectionRole === 'list' ? 'liste' : '';
+        const details = [role, comp.page?.route && `\`${comp.page.route}\``].filter(Boolean).join(', ');
+        return details ? `${name} (${details})` : name;
+      };
+      lines.push(`Pages : ${shownBy.map(pageLabel).join(', ')}.`, '');
+    }
     const referencedBy = collections
       .filter((o) => o.id !== c.id)
       .flatMap((o) => flattenFields(o.fields).filter((f) => f.field.relationTo === c.id).map((f) => `${collectionLink(o)} › ${f.path}`));

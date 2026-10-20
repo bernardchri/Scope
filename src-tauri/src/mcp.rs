@@ -139,7 +139,7 @@ fn tools() -> Value {
         },
         {
             "name": "update_component",
-            "description": "Modifie un élément : nom, description (texte fonctionnel), type et heures estimées. Une valeur vide efface la description ; estimatedHours null efface l'estimation.",
+            "description": "Modifie un élément : nom, description (texte fonctionnel), type, heures estimées et, pour un template, sa page (route, titre et description SEO, collection affichée et rôle). Une valeur vide efface la description ; estimatedHours null efface l'estimation.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -147,7 +147,12 @@ fn tools() -> Value {
                     "name": { "type": "string" },
                     "description": { "type": "string" },
                     "category": { "type": "string", "enum": ["document", "component", "template", "section"] },
-                    "estimatedHours": { "type": ["number", "null"] }
+                    "estimatedHours": { "type": ["number", "null"] },
+                    "route": { "type": "string", "description": "Adresse de la page (templates), ex. /ouvrages/:slug." },
+                    "seoTitle": { "type": "string" },
+                    "seoDescription": { "type": "string" },
+                    "collection": { "type": "string", "description": "Collection affichée par la page (nom ou id) ; vide pour retirer." },
+                    "collectionRole": { "type": "string", "enum": ["single", "list"], "description": "single : fiche d'une entrée ; list : liste des entrées." }
                 },
                 "required": ["component"]
             }

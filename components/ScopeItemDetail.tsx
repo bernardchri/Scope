@@ -38,6 +38,7 @@ import CommentWidget from './CommentWidget';
 import TaskList from './TaskList';
 import ComponentInstanceList from './ComponentInstanceList';
 import ComponentAssets from './ComponentAssets';
+import PageInfoWidget from './PageInfoWidget';
 import SortableWidget from './molecules/SortableWidget';
 import SlashCommandMenu from './molecules/SlashCommandMenu';
 import type { TextBlockHandlers } from './TextBlock';
@@ -182,6 +183,7 @@ export default function ScopeItemDetail({
         case 'tasks': updates.tasks = []; break;
         case 'instances': updates.instances = []; break;
         case 'resources': updates.assets = undefined; break;
+        case 'page': updates.page = undefined; break;
       }
     }
     onUpdate(item.id, updates);
@@ -319,6 +321,15 @@ export default function ScopeItemDetail({
             assets={item.assets || []}
             folderPath={folderPath}
             onUpdateAssets={(assets) => onUpdate(item.id, { assets: assets.length ? assets : undefined })}
+          />
+        );
+      case 'page':
+        return (
+          <PageInfoWidget
+            key={widget.id}
+            page={item.page}
+            collections={collections}
+            onChange={(page) => onUpdate(item.id, { page })}
           />
         );
       default: {

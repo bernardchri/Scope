@@ -2,7 +2,7 @@ export type ScopeItemType = 'document' | 'component' | 'template' | 'section';
 export type ComponentCategory = ScopeItemType;
 
 export type WidgetType =
-  | 'notes' | 'images' | 'tasks' | 'instances' | 'resources'
+  | 'notes' | 'images' | 'tasks' | 'instances' | 'resources' | 'page'
   | 'paragraph' | 'heading1' | 'heading2' | 'heading3' | 'bullet' | 'comment';
 
 export interface WidgetInstance {
@@ -131,6 +131,18 @@ export interface FigmaLink {
   lastSyncAt?: string;
 }
 
+/** Ce qu'un template affiche : adresse, métadonnées SEO et données (collection) qu'il met en scène. */
+export interface PageInfo {
+  /** Adresse de la page, ex. « / », « /ouvrages », « /ouvrages/:slug ». */
+  route?: string;
+  seoTitle?: string;
+  seoDescription?: string;
+  /** Collection affichée par la page. */
+  collectionId?: string;
+  /** « single » : fiche d'une entrée ; « list » : liste (archive) des entrées. */
+  collectionRole?: 'single' | 'list';
+}
+
 export interface Component {
   id: string;
   name: string;
@@ -147,6 +159,7 @@ export interface Component {
   instances: ComponentInstance[];
   tasks: Task[];
   figmaLink?: FigmaLink;
+  page?: PageInfo;
 }
 
 export interface ClientInfo {
