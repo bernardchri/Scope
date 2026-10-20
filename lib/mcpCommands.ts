@@ -1,7 +1,8 @@
-import { Collection, Component, ComponentImage, ImagePin, PageInfo, Project, ScopeItemType, Task, TaskCategory, WidgetInstance } from './types';
+import { Collection, CollectionField, Component, ComponentImage, ImagePin, PageInfo, Project, ScopeItemType, Task, TaskCategory, WidgetInstance } from './types';
 import { getActiveWidgets, isTextWidget } from './categoryHelpers';
 import { PIN_KINDS, describePin, getPinKind } from './pinKinds';
 import { findCollection, flattenFields } from './collectionLookup';
+import { FIELD_KINDS, createCollection, createField, getFieldKind } from './collections';
 import { isPinQualified } from './completeness';
 import { nextPinNumber } from './pinHelpers';
 import { generateBriefMd } from './markdownExport';
@@ -13,7 +14,7 @@ import { componentProgress, projectProgress } from './progress';
 export type McpArgs = Record<string, unknown>;
 
 export type McpOutcome =
-  | { ok: true; componentId: string; updates: Partial<Component>; result: unknown; /** Lecture seule : rien à appliquer au projet. */ query?: true }
+  | { ok: true; componentId: string; updates: Partial<Component>; result: unknown; /** Lecture seule : rien à appliquer au projet. */ query?: true; /** Modification du projet lui-même (collections), à la place de celle d'un élément. */ projectUpdates?: Partial<Project> }
   | { ok: false; error: string };
 
 const fail = (error: string): McpOutcome => ({ ok: false, error });
@@ -491,11 +492,189 @@ function runProgress(project: Project): McpOutcome {
   return queryOutcome({ project: projectProgress(project), byCategory, elements });
 }
 
+
+// --- Collections (modèle de contenu) -----------------------------------------------------------------
+
+const slugOf = (value: string) =>
+  value.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+
+const projectOutcome = (collections: Collection[], result: unknown): McpOutcome =>
+  ({ ok: true, componentId: '', updates: {}, projectUpdates: { collections }, result });
+
+/** Applique `fn` au champ d'id `id`, où qu'il soit (sous-champs de répéteur compris) ; `null` le retire. */
+function mapField(fields: CollectionField[], id: string, fn: (f: CollectionField) => CollectionField | null): CollectionField[] {
+  return fields.flatMap((f) => {
+    if (f.id === id) {
+      const next = fn(f);
+      return next ? [next] : [];
+    }
+    return [f.subFields ? { ...f, subFields: mapField(f.subFields, id, fn) } : f];
+  });
+}
+
+/** Applique les paramètres d'un champ (`name`, `kind`, `specs`, `relationTo`, `multiple`, `required`, `note`) ; mêmes règles que l'éditeur. */
+function applyField(base: CollectionField, args: McpArgs, collections: Collection[]): CollectionField | string {
+  let next: CollectionField = { ...base };
+  const name = str(args.name)?.trim();
+  if (name !== undefined) {
+    if (!name) return 'Le nom du champ ne peut pas être vide.';
+    next.name = name;
+  }
+
+  const kind = str(args.kind)?.trim();
+  if (kind !== undefined && kind !== next.kind) {
+    if (!getFieldKind(kind)) return `Type de champ « ${kind} » inconnu. Types : ${FIELD_KINDS.map((k) => k.id).join(', ')}.`;
+    next = { ...next, kind, specs: undefined, relationTo: undefined, multiple: undefined, subFields: kind === 'repeater' ? next.subFields ?? [] : undefined };
+  }
+
+  if (args.specs !== undefined) {
+    if (typeof args.specs !== 'object' || args.specs === null) return '`specs` doit être un objet { précision: valeur }.';
+    const allowed = getFieldKind(next.kind)?.fields.map((f) => f.id) ?? [];
+    const specs = { ...(next.specs ?? {}) };
+    for (const [key, raw] of Object.entries(args.specs)) {
+      if (!allowed.includes(key)) return `Précision « ${key} » inconnue pour un champ ${next.kind}. Valides : ${allowed.join(', ') || 'aucune'}.`;
+      const checked = checkSpec(next.kind, key, raw);
+      if ('error' in checked) return checked.error;
+      if (checked.value) specs[key] = checked.value;
+      else delete specs[key];
+    }
+    next = { ...next, specs: Object.keys(specs).length ? specs : undefined };
+  }
+
+  if (args.relationTo !== undefined) {
+    if (next.kind !== 'relation') return '`relationTo` ne s\'applique qu\'à un champ de type relation.';
+    if (str(args.relationTo)?.trim() === '') next = { ...next, relationTo: undefined };
+    else {
+      const target = resolveCollection(collections, args.relationTo);
+      if (typeof target === 'string') return target;
+      next = { ...next, relationTo: target.id };
+    }
+  }
+  if (args.multiple !== undefined) {
+    if (next.kind !== 'relation') return '`multiple` ne s\'applique qu\'à un champ de type relation.';
+    next = { ...next, multiple: args.multiple === true ? true : undefined };
+  }
+  if (args.required !== undefined) next = { ...next, required: args.required === true ? true : undefined };
+  if (args.note !== undefined) next = { ...next, note: str(args.note)?.trim() || undefined };
+  return next;
+}
+
+/** Construit un champ (et ses sous-champs, pour un répéteur) à partir de paramètres de création. */
+function buildField(args: McpArgs, collections: Collection[]): CollectionField | string {
+  if (!str(args.name)?.trim()) return 'Chaque champ a besoin d\'un `name`.';
+  const built = applyField(createField(), args, collections);
+  if (typeof built === 'string' || args.subFields === undefined) return built;
+  if (built.kind !== 'repeater') return '`subFields` ne s\'applique qu\'à un champ de type repeater.';
+  if (!Array.isArray(args.subFields)) return '`subFields` doit être une liste de champs.';
+  const subFields: CollectionField[] = [];
+  for (const raw of args.subFields) {
+    const sub = buildField((raw ?? {}) as McpArgs, collections);
+    if (typeof sub === 'string') return `Sous-champ de « ${built.name} » : ${sub}`;
+    subFields.push(sub);
+  }
+  return { ...built, subFields };
+}
+
+const collectionSummary = (c: Collection) => ({ id: c.id, name: c.name, slug: c.slug, fields: flattenFields(c.fields).map((f) => f.path) });
+
+function runCollectionCommand(project: Project, tool: string, args: McpArgs): McpOutcome {
+  const collections = project.collections ?? [];
+
+  if (tool === 'create_collection') {
+    const name = str(args.name)?.trim();
+    if (!name) return fail('Précise `name` (nom de la collection).');
+    if (collections.some((c) => norm(c.name) === norm(name))) return fail(`Une collection « ${name} » existe déjà.`);
+    let created: Collection = { ...createCollection(name, collections), description: str(args.description)?.trim() || undefined, hasDetailPage: args.hasDetailPage === true ? true : undefined };
+    if (str(args.slug)?.trim()) {
+      const slug = slugOf(str(args.slug)!);
+      if (!slug) return fail('`slug` invalide.');
+      if (collections.some((c) => c.slug === slug)) return fail(`Le slug « ${slug} » est déjà pris.`);
+      created = { ...created, slug };
+    }
+    if (args.fields !== undefined) {
+      if (!Array.isArray(args.fields)) return fail('`fields` doit être une liste de champs { name, kind, … }.');
+      // Les relations vers la collection créée elle-même sont possibles : on la compte dans la liste de référence.
+      const known = [...collections, created];
+      for (const raw of args.fields) {
+        const field = buildField((raw ?? {}) as McpArgs, known);
+        if (typeof field === 'string') return fail(field);
+        created = { ...created, fields: [...created.fields, field] };
+      }
+    }
+    return projectOutcome([...collections, created], { created: collectionSummary(created) });
+  }
+
+  const collection = resolveCollection(collections, args.collection);
+  if (typeof collection === 'string') return fail(collection);
+  const replace = (next: Collection) => collections.map((c) => (c.id === next.id ? next : c));
+
+  switch (tool) {
+    case 'update_collection': {
+      let next = { ...collection };
+      if (args.name !== undefined) {
+        const name = str(args.name)?.trim();
+        if (!name) return fail('Le nom ne peut pas être vide.');
+        next = { ...next, name };
+      }
+      if (args.slug !== undefined) {
+        const slug = slugOf(str(args.slug) ?? '');
+        if (!slug) return fail('`slug` invalide.');
+        if (collections.some((c) => c.id !== collection.id && c.slug === slug)) return fail(`Le slug « ${slug} » est déjà pris.`);
+        next = { ...next, slug };
+      }
+      if (args.description !== undefined) next = { ...next, description: str(args.description)?.trim() || undefined };
+      if (args.hasDetailPage !== undefined) next = { ...next, hasDetailPage: args.hasDetailPage === true ? true : undefined };
+      return projectOutcome(replace(next), { updated: collectionSummary(next) });
+    }
+    case 'delete_collection': {
+      // Comme dans l'éditeur : les relations qui pointaient vers elle sont retirées ; les pins liés l'ignorent d'eux-mêmes.
+      const unlink = (fields: CollectionField[]): CollectionField[] =>
+        fields.map((f) => ({ ...f, ...(f.relationTo === collection.id ? { relationTo: undefined } : {}), ...(f.subFields ? { subFields: unlink(f.subFields) } : {}) }));
+      const rest = collections.filter((c) => c.id !== collection.id).map((c) => ({ ...c, fields: unlink(c.fields) }));
+      const usedBy = project.components
+        .filter((comp) => comp.page?.collectionId === collection.id || (comp.images ?? []).some((img) => (img.pins ?? []).some((p) => p.collectionId === collection.id || p.fieldRef?.collectionId === collection.id)))
+        .map((comp) => comp.name);
+      return projectOutcome(rest, { deleted: collection.name, ...(usedBy.length ? { warning: `Encore référencée par : ${usedBy.join(', ')} (liens à refaire).` } : {}) });
+    }
+    case 'add_field': {
+      const field = buildField(args, collections);
+      if (typeof field === 'string') return fail(field);
+      if (args.parent !== undefined) {
+        const parent = resolveField(collection, args.parent);
+        if (typeof parent === 'string') return fail(parent);
+        if (parent.kind !== 'repeater') return fail(`« ${parent.name} » n'est pas un répéteur : on ne peut pas y ajouter de sous-champ.`);
+        const fields = mapField(collection.fields, parent.id, (p) => ({ ...p, subFields: [...(p.subFields ?? []), field] }));
+        return projectOutcome(replace({ ...collection, fields }), { added: field.name, collection: collectionSummary({ ...collection, fields }) });
+      }
+      const next = { ...collection, fields: [...collection.fields, field] };
+      return projectOutcome(replace(next), { added: field.name, collection: collectionSummary(next) });
+    }
+    case 'update_field':
+    case 'delete_field': {
+      const field = resolveField(collection, args.field);
+      if (typeof field === 'string') return fail(field);
+      let error = '';
+      const fields = mapField(collection.fields, field.id, (f) => {
+        if (tool === 'delete_field') return null;
+        const next = applyField(f, args, collections);
+        if (typeof next === 'string') { error = next; return f; }
+        return next;
+      });
+      if (error) return fail(error);
+      const next = { ...collection, fields };
+      return projectOutcome(replace(next), { [tool === 'delete_field' ? 'deleted' : 'updated']: field.name, collection: collectionSummary(next) });
+    }
+    default:
+      return fail(`Outil inconnu : ${tool}`);
+  }
+}
+
 /** Exécute un outil MCP d'écriture sur le projet ouvert ; ne modifie rien, renvoie les mises à jour à appliquer. */
 export function runMcpCommand(project: Project, tool: string, args: McpArgs): McpOutcome {
   // Questions sur tout le projet : pas d'élément à désigner.
   if (tool === 'get_next_tasks') return runNextTasks(project, args);
   if (tool === 'get_progress') return runProgress(project);
+  if (['create_collection', 'update_collection', 'delete_collection', 'add_field', 'update_field', 'delete_field'].includes(tool)) return runCollectionCommand(project, tool, args);
   const component = findComponent(project, args.component);
   if (typeof component === 'string') return fail(component);
   switch (tool) {

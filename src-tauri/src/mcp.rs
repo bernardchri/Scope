@@ -51,7 +51,7 @@ pub fn resolve(pending: &McpPending, id: &str, outcome: Value) {
 
 const SERVER_INSTRUCTIONS: &str = "SCOPE est un outil de documentation de projets web (composants, templates, sections, documents). \
 Les éléments portent des images annotées par des pins numérotés ; chaque pin peut être qualifié (type, contraintes, collection de contenu). \
-Commence par get_project puis get_issues pour voir ce qui reste à compléter ; get_build_brief donne en un appel tout ce qu'il faut pour construire un élément, et tu coches ses tâches avec update_task au fil du développement. get_component_image montre la maquette ; qualify_pin et add_pin qualifient les pins (mêmes types et précisions que l'éditeur de SCOPE) ; update_component, add_task, update_task, delete_task, set_text et delete_text modifient la description, les tâches et les textes des documents. Les modifications sont appliquées dans l'app et annulables (Cmd+Z). Pour avancer : get_next_tasks, puis update_tasks pour cocher (avec une note), link_code pour dire où est le code.";
+Commence par get_project puis get_issues pour voir ce qui reste à compléter ; get_build_brief donne en un appel tout ce qu'il faut pour construire un élément, et tu coches ses tâches avec update_task au fil du développement. get_component_image montre la maquette ; qualify_pin et add_pin qualifient les pins (mêmes types et précisions que l'éditeur de SCOPE) ; update_component, add_task, update_task, delete_task, set_text et delete_text modifient la description, les tâches et les textes des documents ; create_collection, update_collection, delete_collection, add_field, update_field et delete_field gèrent le modèle de contenu (list_collections le lit). Les modifications sont appliquées dans l'app et annulables (Cmd+Z). Pour avancer : get_next_tasks, puis update_tasks pour cocher (avec une note), link_code pour dire où est le code.";
 
 fn tools() -> Value {
     json!([
@@ -85,6 +85,93 @@ fn tools() -> Value {
             "name": "list_collections",
             "description": "Modèle de contenu du projet : collections (types de contenu) et leurs champs, répéteurs compris.",
             "inputSchema": { "type": "object", "properties": {} }
+        },
+        {
+            "name": "create_collection",
+            "description": "Crée une collection (type de contenu) dans le modèle de contenu, avec éventuellement ses champs. Chaque champ : name, kind (title, text, image, link, number, date, category, boolean, relation, repeater, other), specs (précisions du type, comme qualify_pin), relationTo (collection pointée, pour une relation), multiple, required, note, subFields (champs d'une ligne, pour un répéteur).",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "name": { "type": "string", "description": "Nom de la collection, ex. Projets." },
+                    "slug": { "type": "string", "description": "Identifiant technique ; déduit du nom par défaut." },
+                    "description": { "type": "string" },
+                    "hasDetailPage": { "type": "boolean", "description": "Chaque entrée a sa propre page de détail." },
+                    "fields": { "type": "array", "items": { "type": "object", "additionalProperties": true }, "description": "Champs à créer, dans l'ordre." }
+                },
+                "required": ["name"]
+            }
+        },
+        {
+            "name": "update_collection",
+            "description": "Modifie une collection : nom, slug, description, page de détail. Une description vide l'efface.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "collection": { "type": "string", "description": "Nom, slug ou id de la collection (voir list_collections)." },
+                    "name": { "type": "string" },
+                    "slug": { "type": "string" },
+                    "description": { "type": "string" },
+                    "hasDetailPage": { "type": "boolean" }
+                },
+                "required": ["collection"]
+            }
+        },
+        {
+            "name": "delete_collection",
+            "description": "Supprime une collection. Les relations des autres collections qui pointaient vers elle sont retirées ; la réponse signale les éléments dont des pins ou la page y sont encore liés.",
+            "inputSchema": {
+                "type": "object",
+                "properties": { "collection": { "type": "string", "description": "Nom, slug ou id." } },
+                "required": ["collection"]
+            }
+        },
+        {
+            "name": "add_field",
+            "description": "Ajoute un champ à une collection (à la fin, ou dans un répéteur avec `parent`). Mêmes paramètres que les champs de create_collection.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "collection": { "type": "string" },
+                    "name": { "type": "string", "description": "Nom du champ." },
+                    "kind": { "type": "string", "description": "text par défaut." },
+                    "specs": { "type": "object", "additionalProperties": true },
+                    "relationTo": { "type": "string", "description": "Collection pointée (kind relation)." },
+                    "multiple": { "type": "boolean" },
+                    "required": { "type": "boolean" },
+                    "note": { "type": "string" },
+                    "subFields": { "type": "array", "items": { "type": "object", "additionalProperties": true } },
+                    "parent": { "type": "string", "description": "Champ répéteur (nom, chemin « galerie › image » ou id) qui reçoit ce sous-champ." }
+                },
+                "required": ["collection", "name"]
+            }
+        },
+        {
+            "name": "update_field",
+            "description": "Modifie un champ de collection : nom, type (changer de type efface précisions et lien), specs, relationTo, multiple, required, note. Une valeur vide efface la note ou le lien.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "collection": { "type": "string" },
+                    "field": { "type": "string", "description": "Nom, chemin « galerie › image » ou id du champ (voir list_collections)." },
+                    "name": { "type": "string" },
+                    "kind": { "type": "string" },
+                    "specs": { "type": "object", "additionalProperties": true },
+                    "relationTo": { "type": "string" },
+                    "multiple": { "type": "boolean" },
+                    "required": { "type": "boolean" },
+                    "note": { "type": "string" }
+                },
+                "required": ["collection", "field"]
+            }
+        },
+        {
+            "name": "delete_field",
+            "description": "Supprime un champ d'une collection (avec ses sous-champs s'il s'agit d'un répéteur).",
+            "inputSchema": {
+                "type": "object",
+                "properties": { "collection": { "type": "string" }, "field": { "type": "string" } },
+                "required": ["collection", "field"]
+            }
         },
         {
             "name": "get_component_image",
@@ -438,7 +525,7 @@ fn call_tool(name: &str, args: &Value, snapshot: &Value, dispatch: Dispatch) -> 
             None => error_result("Élément introuvable : donne un id ou un nom exact (voir list_components)."),
         },
         "get_component_image" => image_result(args, snapshot),
-        "qualify_pin" | "add_pin" | "get_build_brief" | "get_next_tasks" | "get_progress" | "update_tasks" | "link_code" | "update_component" | "add_task" | "update_task" | "delete_task" | "set_text" | "delete_text" => match dispatch(name, args) {
+        "qualify_pin" | "add_pin" | "get_build_brief" | "get_next_tasks" | "get_progress" | "update_tasks" | "link_code" | "update_component" | "add_task" | "update_task" | "delete_task" | "set_text" | "delete_text" | "create_collection" | "update_collection" | "delete_collection" | "add_field" | "update_field" | "delete_field" => match dispatch(name, args) {
             Ok(result) => text_result(&result),
             Err(message) => error_result(&message),
         },
@@ -639,7 +726,7 @@ mod tests {
     fn tous_les_outils_sont_annonces() {
         let r = call("tools/list", json!({}));
         let names: Vec<&str> = r["result"]["tools"].as_array().unwrap().iter().map(|t| t["name"].as_str().unwrap()).collect();
-        for expected in ["get_project", "list_components", "get_component", "get_component_image", "qualify_pin", "add_pin", "update_component", "add_task", "update_task", "delete_task", "set_text", "delete_text", "get_build_brief", "get_next_tasks", "get_progress", "update_tasks", "link_code", "list_collections", "get_design_tokens", "get_issues"] {
+        for expected in ["get_project", "list_components", "get_component", "get_component_image", "qualify_pin", "add_pin", "update_component", "add_task", "update_task", "delete_task", "set_text", "delete_text", "create_collection", "update_collection", "delete_collection", "add_field", "update_field", "delete_field", "get_build_brief", "get_next_tasks", "get_progress", "update_tasks", "link_code", "list_collections", "get_design_tokens", "get_issues"] {
             assert!(names.contains(&expected), "{} manquant", expected);
         }
     }

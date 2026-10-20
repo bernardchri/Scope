@@ -189,3 +189,58 @@ describe('suivi du développement : prochaines tâches, avancement, notes et cod
     expect(runMcpCommand(withCode, 'link_code', { component: 'Slider', clear: true }).ok).toBe(true);
   });
 });
+
+describe('collections', () => {
+  const col = (tool: string, args: Record<string, unknown>) => runMcpCommand(project, tool, args);
+  const collectionsOf = (o: ReturnType<typeof col>) => (o.ok ? o.projectUpdates!.collections! : []);
+
+  it('crée une collection avec ses champs, relation et répéteur compris', () => {
+    const out = col('create_collection', {
+      name: 'Ouvrages', hasDetailPage: true,
+      fields: [
+        { name: 'titre', kind: 'title', specs: { seo: 'h2' } },
+        { name: 'projet', kind: 'relation', relationTo: 'Projets', multiple: true },
+        { name: 'galerie', kind: 'repeater', subFields: [{ name: 'image', kind: 'image' }] },
+      ],
+    });
+    const created = collectionsOf(out)[1];
+    expect(created).toMatchObject({ name: 'Ouvrages', slug: 'ouvrages', hasDetailPage: true });
+    expect(created.fields[0].specs).toEqual({ seo: 'H2' });
+    expect(created.fields[1]).toMatchObject({ relationTo: 'c', multiple: true });
+    expect(created.fields[2].subFields).toHaveLength(1);
+  });
+
+  it('refuse un doublon, un type inconnu et une précision inconnue', () => {
+    expect(col('create_collection', { name: 'projets' })).toMatchObject({ ok: false });
+    expect(col('add_field', { collection: 'Projets', name: 'x', kind: 'zzz' })).toMatchObject({ ok: false });
+    const bad = col('add_field', { collection: 'Projets', name: 'x', kind: 'title', specs: { couleur: 'rouge' } });
+    expect(!bad.ok && bad.error).toContain('Valides');
+  });
+
+  it('modifie et supprime un champ, ajoute un sous-champ dans un répéteur', () => {
+    const added = col('add_field', { collection: 'Projets', name: 'galerie', kind: 'repeater' });
+    expect(collectionsOf(added)[0].fields).toHaveLength(2);
+    const upd = col('update_field', { collection: 'projet', field: 'titre', kind: 'text', required: true });
+    expect(collectionsOf(upd)[0].fields[0]).toMatchObject({ kind: 'text', required: true });
+    const del = col('delete_field', { collection: 'Projets', field: 'titre' });
+    expect(collectionsOf(del)[0].fields).toHaveLength(0);
+  });
+
+  it('supprime une collection et retire les relations qui y menaient', () => {
+    const withRel = { ...project, collections: [
+      ...project.collections!,
+      { id: 'd', name: 'Ouvrages', slug: 'ouvrages', fields: [{ id: 'r', name: 'projet', kind: 'relation', relationTo: 'c' }] },
+    ] } as Project;
+    const out = runMcpCommand(withRel, 'delete_collection', { collection: 'Projets' });
+    const rest = collectionsOf(out);
+    expect(rest).toHaveLength(1);
+    expect(rest[0].fields[0].relationTo).toBeUndefined();
+  });
+
+  it('modifie une collection et refuse un slug déjà pris', () => {
+    const out = col('update_collection', { collection: 'Projets', name: 'Réalisations', description: 'Les chantiers' });
+    expect(collectionsOf(out)[0]).toMatchObject({ name: 'Réalisations', slug: 'projet', description: 'Les chantiers' });
+    const two = { ...project, collections: [...project.collections!, { id: 'd', name: 'Autre', slug: 'autre', fields: [] }] } as Project;
+    expect(runMcpCommand(two, 'update_collection', { collection: 'Autre', slug: 'projet' })).toMatchObject({ ok: false });
+  });
+});
