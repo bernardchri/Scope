@@ -91,3 +91,26 @@ describe('generateStoriesMd — design tokens', () => {
     expect(generateStoriesMd(makeProject([makeComponent()]))).not.toContain('## Design tokens');
   });
 });
+
+describe('generateStoriesMd — documents avec notes', () => {
+  it('garde la todo-liste, les pins et les composants utilisés d\'un document ou d\'un template qui a des notes', () => {
+    const header = makeComponent({ id: 'h', name: 'Header', category: 'component' });
+    const doc = makeComponent({
+      id: 'd', name: 'Cahier', category: 'document',
+      notes: [{ id: 'n1', content: 'Intro du cahier' }],
+      widgets: [{ id: 'n1', type: 'notes' }, { id: 'tasks', type: 'tasks' }],
+      tasks: [
+        { id: 't1', name: 'Valider la charte', completed: false, category: 'frontend' },
+        { id: 't2', name: 'API contenus', completed: true, category: 'backend' },
+        { id: 't3', name: 'Version anglaise', completed: false, category: 'frontend', scope: 'v2' },
+      ],
+      instances: [{ id: 'i1', componentId: 'h' }],
+    });
+    const md = generateStoriesMd(makeProject([doc, header]));
+    expect(md).toContain('## Contenu\n\nIntro du cahier');
+    expect(md).toContain('Valider la charte');
+    expect(md).toContain('API contenus');
+    expect(md).toContain('v2: Version anglaise');
+    expect(md).toContain('## Composants utilisés');
+  });
+});

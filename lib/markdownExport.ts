@@ -145,13 +145,15 @@ function generateComponentBlock(component: Component, imageMap: ImageMap, allCom
     parts.push(taskLines.join('\n'));
   }
 
-  // Paragraphs & comments
+  // Notes (Markdown libre), paragraphes, titres, puces et commentaires, dans l'ordre de la fiche
   const textWidgets = getActiveWidgets(component)
-    .filter(w => isBlockText(w.type) || (w.type === 'comment' && exportComments));
+    .filter(w => w.type === 'notes' || isBlockText(w.type) || (w.type === 'comment' && exportComments));
   for (const w of textWidgets) {
     const note = component.notes?.find(n => n.id === w.id);
     if (!note?.content) continue;
-    if (w.type === 'comment') {
+    if (w.type === 'notes') {
+      parts.push(`## Contenu\n\n${note.content}`);
+    } else if (w.type === 'comment') {
       parts.push(note.content.split('\n').map(line => `> ${line}`).join('\n'));
     } else {
       parts.push(blockTextToMarkdown(w.type, note.content));
@@ -231,52 +233,6 @@ function pageInfoLines(component: Component, collections: Collection[], collecti
   return lines.length ? ['## Page', '', ...lines].join('\n') : '';
 }
 
-function generateDocumentBlock(component: Component, imageMap: ImageMap, exportComments = false, assetMap: AssetMap = new Map()): string {
-  const parts: string[] = [];
-  parts.push(`# ${component.name}`);
-
-  if (component.estimatedHours && component.estimatedHours > 0) {
-    parts.push(`<!-- estimate: ${component.estimatedHours}h -->`);
-  }
-
-  if (component.description) {
-    parts.push(`## Description\n\n${component.description}`);
-  }
-
-  const images = imageMap.get(component.id);
-  if (images && images.length > 0) {
-    parts.push(imagesSection(images, component.name));
-  }
-
-  const documentAssets = assetMap.get(component.id) ?? [];
-  if (documentAssets.length > 0) {
-    parts.push(assetsSection(documentAssets));
-  }
-
-  // Notes (markdown content)
-  const widgets = getActiveWidgets(component);
-  const noteWidgets = widgets.filter(w => w.type === 'notes');
-  for (const w of noteWidgets) {
-    const note = component.notes?.find(n => n.id === w.id);
-    if (note?.content) parts.push(`## Contenu\n\n${note.content}`);
-  }
-
-  // Paragraphs & comments (plain text)
-  const paraWidgets = widgets.filter(w => isBlockText(w.type) || (w.type === 'comment' && exportComments));
-  for (const w of paraWidgets) {
-    const note = component.notes?.find(n => n.id === w.id);
-    if (!note?.content) continue;
-    if (w.type === 'comment') {
-      parts.push(note.content.split('\n').map(line => `> ${line}`).join('\n'));
-    } else {
-      parts.push(blockTextToMarkdown(w.type, note.content));
-    }
-  }
-
-  parts.push('---');
-  return parts.join('\n\n');
-}
-
 /** Client, version et total d'heures estimées, en une ligne (vide si rien n'est renseigné). */
 export function projectMetaLine(project: Project): string {
   const client = project.client;
@@ -319,13 +275,8 @@ export function generateStoriesMd(project: Project, imageMap: ImageMap = new Map
     if (group.length === 0) continue;
     sections.push(`<!-- ${CATEGORY_SECTION_LABELS[category] ?? category} -->`);
     for (const comp of group) {
-      const widgets = getActiveWidgets(comp);
-      const hasNotes = widgets.some(w => w.type === 'notes') && comp.notes?.some(n => n.content);
-      if (hasNotes) {
-        sections.push(generateDocumentBlock(comp, imageMap, exportComments, assetMap));
-      } else {
-        sections.push(generateComponentBlock(comp, imageMap, project.components, exportComments, assetMap, new Map(), project.collections));
-      }
+      // Même fiche pour tous les types : un document garde ainsi ses tâches, pins et composants utilisés.
+      sections.push(generateComponentBlock(comp, imageMap, project.components, exportComments, assetMap, new Map(), project.collections));
     }
   }
 
@@ -519,11 +470,7 @@ async function exportProjectMarkdownMulti(project: Project, folderPath?: string,
     for (const comp of group) {
       const filename = fileNames.get(comp.id)!;
 
-      const widgets = getActiveWidgets(comp);
-      const hasNotes = widgets.some(w => w.type === 'notes') && comp.notes?.some(n => n.content);
-      const block = hasNotes
-        ? generateDocumentBlock(comp, imageMap, exportComments, assetMap)
-        : generateComponentBlock(comp, imageMap, project.components, exportComments, assetMap, links, project.collections, './index.md');
+      const block = generateComponentBlock(comp, imageMap, project.components, exportComments, assetMap, links, project.collections, './index.md');
 
       await invoke('write_text_file', { path: `${destDir}/${filename}`, content: block });
 
