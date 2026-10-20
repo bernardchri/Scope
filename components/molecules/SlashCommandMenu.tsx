@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useLayoutEffect, useCallback, useRef } from 'react';
 import { WidgetType } from '@/lib/types';
 import { WIDGET_LABELS, WIDGET_ICONS } from '@/lib/categoryHelpers';
 
@@ -63,6 +63,33 @@ function SlashCommandMenuInner({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [onClose]);
 
+  useLayoutEffect(() => {
+    const menu = menuRef.current;
+    if (!menu) return;
+    const MARGIN = 12;
+    const CARET_LINE = 28; // hauteur approximative de la ligne qui porte le curseur
+    const height = menu.scrollHeight;
+    const below = window.innerHeight - position.top - 4 - MARGIN;
+    const above = position.top - CARET_LINE - MARGIN;
+    // Emplacement réel : sous le curseur s'il y tient, sinon au-dessus, sinon sous le curseur avec défilement.
+    // Posé directement sur l'élément (avant l'affichage) : pas de rendu supplémentaire.
+    menu.style.maxHeight = '';
+    if (height <= below) {
+      menu.style.top = `${position.top + 4}px`;
+    } else if (above > below) {
+      menu.style.top = `${position.top - CARET_LINE - Math.min(height, above)}px`;
+      menu.style.maxHeight = `${above}px`;
+    } else {
+      menu.style.top = `${position.top + 4}px`;
+      menu.style.maxHeight = `${below}px`;
+    }
+  }, [position.top, filtered.length]);
+
+  // Le choix au clavier reste visible quand la liste défile.
+  useEffect(() => {
+    menuRef.current?.querySelector('[data-active="true"]')?.scrollIntoView({ block: 'nearest' });
+  }, [activeIndex]);
+
   if (filtered.length === 0) {
     return (
       <div
@@ -78,7 +105,7 @@ function SlashCommandMenuInner({
   return (
     <div
       ref={menuRef}
-      className="fixed z-50 bg-popover border rounded-md shadow-md p-1 min-w-48"
+      className="fixed z-50 bg-popover border rounded-md shadow-md p-1 min-w-48 overflow-y-auto"
       style={{ top: position.top + 4, left: position.left }}
     >
       {filtered.map((w, i) => {
@@ -89,6 +116,7 @@ function SlashCommandMenuInner({
             className={`w-full flex items-center gap-2 px-3 py-1.5 text-sm rounded-sm transition-colors ${
               i === activeIndex ? 'bg-accent text-accent-foreground' : 'hover:bg-accent/50'
             }`}
+            data-active={i === activeIndex}
             onMouseEnter={() => setActiveIndex(i)}
             onClick={() => onSelect(w)}
           >
