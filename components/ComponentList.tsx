@@ -24,6 +24,8 @@ import CreateComponentModal from './modals/CreateComponentModal';
 import FigmaImportDialog from './modals/FigmaImportDialog';
 import { Button } from '@/components/ui/button';
 import { PanelLeftOpen } from 'lucide-react';
+import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
+import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
 
 interface ComponentListProps {
   projectId: string;
@@ -43,6 +45,10 @@ export default function ComponentList({ projectId }: ComponentListProps) {
   const [navHistory, setNavHistory] = useState<string[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  // Fenêtre étroite : la sidebar quitte la mise en page et s'ouvre depuis un burger.
+  const compact = useMediaQuery('(max-width: 900px)');
+  const [menuOpen, setMenuOpen] = useState(false);
+  useEffect(() => { if (!compact) setMenuOpen(false); }, [compact]);
   const [figmaImportPayload, setFigmaImportPayload] = useState<FigmaImportPayload | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
@@ -253,6 +259,26 @@ export default function ComponentList({ projectId }: ComponentListProps) {
     setNavHistory([newComponent.id]);
   }
 
+  // Même sidebar en colonne fixe ou dans le menu burger ; `afterNavigate` referme le menu après un choix.
+  function renderSidebar(afterNavigate?: () => void) {
+    const then = (fn: () => void) => () => { fn(); afterNavigate?.(); };
+    return (
+      <ComponentSidebar
+        components={activeProject!.components}
+        selectedComponentId={selectedComponentId}
+        showingDashboard={showingDashboard && !collectionsOpen}
+        onSelectComponent={(id) => { selectFromSidebar(id); afterNavigate?.(); }}
+        onReorderComponents={(ids, categoryChange) => reorderComponents(activeProject!.id, ids, categoryChange)}
+        onGoHome={then(() => { setCollectionsOpen(false); setNavHistory([]); })}
+        onOpenCollections={then(() => { setFocusedCollectionId(null); setCollectionsOpen(true); setNavHistory([]); })}
+        collectionsActive={collectionsOpen && !selectedComponentId}
+        collectionCount={activeProject!.collections?.length}
+        onToggleSidebar={() => setSidebarOpen(false)}
+        onNewElement={then(() => setIsModalOpen(true))}
+      />
+    );
+  }
+
   return (
     <div className="flex flex-col h-screen w-full overflow-hidden">
       <ProjectHeader
@@ -260,6 +286,7 @@ export default function ComponentList({ projectId }: ComponentListProps) {
         onRenameProject={(name) => updateProject(activeProject.id, { name })}
         onRefresh={handleRefresh}
         refreshing={refreshing}
+        onOpenMenu={compact ? () => setMenuOpen(true) : undefined}
       />
 
       <CreateComponentModal
@@ -291,21 +318,17 @@ export default function ComponentList({ projectId }: ComponentListProps) {
       />
 
       <div className="flex flex-1 overflow-hidden relative">
-        {sidebarOpen ? (
+        {compact ? (
+          <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
+            <SheetContent side="left" className="w-72 p-0 sm:max-w-xs">
+              <SheetTitle className="sr-only">Navigation</SheetTitle>
+              {/* Marge haute : la croix de fermeture du menu occupe le coin */}
+              <div className="h-full pt-10">{renderSidebar(() => setMenuOpen(false))}</div>
+            </SheetContent>
+          </Sheet>
+        ) : sidebarOpen ? (
           <div className="w-64 border-r shrink-0 overflow-y-auto">
-            <ComponentSidebar
-              components={activeProject.components}
-              selectedComponentId={selectedComponentId}
-              showingDashboard={showingDashboard && !collectionsOpen}
-              onSelectComponent={selectFromSidebar}
-              onReorderComponents={(ids, categoryChange) => reorderComponents(activeProject.id, ids, categoryChange)}
-              onGoHome={() => { setCollectionsOpen(false); setNavHistory([]); }}
-              onOpenCollections={() => { setFocusedCollectionId(null); setCollectionsOpen(true); setNavHistory([]); }}
-              collectionsActive={collectionsOpen && !selectedComponentId}
-              collectionCount={activeProject.collections?.length}
-              onToggleSidebar={() => setSidebarOpen(false)}
-              onNewElement={() => setIsModalOpen(true)}
-            />
+            {renderSidebar()}
           </div>
         ) : (
           <Button

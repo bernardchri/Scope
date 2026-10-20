@@ -2,7 +2,7 @@
 
 import { useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { RefreshCw, Settings } from 'lucide-react';
+import { Menu, RefreshCw, Settings } from 'lucide-react';
 import { useState } from 'react';
 import SettingsDialog from '@/components/SettingsDialog';
 
@@ -12,6 +12,8 @@ interface ProjectHeaderProps {
   /** Relit le projet depuis le disque (changements faits hors de l'interface, ex. serveur MCP). */
   onRefresh?: () => void;
   refreshing?: boolean;
+  /** Fenêtre étroite : ouvre la navigation (sidebar) depuis un menu burger. */
+  onOpenMenu?: () => void;
 }
 
 export default function ProjectHeader({
@@ -19,6 +21,7 @@ export default function ProjectHeader({
   onRenameProject,
   onRefresh,
   refreshing,
+  onOpenMenu,
 }: ProjectHeaderProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [draft, setDraft] = useState(projectName);
@@ -72,7 +75,13 @@ export default function ProjectHeader({
           )}
         </div>
 
-        <div className="w-24" />
+        {onOpenMenu ? (
+          <Button size="sm" variant="ghost" onClick={onOpenMenu} title="Navigation" aria-label="Ouvrir la navigation">
+            <Menu className="h-4 w-4" />
+          </Button>
+        ) : (
+          <div className="w-24" />
+        )}
 
         <div className="flex items-center gap-2">
           {onRefresh && (
