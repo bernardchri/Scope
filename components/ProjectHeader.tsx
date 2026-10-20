@@ -2,18 +2,23 @@
 
 import { useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Settings } from 'lucide-react';
+import { RefreshCw, Settings } from 'lucide-react';
 import { useState } from 'react';
 import SettingsDialog from '@/components/SettingsDialog';
 
 interface ProjectHeaderProps {
   projectName: string;
   onRenameProject: (name: string) => void;
+  /** Relit le projet depuis le disque (changements faits hors de l'interface, ex. serveur MCP). */
+  onRefresh?: () => void;
+  refreshing?: boolean;
 }
 
 export default function ProjectHeader({
   projectName,
   onRenameProject,
+  onRefresh,
+  refreshing,
 }: ProjectHeaderProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [draft, setDraft] = useState(projectName);
@@ -70,7 +75,19 @@ export default function ProjectHeader({
         <div className="w-24" />
 
         <div className="flex items-center gap-2">
-          <Button size="sm" variant="ghost" onClick={() => setSettingsOpen(true)}>
+          {onRefresh && (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={onRefresh}
+              disabled={refreshing}
+              title="Recharger les données depuis le disque"
+              aria-label="Recharger les données"
+            >
+              <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+            </Button>
+          )}
+          <Button size="sm" variant="ghost" onClick={() => setSettingsOpen(true)} title="Paramètres">
             <Settings className="h-4 w-4" />
           </Button>
         </div>

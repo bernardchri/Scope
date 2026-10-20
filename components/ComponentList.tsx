@@ -2,13 +2,15 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { listen } from '@tauri-apps/api/event';
-import { useProjectStore, undo, redo } from '@/lib/projectStore';
+import { useProjectStore, undo, redo, initPreviousProject } from '@/lib/projectStore';
 import { Component, ScopeItemType } from '@/lib/types';
 import { FigmaImportPayload, applyFigmaImport, buildComponentFromFigmaUpdates, diffFigmaFields } from '@/lib/figmaImport';
 import CollectionsPage from './CollectionsPage';
 import { Collection } from '@/lib/types';
 import FigmaSyncRecapDialog, { SyncRecapEntry } from './modals/FigmaSyncRecapDialog';
-import { withDefaultEstimate } from '@/lib/persistence';
+import { withDefaultEstimate, openProjectFolder } from '@/lib/persistence';
+import { clearImageCache } from '@/lib/imageManager';
+import { message } from '@tauri-apps/plugin-dialog';
 import { publishFigmaComponentCatalog } from '@/lib/figmaBridge';
 import { publishMcpSnapshot } from '@/lib/mcpSnapshot';
 import { runMcpCommand } from '@/lib/mcpCommands';
@@ -42,6 +44,8 @@ export default function ComponentList({ projectId }: ComponentListProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [figmaImportPayload, setFigmaImportPayload] = useState<FigmaImportPayload | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
   const [collectionsOpen, setCollectionsOpen] = useState(false);
   const [focusedCollectionId, setFocusedCollectionId] = useState<string | null>(null);
   const [syncRecap, setSyncRecap] = useState<SyncRecapEntry[]>([]);
@@ -165,6 +169,25 @@ export default function ComponentList({ projectId }: ComponentListProps) {
     updateProject(projectId, { collections: [...(project?.collections || []), collection] });
   }
 
+  // Relit scope.json et remonte l'interface : reprend les changements faits hors de l'écran (serveur MCP,
+  // édition du fichier) et les états locaux des blocs. Rien n'est réécrit sur le disque.
+  async function handleRefresh() {
+    if (!currentProjectPath) return;
+    setRefreshing(true);
+    try {
+      const fresh = await openProjectFolder(currentProjectPath);
+      if (!fresh) throw new Error('scope.json illisible');
+      clearImageCache();
+      initPreviousProject(fresh);
+      useProjectStore.getState().openProject(fresh, currentProjectPath);
+      setRefreshKey(k => k + 1);
+    } catch (e) {
+      await message(`Impossible de recharger le projet : ${e instanceof Error ? e.message : e}`, { title: 'Recharger', kind: 'error' });
+    } finally {
+      setRefreshing(false);
+    }
+  }
+
   function selectFromSidebar(id: string | null) {
     setCollectionsOpen(false);
     setNavHistory(id ? [id] : []);
@@ -235,6 +258,8 @@ export default function ComponentList({ projectId }: ComponentListProps) {
       <ProjectHeader
         projectName={activeProject.name}
         onRenameProject={(name) => updateProject(activeProject.id, { name })}
+        onRefresh={handleRefresh}
+        refreshing={refreshing}
       />
 
       <CreateComponentModal
@@ -295,7 +320,7 @@ export default function ComponentList({ projectId }: ComponentListProps) {
         )}
 
         {selectedItem ? (
-          <div key={selectedItem.id} ref={detailScrollRef} className="flex-1 overflow-y-auto p-8">
+          <div key={`${selectedItem.id}-${refreshKey}`} ref={detailScrollRef} className="flex-1 overflow-y-auto p-8">
               <ScopeItemDetail
                 projectId={projectId}
                 item={selectedItem}
@@ -311,7 +336,7 @@ export default function ComponentList({ projectId }: ComponentListProps) {
           </div>
         ) : collectionsOpen ? (
           <CollectionsPage
-            key={focusedCollectionId ?? 'all'}
+            key={`${focusedCollectionId ?? 'all'}-${refreshKey}`}
             initialSelectedId={focusedCollectionId}
             collections={activeProject.collections || []}
             components={activeProject.components}
@@ -321,6 +346,7 @@ export default function ComponentList({ projectId }: ComponentListProps) {
           />
         ) : (
           <ProjectDashboard
+            key={refreshKey}
             project={activeProject}
             folderPath={currentProjectPath || ''}
             onSelectComponent={(id) => setNavHistory([id])}
