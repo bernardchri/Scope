@@ -149,8 +149,10 @@ export function describePin(
   collectionLink?: (c: Collection) => string,
 ): string {
   const kind = getPinKind(pin.kind);
-  const specs = describePinSpecs(pin);
-  if (pin.specs?.rowSource && linkedName) specs.push(`chaque ligne : composant « ${linkedName} » (voir sa fiche)`);
+  // Une ligne décrite par le composant lié rend inutile la liste libre des champs (le formulaire la masque, sa valeur peut rester).
+  const fromComponent = !!pin.specs?.rowSource && !!linkedName;
+  const specs = describePinSpecs(fromComponent ? { ...pin, specs: { ...pin.specs, rowFields: '' } } : pin);
+  if (fromComponent) specs.push(`chaque ligne : composant « ${linkedName} » (voir sa fiche)`);
   const parts = [kind ? kind.label : '', specs.join(', ')].filter(Boolean);
   const head = parts.join(' — ');
   return [head, describePinContent(pin, collections, collectionLink), pin.note?.trim()].filter(Boolean).join(' — ');

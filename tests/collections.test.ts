@@ -51,6 +51,8 @@ describe('collections', () => {
     const pin = { kind: 'repeater', specs: { minRows: '3', maxRows: '6', rowSource: 'x' } };
     expect(describePin(pin, [], 'Slider')).toBe('Répéteur — min 3 ligne(s), max 6 ligne(s), chaque ligne : composant « Slider » (voir sa fiche)');
     expect(describePin(pin)).toBe('Répéteur — min 3 ligne(s), max 6 ligne(s)');
+    // La liste libre des champs ne double pas le composant lié.
+    expect(describePin({ ...pin, specs: { ...pin.specs, rowFields: 'Slider' } }, [], 'Slider')).toBe('Répéteur — min 3 ligne(s), max 6 ligne(s), chaque ligne : composant « Slider » (voir sa fiche)');
   });
 
   it('relie un pin à une collection ou à un champ', () => {
