@@ -13,11 +13,14 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { SCOPE_ITEM_TYPES, TYPE_LABELS } from '@/lib/categoryHelpers';
+import { TYPE_LABELS } from '@/lib/categoryHelpers';
 
 /** Valeur du sélecteur de type pour créer une collection (modèle de contenu) plutôt qu'un élément de page. */
 export const COLLECTION_TYPE = 'collection';
 export type NewElementType = ScopeItemType | typeof COLLECTION_TYPE;
+
+/** Même ordre que la sidebar : collections, documents, templates, sections, composants. */
+const NEW_ELEMENT_ORDER: NewElementType[] = [COLLECTION_TYPE, 'document', 'template', 'section', 'component'];
 
 interface CreateComponentModalProps {
   open: boolean;
@@ -65,12 +68,11 @@ export default function CreateComponentModal({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {SCOPE_ITEM_TYPES.map((type) => (
+                {NEW_ELEMENT_ORDER.map((type) => (
                   <SelectItem key={type} value={type}>
-                    {TYPE_LABELS[type]}
+                    {type === COLLECTION_TYPE ? 'Collection (type de contenu)' : TYPE_LABELS[type]}
                   </SelectItem>
                 ))}
-                <SelectItem value={COLLECTION_TYPE}>Collection (type de contenu)</SelectItem>
               </SelectContent>
             </Select>
           </div>
