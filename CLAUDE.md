@@ -205,7 +205,7 @@ Tailwind CSS 4, OKLch color space, CSS variables in `styles/global.css`. Use `cn
 
 ### Pont local et serveur MCP
 
-`src-tauri/src/figma_bridge.rs` écoute sur 127.0.0.1 (ports 51789–51793, token conservé dans le dossier de données) : `POST /scope-push` (plugin Figma), `GET /scope-components`, et `POST /mcp` (serveur MCP pour Claude Code, `src-tauri/src/mcp.rs`). Le front publie un instantané du projet ouvert (`lib/mcpSnapshot.ts` → commande `set_mcp_snapshot`) que les outils MCP interrogent ; la commande de connexion est dans Paramètres.
+`src-tauri/src/figma_bridge.rs` écoute sur 127.0.0.1 (ports 51789–51793, token conservé dans le dossier de données) : `POST /scope-push` (plugin Figma), `GET /scope-components`, et `POST /mcp` (serveur MCP pour Claude Code, `src-tauri/src/mcp.rs`). Le front publie un instantané du projet ouvert (`lib/mcpSnapshot.ts` → commande `set_mcp_snapshot`) que les outils MCP interrogent ; la commande de connexion est dans Paramètres. Deux profils peuvent tourner ensemble (même dossier de données) : le build de développement (`tauri dev`, `figma_bridge::PROFILE` = dev) essaie les ports en partant du dernier (51793) et a son propre jeton (`figma_bridge_token_dev`), l'app installée part du premier (51789) ; Paramètres donne `scope-dev` ou `scope` comme nom de serveur MCP.
 
 ### Vision
 

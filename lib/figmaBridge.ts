@@ -3,6 +3,8 @@ import { invoke } from '@tauri-apps/api/core';
 export interface FigmaBridgeInfo {
   port: number;
   token: string;
+  /** « dev » (build de développement) ou « prod » (app installée). */
+  profile?: 'dev' | 'prod';
 }
 
 /** Infos de connexion du pont HTTP local utilisé par le futur plugin Figma. */

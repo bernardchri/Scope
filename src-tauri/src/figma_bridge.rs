@@ -19,7 +19,14 @@ use tiny_http::{Header, Method, Response, StatusCode};
 pub struct FigmaBridgeInfo {
     pub port: u16,
     pub token: String,
+    /// « dev » (build de développement) ou « prod » (app installée) : les deux peuvent tourner ensemble.
+    pub profile: String,
 }
+
+/// Profil de ce build. Il sépare les deux apps qui partagent le même dossier de données : jeton propre
+/// à chacune, et ports essayés dans l'ordre inverse (prod depuis le premier, dev depuis le dernier),
+/// ce qui donne à chacune un port stable même quand les deux sont ouvertes.
+pub const PROFILE: &str = if cfg!(debug_assertions) { "dev" } else { "prod" };
 
 /// Catalogue des composants du projet ouvert (tableau JSON sérialisé),
 /// partagé entre la commande Tauri qui le met à jour et le thread du pont.
@@ -54,7 +61,7 @@ fn generate_token() -> String {
 /// ou d'écriture, on retombe sur un jeton éphémère : le pont reste utilisable.
 fn load_or_create_token(app: &AppHandle) -> String {
     let path = match app.path().app_data_dir() {
-        Ok(dir) => dir.join("figma_bridge_token"),
+        Ok(dir) => dir.join(if PROFILE == "dev" { "figma_bridge_token_dev" } else { "figma_bridge_token" }),
         Err(_) => return generate_token(),
     };
     if let Ok(existing) = std::fs::read_to_string(&path) {
@@ -190,7 +197,11 @@ fn handle_request(
 pub fn start(app: AppHandle, catalog: FigmaComponentCatalog, snapshot: McpSnapshot, pending: McpPending) -> Option<FigmaBridgeInfo> {
     let token = load_or_create_token(&app);
 
-    for port in CANDIDATE_PORTS {
+    let mut ports = CANDIDATE_PORTS;
+    if PROFILE == "dev" {
+        ports.reverse();
+    }
+    for port in ports {
         let server = match tiny_http::Server::http(("127.0.0.1", port)) {
             Ok(s) => s,
             Err(_) => continue,
@@ -209,7 +220,7 @@ pub fn start(app: AppHandle, catalog: FigmaComponentCatalog, snapshot: McpSnapsh
             }
         });
 
-        return Some(FigmaBridgeInfo { port, token });
+        return Some(FigmaBridgeInfo { port, token, profile: PROFILE.to_string() });
     }
 
     eprintln!("[figma_bridge] aucun port disponible parmi {:?}, pont désactivé", CANDIDATE_PORTS);

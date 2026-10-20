@@ -226,7 +226,7 @@ pub fn run() {
             let mcp_snapshot = mcp::McpSnapshot::default();
             let mcp_pending = mcp::McpPending::default();
             let figma_bridge_info = figma_bridge::start(app.handle().clone(), figma_catalog.clone(), mcp_snapshot.clone(), mcp_pending.clone())
-                .unwrap_or_else(|| figma_bridge::FigmaBridgeInfo { port: 0, token: String::new() });
+                .unwrap_or_else(|| figma_bridge::FigmaBridgeInfo { port: 0, token: String::new(), profile: figma_bridge::PROFILE.to_string() });
             app.manage(figma_bridge_info);
             app.manage(figma_catalog);
             app.manage(mcp_snapshot);

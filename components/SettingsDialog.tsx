@@ -23,8 +23,11 @@ interface Props {
   onOpenChange: (open: boolean) => void;
 }
 
-const mcpCommand = (bridge: { port: number; token: string }) =>
-  `claude mcp add --transport http scope http://localhost:${bridge.port}/mcp --header "Authorization: Bearer ${bridge.token}"`;
+// Nom du serveur côté Claude Code : distinct pour le build de développement, qui peut tourner en même temps que l'app installée.
+const mcpServerName = (bridge: FigmaBridgeInfo) => (bridge.profile === 'dev' ? 'scope-dev' : 'scope');
+
+const mcpCommand = (bridge: FigmaBridgeInfo) =>
+  `claude mcp add --transport http ${mcpServerName(bridge)} http://localhost:${bridge.port}/mcp --header "Authorization: Bearer ${bridge.token}"`;
 
 export default function SettingsDialog({ open, onOpenChange }: Props) {
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_APP_SETTINGS);
@@ -177,9 +180,11 @@ export default function SettingsDialog({ open, onOpenChange }: Props) {
 
             {figmaBridge && figmaBridge.port !== 0 && (
               <div className="space-y-2">
-                <Label className="text-sm font-semibold">Serveur MCP (Claude Code)</Label>
+                <Label className="text-sm font-semibold">
+                  Serveur MCP (Claude Code) — {figmaBridge.profile === 'dev' ? 'build de développement' : 'application installée'}
+                </Label>
                 <p className="text-sm text-muted-foreground">
-                  Permet à Claude Code de lire le projet ouvert (éléments, pins, collections, points à compléter). Lance cette commande une fois dans un terminal :
+                  Permet à Claude Code de lire et qualifier le projet ouvert (éléments, pins, collections, points à compléter). Lance cette commande une fois dans un terminal ; le build de développement et l&apos;application installée ont chacun leur nom (<code>scope-dev</code>, <code>scope</code>), leur port et leur token :
                 </p>
                 <code className="block break-all rounded bg-muted p-2 text-xs">{mcpCommand(figmaBridge)}</code>
                 <Button
