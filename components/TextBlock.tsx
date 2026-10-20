@@ -220,8 +220,8 @@ export default function TextBlock({
         placeholder={VARIANT_PLACEHOLDERS[variant]}
         className={cn(
           'w-full resize-none bg-transparent outline-none border-0 border-l-2 border-transparent focus:border-border px-3 py-0.5 transition-colors',
-          // Un paragraphe vide ne montre son invite que sous le curseur (il sert aussi d'espace) ; titres et puces la gardent.
-          variant === 'paragraph' ? 'placeholder:text-transparent focus:placeholder:text-muted-foreground/50' : 'placeholder:text-muted-foreground/50',
+          // Un paragraphe vide ne montre son invite qu'au survol du bloc ou sous le curseur (il sert aussi d'espace) ; titres et puces la gardent.
+          variant === 'paragraph' ? 'placeholder:text-transparent focus:placeholder:text-muted-foreground/50 group-hover/widget:placeholder:text-muted-foreground/50' : 'placeholder:text-muted-foreground/50',
           VARIANT_STYLES[variant],
         )}
         rows={1}
