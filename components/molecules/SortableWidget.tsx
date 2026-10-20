@@ -38,12 +38,12 @@ interface SortableWidgetProps {
   icon: LucideIcon;
   onRemove: () => void;
   actions?: BlockActions;
-  /** Espacement vertical du bloc (par défaut celui d'un gros bloc). */
+  /** Espacement vertical du bloc (par défaut celui d'un gros bloc : une demi-ligne de chaque côté). */
   spacing?: string;
   children: ReactNode;
 }
 
-export default function SortableWidget({ id, onRemove, actions, spacing = 'py-4', children }: SortableWidgetProps) {
+export default function SortableWidget({ id, onRemove, actions, spacing = 'py-3', children }: SortableWidgetProps) {
   const {
     attributes,
     listeners,

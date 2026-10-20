@@ -10,7 +10,7 @@ interface CommentWidgetProps extends TextBlockHandlers {
 
 export default function CommentWidget(props: CommentWidgetProps) {
   return (
-    <div className="relative border border-muted-foreground/30 bg-muted/50 rounded-lg pl-9 pr-3 py-3 pt-6">
+    <div className="relative border border-muted-foreground/30 bg-muted/50 rounded-lg pl-9 pr-3 py-2">
       <MessageSquare className="absolute top-3 left-3 h-4 w-4 text-muted-foreground/60" />
       <div className="text-muted-foreground">
         <TextBlock {...props} />

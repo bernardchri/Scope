@@ -7,11 +7,11 @@ import type { WidgetType } from '@/lib/types';
 export type TextBlockVariant = 'paragraph' | 'heading1' | 'heading2' | 'heading3' | 'list-item';
 
 const VARIANT_STYLES: Record<TextBlockVariant, string> = {
-  paragraph: 'text-base leading-relaxed',
+  paragraph: 'text-base leading-normal',
   heading1: 'text-2xl font-bold leading-tight',
   heading2: 'text-xl font-semibold leading-tight',
   heading3: 'text-lg font-medium leading-snug',
-  'list-item': 'text-base leading-relaxed',
+  'list-item': 'text-base leading-normal',
 };
 
 const VARIANT_PLACEHOLDERS: Record<TextBlockVariant, string> = {
@@ -214,7 +214,7 @@ export default function TextBlock({
         onKeyDown={handleKeyDown}
         placeholder={VARIANT_PLACEHOLDERS[variant]}
         className={cn(
-          'w-full resize-none bg-transparent outline-none border-0 border-l-2 border-transparent focus:border-border px-3 py-1 transition-colors placeholder:text-muted-foreground/50',
+          'w-full resize-none bg-transparent outline-none border-0 border-l-2 border-transparent focus:border-border px-3 py-0.5 transition-colors placeholder:text-muted-foreground/50',
           VARIANT_STYLES[variant],
         )}
         rows={1}

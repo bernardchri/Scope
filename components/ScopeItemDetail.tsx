@@ -59,16 +59,18 @@ const TEXT_WIDGET_COMPONENTS: Partial<Record<WidgetType, React.ComponentType<{
 };
 
 /**
- * Espacement vertical par type : les blocs de texte se suivent serrés comme dans Notion (titres un peu plus
- * aérés au-dessus) ; les gros blocs (maquettes, tâches, composants, ressources, notes) gardent leur respiration.
+ * Espacement vertical par type, pensé en hauteur de ligne (24 px = 1 ligne de texte) : le texte n'a aucune marge
+ * entre blocs (seul le léger remplissage de la zone de saisie sépare deux lignes), un titre est précédé d'une
+ * ligne, un gros bloc (maquettes, tâches, composants, ressources, notes) d'une demi-ligne de chaque côté,
+ * soit une ligne entière entre deux gros blocs.
  */
 const BLOCK_SPACING: Partial<Record<WidgetType, string>> = {
-  paragraph: 'py-0.5',
+  paragraph: 'py-0',
   bullet: 'py-0',
-  comment: 'py-1.5',
-  heading1: 'pt-6 pb-1',
-  heading2: 'pt-4 pb-0.5',
-  heading3: 'pt-3 pb-0.5',
+  comment: 'py-1',
+  heading1: 'pt-6 pb-0',
+  heading2: 'pt-5 pb-0',
+  heading3: 'pt-4 pb-0',
 };
 
 /** Types entre lesquels un bloc de texte peut être transformé (menu de la poignée). */
@@ -540,7 +542,7 @@ export default function ScopeItemDetail({
                   icon={WIDGET_ICONS[widget.type]}
                   onRemove={() => removeWidget(widget)}
                   actions={blockActions(widget)}
-                  spacing={BLOCK_SPACING[widget.type] ?? 'py-4'}
+                  spacing={BLOCK_SPACING[widget.type] ?? 'py-3'}
                 >
                   {renderWidget(widget)}
                 </SortableWidget>
