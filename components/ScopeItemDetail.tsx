@@ -157,7 +157,10 @@ export default function ScopeItemDetail({
   }
 
   function removeWidget(widget: WidgetInstance) {
-    if (widgetHasContent(item, widget)) {
+    // Paragraphes, titres, puces et commentaires partent sans confirmation (Cmd+Z les rend) ; seuls les blocs
+    // qui portent des données (maquettes, tâches…) et les notes Markdown demandent confirmation.
+    const quick = isTextWidget(widget.type) && widget.type !== 'notes';
+    if (!quick && widgetHasContent(item, widget)) {
       setPendingRemove(widget);
       return;
     }
