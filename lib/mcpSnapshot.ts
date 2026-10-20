@@ -20,10 +20,10 @@ export function buildMcpSnapshot(project: Project, folderPath?: string) {
     estimatedHours: comp.estimatedHours,
     // Contenu texte des documents et blocs de texte, dans l'ordre de la fiche.
     texts: getActiveWidgets(comp)
-      .map((w) => ({ widget: w.type, content: comp.notes?.find((n) => n.id === w.id)?.content }))
+      .map((w) => ({ id: w.id, widget: w.type, content: comp.notes?.find((n) => n.id === w.id)?.content }))
       .filter((t) => t.content && ['notes', 'paragraph', 'comment'].includes(t.widget)),
     tasks: comp.tasks.map((t) => ({
-      name: t.name, category: t.category, completed: t.completed, outOfScope: t.scope === 'v2' || undefined, pin: t.pinRef?.pinNumber,
+      id: t.id, name: t.name, category: t.category, completed: t.completed, outOfScope: t.scope === 'v2' || undefined, pin: t.pinRef?.pinNumber,
     })),
     usedComponents: comp.instances.map((i) => ({ component: nameOf(i.componentId), pin: i.pinRef?.pinNumber })),
     resources: comp.assets?.map((a) => a.name),

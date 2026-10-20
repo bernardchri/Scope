@@ -64,3 +64,55 @@ describe('runMcpCommand', () => {
     expect(run('qualify_pin', { pin: 9 }).ok).toBe(false);
   });
 });
+
+describe('éléments, tâches et textes', () => {
+  const doc = {
+    id: 'doc', name: 'Cahier', category: 'document', tasks: [
+      { id: 't1', name: 'Intégrer le slider', completed: false, category: 'frontend' },
+    ], instances: [], images: [{ id: 'im', isPrimary: true, pins: [{ id: 'p1', number: 1, x: 0, y: 0 }] }],
+    notes: [{ id: 'n1', content: 'Intro' }], widgets: [{ id: 'n1', type: 'notes' }],
+  };
+  const withDoc = { ...project, components: [...project.components, doc] } as unknown as Project;
+  const go = (tool: string, args: Record<string, unknown>) => runMcpCommand(withDoc, tool, { component: 'Cahier', ...args });
+
+  it('modifie la description, le type et l\'estimation', () => {
+    const out = go('update_component', { description: 'Page de cadrage', category: 'section', estimatedHours: 3 });
+    expect(out.ok && out.updates).toEqual({ description: 'Page de cadrage', category: 'section', estimatedHours: 3 });
+    expect(go('update_component', { category: 'page' }).ok).toBe(false);
+    expect(go('update_component', {}).ok).toBe(false);
+  });
+
+  it('ajoute, modifie, coche et supprime des tâches', () => {
+    const added = go('add_task', { name: 'API contenus', category: 'backend', outOfScope: true, pin: 1 });
+    expect(added.ok && added.updates.tasks).toHaveLength(2);
+    expect(added.ok && added.updates.tasks![1]).toMatchObject({ name: 'API contenus', category: 'backend', scope: 'v2', pinRef: { pinNumber: 1 } });
+    const done = go('update_task', { task: 'intégrer le slider', completed: true, category: 'motion' });
+    expect(done.ok && done.updates.tasks![0]).toMatchObject({ completed: true, category: 'motion' });
+    expect(go('delete_task', { task: 't1' })).toMatchObject({ ok: true, updates: { tasks: [] } });
+    expect(go('update_task', { task: 'inconnue' }).ok).toBe(false);
+    expect(go('add_task', { name: 'x', category: 'design' }).ok).toBe(false);
+  });
+
+  it('remplace, complète, ajoute et supprime des textes', () => {
+    const replaced = go('set_text', { id: 'n1', content: 'Nouvelle intro' });
+    expect(replaced.ok && replaced.updates.notes).toEqual([{ id: 'n1', content: 'Nouvelle intro' }]);
+    const appended = go('set_text', { id: 'n1', content: 'Suite', mode: 'append' });
+    expect(appended.ok && appended.updates.notes![0].content).toBe('Intro\n\nSuite');
+    const created = go('set_text', { type: 'comment', content: 'À valider' });
+    const textWidgets = (o: ReturnType<typeof go>) => (o.ok ? o.updates.widgets! : []).filter((w) => ['notes', 'paragraph', 'comment'].includes(w.type));
+    expect(textWidgets(created)).toHaveLength(2);
+    expect(created.ok && created.updates.notes).toHaveLength(2);
+    const deleted = go('delete_text', { id: 'n1' });
+    expect(textWidgets(deleted)).toHaveLength(0);
+    expect(deleted.ok && deleted.updates.notes).toEqual([]);
+    expect(go('set_text', { id: 'absent', content: 'x' }).ok).toBe(false);
+  });
+
+  it('remplit le bloc de notes vide d\'un document vierge au lieu d\'en ajouter un', () => {
+    const blank = { id: 'b', name: 'Vierge', category: 'document', tasks: [], instances: [] };
+    const out = runMcpCommand({ ...project, components: [blank] } as unknown as Project, 'set_text', { component: 'Vierge', content: '# Titre' });
+    expect(out.ok && out.updates.widgets!.filter((w) => w.type === 'notes')).toHaveLength(1);
+    expect(out.ok && out.updates.notes).toHaveLength(1);
+    expect(out.ok && out.updates.notes![0].content).toBe('# Titre');
+  });
+});

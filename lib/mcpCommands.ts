@@ -1,4 +1,5 @@
-import { Collection, Component, ComponentImage, ImagePin, Project } from './types';
+import { Collection, Component, ComponentImage, ImagePin, Project, ScopeItemType, Task, TaskCategory, WidgetInstance } from './types';
+import { getActiveWidgets, isTextWidget } from './categoryHelpers';
 import { PIN_KINDS, describePin, getPinKind } from './pinKinds';
 import { findCollection, flattenFields } from './collectionLookup';
 import { isPinQualified } from './completeness';
@@ -138,11 +139,12 @@ function pinReport(pin: ImagePin, component: Component, collections: Collection[
   return { number: pin.number, id: pin.id, description: describePin(pin, collections), qualified: isPinQualified(pin, component) };
 }
 
-/** Exécute un outil MCP d'écriture sur le projet ouvert ; ne modifie rien, renvoie les mises à jour à appliquer. */
-export function runMcpCommand(project: Project, tool: string, args: McpArgs): McpOutcome {
+const TASK_CATEGORIES: TaskCategory[] = ['frontend', 'backend', 'seo', 'motion'];
+const ITEM_CATEGORIES: ScopeItemType[] = ['document', 'component', 'template', 'section'];
+
+/** Pins : outils qui agissent sur l'image d'un élément. */
+function runPinCommand(project: Project, component: Component, tool: string, args: McpArgs): McpOutcome {
   const collections = project.collections ?? [];
-  const component = findComponent(project, args.component);
-  if (typeof component === 'string') return fail(component);
   const image = findImage(component, args.image);
   if (typeof image === 'string') return fail(image);
   const pins = image.pins ?? [];
@@ -159,7 +161,7 @@ export function runMcpCommand(project: Project, tool: string, args: McpArgs): Mc
     if (typeof qualified === 'string') return fail(qualified);
     target = qualified;
     updatedPins = [...pins, target];
-  } else if (tool === 'qualify_pin') {
+  } else {
     const number = Number(args.pin);
     const matches = pins.filter((p) => p.number === number);
     if (!Number.isInteger(number) || matches.length === 0) {
@@ -169,8 +171,6 @@ export function runMcpCommand(project: Project, tool: string, args: McpArgs): Mc
     if (typeof qualified === 'string') return fail(qualified);
     target = qualified;
     updatedPins = pins.map((p) => (p.id === target.id ? target : p));
-  } else {
-    return fail(`Outil inconnu : ${tool}`);
   }
 
   const images = (component.images ?? []).map((img) => (img.id === image.id ? { ...img, pins: updatedPins } : img));
@@ -181,4 +181,186 @@ export function runMcpCommand(project: Project, tool: string, args: McpArgs): Mc
     updates: { images },
     result: { component: component.name, image: image.id, pin: pinReport(target, updated, collections) },
   };
+}
+
+/** Champs propres à l'élément : nom, description, type, estimation. */
+function runUpdateComponent(component: Component, args: McpArgs): McpOutcome {
+  const updates: Partial<Component> = {};
+  if (args.name !== undefined) {
+    const name = str(args.name)?.trim();
+    if (!name) return fail('`name` ne peut pas être vide.');
+    updates.name = name;
+  }
+  if (args.description !== undefined) updates.description = str(args.description)?.trim() || undefined;
+  if (args.category !== undefined) {
+    if (!ITEM_CATEGORIES.includes(args.category as ScopeItemType)) return fail(`Type inconnu. Types : ${ITEM_CATEGORIES.join(', ')}.`);
+    updates.category = args.category as ScopeItemType;
+  }
+  if (args.estimatedHours !== undefined) {
+    const hours = args.estimatedHours === null ? undefined : Number(args.estimatedHours);
+    if (hours !== undefined && !(Number.isFinite(hours) && hours >= 0)) return fail('`estimatedHours` doit être un nombre positif (ou null pour effacer).');
+    updates.estimatedHours = hours;
+  }
+  if (Object.keys(updates).length === 0) return fail('Rien à modifier : donne `name`, `description`, `category` ou `estimatedHours`.');
+  const next = { ...component, ...updates };
+  return {
+    ok: true,
+    componentId: component.id,
+    updates,
+    result: { id: next.id, name: next.name, category: next.category, description: next.description, estimatedHours: next.estimatedHours },
+  };
+}
+
+function findTask(component: Component, ref: unknown): Task | string {
+  const key = str(ref)?.trim();
+  if (!key) return 'Précise `task` (id ou nom exact de la tâche).';
+  const byId = component.tasks.find((t) => t.id === key);
+  if (byId) return byId;
+  const byName = component.tasks.filter((t) => norm(t.name) === norm(key));
+  if (byName.length === 1) return byName[0];
+  return byName.length === 0
+    ? `Tâche introuvable : « ${key} » (tâches : ${component.tasks.map((t) => t.name).join(' | ') || 'aucune'}).`
+    : `Plusieurs tâches s'appellent « ${key} » : utilise l'id (${byName.map((t) => t.id).join(', ')}).`;
+}
+
+/** Lien tâche → pin (`pin` = numéro sur l'image, 0 pour délier). */
+function taskPinRef(component: Component, args: McpArgs): { pinRef: Task['pinRef'] } | string {
+  const number = Number(args.pin);
+  if (number === 0) return { pinRef: undefined };
+  const image = findImage(component, args.image);
+  if (typeof image === 'string') return image;
+  const pin = (image.pins ?? []).find((p) => p.number === number);
+  if (!pin) return `Pin #${args.pin} introuvable sur cette image.`;
+  return { pinRef: { imageId: image.id, pinId: pin.id, pinNumber: pin.number } };
+}
+
+const taskView = (t: Task) => ({
+  id: t.id, name: t.name, category: t.category, completed: t.completed, outOfScope: t.scope === 'v2', pin: t.pinRef?.pinNumber,
+});
+
+function runTaskCommand(component: Component, tool: string, args: McpArgs): McpOutcome {
+  const category = args.category === undefined ? undefined : (args.category as TaskCategory);
+  if (category !== undefined && !TASK_CATEGORIES.includes(category)) {
+    return fail(`Catégorie de tâche inconnue. Catégories : ${TASK_CATEGORIES.join(', ')}.`);
+  }
+  const link = args.pin !== undefined ? taskPinRef(component, args) : undefined;
+  if (typeof link === 'string') return fail(link);
+
+  let tasks: Task[];
+  let target: Task | undefined;
+
+  if (tool === 'add_task') {
+    const name = str(args.name)?.trim();
+    if (!name) return fail('`name` est obligatoire.');
+    target = {
+      id: crypto.randomUUID(),
+      name,
+      completed: args.completed === true,
+      category: category ?? 'frontend',
+      scope: args.outOfScope === true ? 'v2' : undefined,
+      pinRef: link?.pinRef,
+    };
+    tasks = [...component.tasks, target];
+  } else {
+    const found = findTask(component, args.task);
+    if (typeof found === 'string') return fail(found);
+    if (tool === 'delete_task') {
+      tasks = component.tasks.filter((t) => t.id !== found.id);
+    } else {
+      const name = args.name === undefined ? undefined : str(args.name)?.trim();
+      if (args.name !== undefined && !name) return fail('`name` ne peut pas être vide.');
+      target = {
+        ...found,
+        ...(name ? { name } : {}),
+        ...(category ? { category } : {}),
+        ...(args.completed !== undefined ? { completed: args.completed === true } : {}),
+        ...(args.outOfScope !== undefined ? { scope: args.outOfScope === true ? ('v2' as const) : undefined } : {}),
+        ...(link ? { pinRef: link.pinRef } : {}),
+      };
+      tasks = component.tasks.map((t) => (t.id === found.id ? target! : t));
+    }
+  }
+  return {
+    ok: true,
+    componentId: component.id,
+    updates: { tasks },
+    result: { component: component.name, task: target ? taskView(target) : 'supprimée', tasks: tasks.map(taskView) },
+  };
+}
+
+/** Texte des documents et blocs de texte (notes Markdown, paragraphes, commentaires). */
+function runTextCommand(component: Component, tool: string, args: McpArgs): McpOutcome {
+  const active = getActiveWidgets(component);
+  const notes = [...(component.notes ?? [])];
+  const id = str(args.id)?.trim();
+  const upsert = (noteId: string, content: string) => {
+    const idx = notes.findIndex((n) => n.id === noteId);
+    if (idx >= 0) notes[idx] = { ...notes[idx], content };
+    else notes.push({ id: noteId, content });
+  };
+  const textIds = () => active.filter((w) => isTextWidget(w.type)).map((w) => `${w.id} (${w.type})`).join(', ') || 'aucun';
+
+  if (tool === 'delete_text') {
+    const widget = active.find((w) => w.id === id && isTextWidget(w.type));
+    if (!widget) return fail(`Texte introuvable : « ${id} ». Textes : ${textIds()}.`);
+    return {
+      ok: true,
+      componentId: component.id,
+      updates: { widgets: active.filter((w) => w.id !== widget.id), notes: notes.filter((n) => n.id !== widget.id) },
+      result: { component: component.name, deleted: widget.id },
+    };
+  }
+
+  const content = args.content === undefined ? undefined : String(args.content);
+  if (content === undefined) return fail('`content` est obligatoire (texte Markdown).');
+  let widgets: WidgetInstance[] = component.widgets ?? active; // fige les identifiants générés à la volée
+  let targetId: string;
+
+  if (id) {
+    const widget = active.find((w) => w.id === id && isTextWidget(w.type));
+    if (!widget) return fail(`Texte introuvable : « ${id} ». Textes : ${textIds()}.`);
+    targetId = widget.id;
+    const current = notes.find((n) => n.id === targetId)?.content ?? '';
+    upsert(targetId, args.mode === 'append' && current ? `${current}\n\n${content}` : content);
+  } else {
+    const type = (str(args.type) ?? 'notes') as WidgetInstance['type'];
+    if (!isTextWidget(type)) return fail('`type` doit être notes, paragraph ou comment.');
+    // Un document vierge a déjà un bloc de notes vide : on le remplit plutôt que d'en ajouter un second.
+    const empty = type === 'notes' ? active.find((w) => w.type === 'notes' && !notes.find((n) => n.id === w.id)?.content?.trim()) : undefined;
+    if (empty) {
+      targetId = empty.id;
+    } else {
+      targetId = crypto.randomUUID();
+      widgets = [...widgets, { id: targetId, type }];
+    }
+    upsert(targetId, content);
+  }
+  return {
+    ok: true,
+    componentId: component.id,
+    updates: { widgets, notes },
+    result: { component: component.name, id: targetId, content: notes.find((n) => n.id === targetId)?.content },
+  };
+}
+
+/** Exécute un outil MCP d'écriture sur le projet ouvert ; ne modifie rien, renvoie les mises à jour à appliquer. */
+export function runMcpCommand(project: Project, tool: string, args: McpArgs): McpOutcome {
+  const component = findComponent(project, args.component);
+  if (typeof component === 'string') return fail(component);
+  switch (tool) {
+    case 'qualify_pin':
+    case 'add_pin':
+      return runPinCommand(project, component, tool, args);
+    case 'update_component':
+      return runUpdateComponent(component, args);
+    case 'add_task':
+    case 'update_task':
+    case 'delete_task':
+      return runTaskCommand(component, tool, args);
+    case 'set_text':
+    case 'delete_text':
+      return runTextCommand(component, tool, args);
+    default:
+      return fail(`Outil inconnu : ${tool}`);
+  }
 }

@@ -51,7 +51,7 @@ pub fn resolve(pending: &McpPending, id: &str, outcome: Value) {
 
 const SERVER_INSTRUCTIONS: &str = "SCOPE est un outil de documentation de projets web (composants, templates, sections, documents). \
 Les éléments portent des images annotées par des pins numérotés ; chaque pin peut être qualifié (type, contraintes, collection de contenu). \
-Commence par get_project puis get_issues pour voir ce qui reste à compléter. get_component_image montre la maquette ; qualify_pin et add_pin qualifient les pins (mêmes types et précisions que l'éditeur de SCOPE). Les modifications sont appliquées dans l'app et annulables (Cmd+Z).";
+Commence par get_project puis get_issues pour voir ce qui reste à compléter. get_component_image montre la maquette ; qualify_pin et add_pin qualifient les pins (mêmes types et précisions que l'éditeur de SCOPE) ; update_component, add_task, update_task, delete_task, set_text et delete_text modifient la description, les tâches et les textes des documents. Les modifications sont appliquées dans l'app et annulables (Cmd+Z).";
 
 fn tools() -> Value {
     json!([
@@ -135,6 +135,89 @@ fn tools() -> Value {
                     "field": { "type": "string" }
                 },
                 "required": ["component", "x", "y"]
+            }
+        },
+        {
+            "name": "update_component",
+            "description": "Modifie un élément : nom, description (texte fonctionnel), type et heures estimées. Une valeur vide efface la description ; estimatedHours null efface l'estimation.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "component": { "type": "string", "description": "Id ou nom de l'élément." },
+                    "name": { "type": "string" },
+                    "description": { "type": "string" },
+                    "category": { "type": "string", "enum": ["document", "component", "template", "section"] },
+                    "estimatedHours": { "type": ["number", "null"] }
+                },
+                "required": ["component"]
+            }
+        },
+        {
+            "name": "add_task",
+            "description": "Ajoute une tâche à un élément (catégories : frontend, backend, seo, motion). outOfScope = évolution v2, exclue du chiffrage. pin relie la tâche à un pin de l'image.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "component": { "type": "string" },
+                    "name": { "type": "string", "description": "Intitulé de la tâche." },
+                    "category": { "type": "string", "enum": ["frontend", "backend", "seo", "motion"], "description": "frontend par défaut." },
+                    "outOfScope": { "type": "boolean" },
+                    "completed": { "type": "boolean" },
+                    "pin": { "type": "integer", "description": "Numéro du pin à relier." },
+                    "image": { "type": "string", "description": "Id ou rang de l'image du pin (principale par défaut)." }
+                },
+                "required": ["component", "name"]
+            }
+        },
+        {
+            "name": "update_task",
+            "description": "Modifie une tâche (repérée par son id ou son nom exact) : intitulé, catégorie, état, hors périmètre, pin lié (0 pour délier).",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "component": { "type": "string" },
+                    "task": { "type": "string", "description": "Id ou nom exact de la tâche (voir get_component)." },
+                    "name": { "type": "string" },
+                    "category": { "type": "string", "enum": ["frontend", "backend", "seo", "motion"] },
+                    "completed": { "type": "boolean" },
+                    "outOfScope": { "type": "boolean" },
+                    "pin": { "type": "integer" },
+                    "image": { "type": "string" }
+                },
+                "required": ["component", "task"]
+            }
+        },
+        {
+            "name": "delete_task",
+            "description": "Supprime une tâche (id ou nom exact).",
+            "inputSchema": {
+                "type": "object",
+                "properties": { "component": { "type": "string" }, "task": { "type": "string" } },
+                "required": ["component", "task"]
+            }
+        },
+        {
+            "name": "set_text",
+            "description": "Écrit un texte Markdown dans un élément, en particulier un document. Avec `id` (voir `texts` dans get_component) : remplace ce texte, ou le complète si mode = append. Sans `id` : ajoute un nouveau bloc à la fin (type notes par défaut, paragraph ou comment) ; le bloc de notes vide d'un document vierge est rempli au lieu d'en ajouter un second.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "component": { "type": "string" },
+                    "content": { "type": "string", "description": "Texte Markdown." },
+                    "id": { "type": "string", "description": "Identifiant du texte à modifier." },
+                    "mode": { "type": "string", "enum": ["replace", "append"], "description": "replace par défaut ; append ajoute à la suite du texte existant." },
+                    "type": { "type": "string", "enum": ["notes", "paragraph", "comment"], "description": "Type du nouveau bloc (sans id)." }
+                },
+                "required": ["component", "content"]
+            }
+        },
+        {
+            "name": "delete_text",
+            "description": "Supprime un texte d'un élément (id visible dans get_component).",
+            "inputSchema": {
+                "type": "object",
+                "properties": { "component": { "type": "string" }, "id": { "type": "string" } },
+                "required": ["component", "id"]
             }
         },
         {
@@ -268,7 +351,7 @@ fn call_tool(name: &str, args: &Value, snapshot: &Value, dispatch: Dispatch) -> 
             None => error_result("Élément introuvable : donne un id ou un nom exact (voir list_components)."),
         },
         "get_component_image" => image_result(args, snapshot),
-        "qualify_pin" | "add_pin" => match dispatch(name, args) {
+        "qualify_pin" | "add_pin" | "update_component" | "add_task" | "update_task" | "delete_task" | "set_text" | "delete_text" => match dispatch(name, args) {
             Ok(result) => text_result(&result),
             Err(message) => error_result(&message),
         },
@@ -394,7 +477,7 @@ mod tests {
     fn tous_les_outils_sont_annonces() {
         let r = call("tools/list", json!({}));
         let names: Vec<&str> = r["result"]["tools"].as_array().unwrap().iter().map(|t| t["name"].as_str().unwrap()).collect();
-        for expected in ["get_project", "list_components", "get_component", "get_component_image", "qualify_pin", "add_pin", "list_collections", "get_issues"] {
+        for expected in ["get_project", "list_components", "get_component", "get_component_image", "qualify_pin", "add_pin", "update_component", "add_task", "update_task", "delete_task", "set_text", "delete_text", "list_collections", "get_issues"] {
             assert!(names.contains(&expected), "{} manquant", expected);
         }
     }
