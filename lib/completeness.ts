@@ -34,12 +34,19 @@ export function findCompletenessIssues(project: Pick<Project, 'components' | 'co
   const collections = project.collections ?? [];
 
   for (const comp of project.components) {
-    const open = unqualifiedPins(comp);
+    const images = comp.images ?? [];
+    // Les numéros repartent de 1 sur chaque image : on précise l'image dès qu'il y en a plusieurs.
+    const open = images.flatMap((img, index) =>
+      (img.pins ?? []).filter((p) => !isPinQualified(p, comp)).map((p) => ({
+        number: p.number,
+        where: images.length > 1 ? `${img.caption || `image ${index + 1}`} ` : '',
+      }))
+    );
     if (open.length > 0) {
       issues.push({
         id: `pins-${comp.id}`,
         level: 'warning',
-        message: `${comp.name} : ${open.length} pin${open.length > 1 ? 's' : ''} à préciser (${open.map((p) => `#${p.number}`).join(', ')})`,
+        message: `${comp.name} : ${open.length} pin${open.length > 1 ? 's' : ''} à préciser (${open.map((p) => `${p.where}#${p.number}`).join(', ')})`,
         componentId: comp.id,
       });
     }

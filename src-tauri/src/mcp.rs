@@ -169,7 +169,9 @@ fn count_pins(component: &Value) -> (usize, usize) {
 
 fn find_component<'a>(components: &'a [Value], args: &Value) -> Option<&'a Value> {
     if let Some(id) = args["id"].as_str() {
-        return components.iter().find(|c| c["id"].as_str() == Some(id));
+        if let Some(found) = components.iter().find(|c| c["id"].as_str() == Some(id)) {
+            return Some(found);
+        }
     }
     let name = args["name"].as_str()?.to_lowercase();
     components
@@ -361,6 +363,13 @@ mod tests {
         assert_eq!(list.as_array().unwrap().len(), 1);
         assert_eq!(list[0]["pins"], 2);
         assert_eq!(list[0]["pinsToQualify"], 1);
+    }
+
+    #[test]
+    fn fiche_par_id_inconnu_retombe_sur_le_nom() {
+        // get_component_image passe la même valeur comme id et comme nom.
+        let r = call("tools/call", json!({ "name": "get_component", "arguments": { "id": "home", "name": "home" } }));
+        assert!(r["result"]["content"][0]["text"].as_str().unwrap().contains("\"Home\""));
     }
 
     #[test]
