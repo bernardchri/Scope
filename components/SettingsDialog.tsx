@@ -48,7 +48,7 @@ export default function SettingsDialog({ open, onOpenChange }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="max-h-[85vh] grid-rows-[auto_minmax(0,1fr)_auto]">
         <DialogHeader>
           <DialogTitle>Paramètres</DialogTitle>
           <DialogDescription>
@@ -57,7 +57,7 @@ export default function SettingsDialog({ open, onOpenChange }: Props) {
         </DialogHeader>
 
         {loaded && (
-          <div className="space-y-6 py-2">
+          <div className="space-y-6 py-2 min-h-0 overflow-y-auto pr-2">
             <div className="space-y-2">
               <Label htmlFor="studioName">Nom du studio</Label>
               <Input
