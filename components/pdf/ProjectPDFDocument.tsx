@@ -11,7 +11,7 @@ import { collectionUsage, describeField, flattenFields } from '@/lib/collections
 import { describePin } from '@/lib/pinKinds';
 import { renderMarkdown } from './renderMarkdown';
 import { CoverPage } from './CoverPage';
-import { CATEGORY_SECTION_LABELS, PDF_DISPLAY_ORDER, getActiveWidgets, isTextWidget } from '@/lib/categoryHelpers';
+import { CATEGORY_SECTION_LABELS, PDF_DISPLAY_ORDER, getActiveWidgets, isTextWidget, blockTextToMarkdown } from '@/lib/categoryHelpers';
 import { TASK_CATEGORY_ORDER } from '@/lib/taskCategoryHelpers';
 import { s } from './pdfStyles';
 
@@ -227,6 +227,14 @@ function ComponentDetailBlock({
             return (
               <View key={w.id} style={{ marginTop: 8, paddingLeft: 8, borderLeft: '2px solid #9ca3af' }}>
                 <Text style={{ fontSize: 10, lineHeight: 1, color: '#6b7280' }}>{note.content}</Text>
+          // Titres et puces : rendus comme du Markdown, sans l'intitulé « Contenu » des notes.
+          if (w.type === 'heading1' || w.type === 'heading2' || w.type === 'heading3' || w.type === 'bullet') {
+            return (
+              <View key={w.id} style={{ marginTop: 8 }}>
+                {renderMarkdown(blockTextToMarkdown(w.type, note.content))}
+              </View>
+            );
+          }
               </View>
             );
           }

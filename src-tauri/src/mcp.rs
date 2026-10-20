@@ -206,7 +206,7 @@ fn tools() -> Value {
                     "content": { "type": "string", "description": "Texte Markdown." },
                     "id": { "type": "string", "description": "Identifiant du texte à modifier." },
                     "mode": { "type": "string", "enum": ["replace", "append"], "description": "replace par défaut ; append ajoute à la suite du texte existant." },
-                    "type": { "type": "string", "enum": ["notes", "paragraph", "comment"], "description": "Type du nouveau bloc (sans id)." }
+                    "type": { "type": "string", "enum": ["notes", "paragraph", "heading1", "heading2", "heading3", "bullet", "comment"], "description": "Type du nouveau bloc (sans id) : paragraph, heading1 à heading3 (titres), bullet (puce, une par ligne), notes (Markdown libre) ou comment." }
                 },
                 "required": ["component", "content"]
             }

@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { cn } from '@/lib/utils';
+import type { WidgetType } from '@/lib/types';
 
 export type TextBlockVariant = 'paragraph' | 'heading1' | 'heading2' | 'heading3' | 'list-item';
 
@@ -21,14 +22,39 @@ const VARIANT_PLACEHOLDERS: Record<TextBlockVariant, string> = {
   'list-item': 'Élément de liste',
 };
 
-interface TextBlockProps {
+/** Comportements « éditeur de blocs » d'un bloc de texte, fournis par la page qui le contient. */
+export interface TextBlockHandlers {
+  autoFocus?: boolean;
+  /** Change à chaque demande de focus : redonne le focus même si `autoFocus` est déjà vrai. */
+  focusToken?: number;
+  /** Position du curseur à la prise de focus (sinon fin du texte). */
+  focusCaret?: number;
+  onSlashCommand?: (caretRect: DOMRect, textBefore: string, textAfter: string) => void;
+  /** Texte tapé après le « / » : filtre le menu des blocs. */
+  onSlashFilter?: (filter: string) => void;
+  onSlashClose?: () => void;
+  onDelete?: () => void;
+  onSplit?: (textBefore: string, textAfter: string) => void;
+  /** Raccourci Markdown en début de bloc (« # », « - »…) : transforme le bloc, `rest` = texte restant. */
+  onShortcut?: (type: WidgetType, rest: string) => void;
+  /** Retour arrière au début d'un bloc non vide : fusion avec le bloc précédent. */
+  onMergeBack?: (value: string) => void;
+  /** Retour arrière au début d'un titre ou d'une puce : redevient un paragraphe. */
+  onConvertToParagraph?: () => void;
+}
+
+interface TextBlockProps extends TextBlockHandlers {
   content: string;
   variant?: TextBlockVariant;
   onSave: (content: string) => void;
-  autoFocus?: boolean;
-  onSlashCommand?: (caretRect: DOMRect, textBefore: string, textAfter: string) => void;
-  onDelete?: () => void;
-  onSplit?: (textBefore: string, textAfter: string) => void;
+}
+
+const SHORTCUTS: Record<string, WidgetType> = { '#': 'heading1', '##': 'heading2', '###': 'heading3', '-': 'bullet', '*': 'bullet' };
+
+/** Zone de texte voisine (bloc précédent/suivant de la page), pour circuler au clavier. */
+function neighbourInput(current: HTMLTextAreaElement, direction: -1 | 1): HTMLTextAreaElement | undefined {
+  const all = Array.from(document.querySelectorAll<HTMLTextAreaElement>('textarea[data-block-input]'));
+  return all[all.indexOf(current) + direction];
 }
 
 export default function TextBlock({
@@ -36,12 +62,27 @@ export default function TextBlock({
   variant = 'paragraph',
   onSave,
   autoFocus,
+  focusToken,
+  focusCaret,
   onSlashCommand,
+  onSlashFilter,
+  onSlashClose,
   onDelete,
   onSplit,
+  onShortcut,
+  onMergeBack,
+  onConvertToParagraph,
 }: TextBlockProps) {
   const [localValue, setLocalValue] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  // Position du « / » qui a ouvert le menu des blocs (null = menu fermé).
+  const slashStart = useRef<number | null>(null);
+  // Vrai tant que la saisie n'a pas été enregistrée : un changement venu de l'extérieur (découpe, fusion) l'annule,
+  // sinon la perte de focus qui suit réécrirait l'ancien texte par-dessus.
+  const dirty = useRef(false);
+
+  // Le contenu ne change que de l'extérieur (fusion, découpe, transformation) : la saisie en cours repart de lui.
+  useEffect(() => { dirty.current = false; setLocalValue(null); }, [content]);
 
   const displayValue = localValue ?? content;
 
@@ -55,33 +96,63 @@ export default function TextBlock({
   useEffect(() => { resize(); }, [displayValue, resize]);
 
   useEffect(() => {
-    if (autoFocus && textareaRef.current) {
-      textareaRef.current.focus();
-    }
-  }, [autoFocus]);
+    const ta = textareaRef.current;
+    if (!autoFocus || !ta) return;
+    ta.focus();
+    // Après le rendu : le contenu fusionné ou transformé est alors en place.
+    requestAnimationFrame(() => {
+      const caret = Math.min(focusCaret ?? ta.value.length, ta.value.length);
+      ta.setSelectionRange(caret, caret);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoFocus, focusToken]);
 
   function handleFocus() {
     setLocalValue(content);
   }
 
   function handleBlur() {
-    if (localValue !== null && localValue !== content) {
+    slashStart.current = null;
+    if (dirty.current && localValue !== null && localValue !== content) {
       onSave(localValue);
     }
+    dirty.current = false;
     setLocalValue(null);
   }
 
   function handleChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
     const newValue = e.target.value;
+    dirty.current = true;
     setLocalValue(newValue);
 
     const ta = textareaRef.current;
-    if (!ta || !onSlashCommand) return;
+    if (!ta) return;
     const cursorPos = ta.selectionStart;
-    if (cursorPos > 0 && newValue[cursorPos - 1] === '/') {
+
+    // Raccourcis Markdown en début de bloc : « # » titre 1, « ## » titre 2, « ### » titre 3, « - » puce.
+    const shortcut = onShortcut && newValue.slice(0, cursorPos).match(/^(#{1,3}|-|\*) $/);
+    if (shortcut && cursorPos === shortcut[0].length) {
+      slashStart.current = null;
+      onShortcut!(SHORTCUTS[shortcut[1]], newValue.slice(cursorPos));
+      return;
+    }
+
+    // Menu des blocs : s'ouvre sur un « / » en début de bloc ou après un espace, se filtre en tapant.
+    const typedSlash = newValue[cursorPos - 1] === '/' && (cursorPos === 1 || /\s/.test(newValue[cursorPos - 2]));
+    if (onSlashCommand && typedSlash) {
       const rect = getCaretRect(ta, cursorPos - 1);
       if (rect) {
+        slashStart.current = cursorPos - 1;
         onSlashCommand(rect, newValue.slice(0, cursorPos - 1), newValue.slice(cursorPos));
+      }
+    } else if (slashStart.current !== null) {
+      const start = slashStart.current;
+      const typed = newValue.slice(start + 1, cursorPos);
+      if (cursorPos <= start || newValue[start] !== '/' || /\s/.test(typed)) {
+        slashStart.current = null;
+        onSlashClose?.();
+      } else {
+        onSlashFilter?.(typed);
       }
     }
   }
@@ -96,9 +167,35 @@ export default function TextBlock({
       onSplit(value.slice(0, pos), value.slice(pos));
       return;
     }
-    if (e.key === 'Backspace' && displayValue === '' && onDelete) {
-      e.preventDefault();
-      onDelete();
+    const ta = textareaRef.current;
+    if (!ta) return;
+    const atStart = ta.selectionStart === 0 && ta.selectionEnd === 0;
+    const atEnd = ta.selectionStart === displayValue.length && ta.selectionEnd === displayValue.length;
+
+    if (e.key === 'Backspace' && atStart) {
+      if (displayValue === '' && onDelete) {
+        e.preventDefault();
+        onDelete();
+      } else if (onConvertToParagraph) {
+        e.preventDefault();
+        onConvertToParagraph();
+      } else if (onMergeBack) {
+        e.preventDefault();
+        onMergeBack(displayValue);
+      }
+      return;
+    }
+
+    // Flèches : au bord du texte, on passe au bloc voisin (curseur à la fin en montant, au début en descendant).
+    const direction = e.key === 'ArrowUp' && atStart ? -1 : e.key === 'ArrowDown' && atEnd ? 1 : 0;
+    if (direction !== 0 && !e.shiftKey) {
+      const target = neighbourInput(ta, direction);
+      if (target) {
+        e.preventDefault();
+        target.focus();
+        const caret = direction < 0 ? target.value.length : 0;
+        target.setSelectionRange(caret, caret);
+      }
     }
   }
 
@@ -109,6 +206,7 @@ export default function TextBlock({
       )}
       <textarea
         ref={textareaRef}
+        data-block-input
         value={displayValue}
         onChange={handleChange}
         onFocus={handleFocus}

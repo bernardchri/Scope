@@ -324,7 +324,7 @@ function runTextCommand(component: Component, tool: string, args: McpArgs): McpO
     upsert(targetId, args.mode === 'append' && current ? `${current}\n\n${content}` : content);
   } else {
     const type = (str(args.type) ?? 'notes') as WidgetInstance['type'];
-    if (!isTextWidget(type)) return fail('`type` doit être notes, paragraph ou comment.');
+    if (!isTextWidget(type)) return fail('`type` doit être notes, paragraph, heading1, heading2, heading3, bullet ou comment.');
     // Un document vierge a déjà un bloc de notes vide : on le remplit plutôt que d'en ajouter un second.
     const empty = type === 'notes' ? active.find((w) => w.type === 'notes' && !notes.find((n) => n.id === w.id)?.content?.trim()) : undefined;
     if (empty) {

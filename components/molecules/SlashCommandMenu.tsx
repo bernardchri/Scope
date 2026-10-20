@@ -28,17 +28,20 @@ function SlashCommandMenuInner({
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
-      if (e.key === 'ArrowDown') {
-        e.preventDefault();
+      // Les touches du menu ne doivent pas atteindre la zone de texte (Entrée y couperait le bloc).
+      const consume = () => { e.preventDefault(); e.stopPropagation(); };
+      if (e.key === 'ArrowDown' && filtered.length > 0) {
+        consume();
         setActiveIndex((i) => (i + 1) % filtered.length);
-      } else if (e.key === 'ArrowUp') {
-        e.preventDefault();
+      } else if (e.key === 'ArrowUp' && filtered.length > 0) {
+        consume();
         setActiveIndex((i) => (i - 1 + filtered.length) % filtered.length);
-      } else if (e.key === 'Enter') {
-        e.preventDefault();
+      } else if (e.key === 'Enter' || e.key === 'Tab') {
+        consume();
         if (filtered[activeIndex]) onSelect(filtered[activeIndex]);
+        else onClose();
       } else if (e.key === 'Escape') {
-        e.preventDefault();
+        consume();
         onClose();
       }
     },

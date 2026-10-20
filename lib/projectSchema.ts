@@ -125,7 +125,7 @@ const instanceSchema = z.object({
 const widgetInstanceSchema = z.object({
   id: z.string(),
   type: z
-    .enum(['notes', 'images', 'tasks', 'instances', 'resources', 'paragraph', 'comment'])
+    .enum(['notes', 'images', 'tasks', 'instances', 'resources', 'paragraph', 'heading1', 'heading2', 'heading3', 'bullet', 'comment'])
     .catch('notes'),
 });
 

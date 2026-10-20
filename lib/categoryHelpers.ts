@@ -1,5 +1,5 @@
 import { ScopeItemType, WidgetType, WidgetInstance, Component } from './types';
-import { FileText, Image, ListChecks, Layers, Package, AlignLeft, MessageSquare, type LucideIcon } from 'lucide-react';
+import { FileText, Image, ListChecks, Layers, Package, AlignLeft, MessageSquare, Heading1, Heading2, Heading3, List, type LucideIcon } from 'lucide-react';
 import scopeConfig from './scope.config.json';
 
 // --- Derived from scope.config.json ---
@@ -50,8 +50,27 @@ export const WIDGET_ICONS: Record<WidgetType, LucideIcon> = {
   instances: Layers,
   resources: Package,
   paragraph: AlignLeft,
+  heading1: Heading1,
+  heading2: Heading2,
+  heading3: Heading3,
+  bullet: List,
   comment: MessageSquare,
 };
+
+/** Blocs de texte courts (paragraphe, titres, puces) : du texte brut, exporté en Markdown selon son type. */
+export const BLOCK_TEXT_TYPES: WidgetType[] = ['paragraph', 'heading1', 'heading2', 'heading3', 'bullet'];
+
+export function isBlockText(type: WidgetType): boolean {
+  return BLOCK_TEXT_TYPES.includes(type);
+}
+
+const HEADING_PREFIX: Partial<Record<WidgetType, string>> = { heading1: '# ', heading2: '## ', heading3: '### ' };
+
+/** Contenu d'un bloc de texte tel qu'il s'écrit en Markdown (`# Titre`, `- puce`). */
+export function blockTextToMarkdown(type: WidgetType, content: string): string {
+  if (type === 'bullet') return content.split('\n').map(line => `- ${line}`).join('\n');
+  return `${HEADING_PREFIX[type] ?? ''}${content}`;
+}
 
 export function widgetHasContent(item: Component, widget: WidgetInstance): boolean {
   if (isTextWidget(widget.type)) {

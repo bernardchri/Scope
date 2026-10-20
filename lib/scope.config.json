@@ -32,6 +32,10 @@
     { "id": "instances", "label": "Composants utilisés" },
     { "id": "resources", "label": "Ressources" },
     { "id": "paragraph", "label": "Paragraphe",         "storage": "notes" },
+    { "id": "heading1",  "label": "Titre 1",            "storage": "notes" },
+    { "id": "heading2",  "label": "Titre 2",            "storage": "notes" },
+    { "id": "heading3",  "label": "Titre 3",            "storage": "notes" },
+    { "id": "bullet",    "label": "Liste à puces",      "storage": "notes" },
     { "id": "comment",   "label": "Commentaire",        "storage": "notes" }
   ],
   "shortcuts": [

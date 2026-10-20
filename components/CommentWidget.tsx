@@ -1,15 +1,11 @@
 'use client';
 
 import { MessageSquare } from 'lucide-react';
-import TextBlock from './TextBlock';
+import TextBlock, { type TextBlockHandlers } from './TextBlock';
 
-interface CommentWidgetProps {
+interface CommentWidgetProps extends TextBlockHandlers {
   content: string;
   onSave: (content: string) => void;
-  autoFocus?: boolean;
-  onSlashCommand?: (caretRect: DOMRect, textBefore: string, textAfter: string) => void;
-  onDelete?: () => void;
-  onSplit?: (textBefore: string, textAfter: string) => void;
 }
 
 export default function CommentWidget(props: CommentWidgetProps) {

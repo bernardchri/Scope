@@ -27,3 +27,15 @@ describe('getAvailableWidgetTypes', () => {
     expect(available).toContain('paragraph');
   });
 });
+
+describe('blocs de texte', () => {
+  it('traduit titres et puces en Markdown', async () => {
+    const { blockTextToMarkdown, isBlockText, isTextWidget } = await import('@/lib/categoryHelpers');
+    expect(blockTextToMarkdown('heading1', 'Titre')).toBe('# Titre');
+    expect(blockTextToMarkdown('heading3', 'Sous-titre')).toBe('### Sous-titre');
+    expect(blockTextToMarkdown('bullet', 'un\ndeux')).toBe('- un\n- deux');
+    expect(blockTextToMarkdown('paragraph', 'Texte')).toBe('Texte');
+    expect(isBlockText('heading2') && isBlockText('bullet') && !isBlockText('comment')).toBe(true);
+    expect(isTextWidget('heading1') && isTextWidget('bullet')).toBe(true);
+  });
+});

@@ -33,13 +33,14 @@ import {
 import ComponentEditForm from './forms/ComponentEditForm';
 import ImagePinViewer from './ImagePinViewer';
 import NoteWidget from './NoteWidget';
-import ParagraphWidget from './ParagraphWidget';
+import ParagraphWidget, { Heading1Widget, Heading2Widget, Heading3Widget, BulletWidget } from './ParagraphWidget';
 import CommentWidget from './CommentWidget';
 import TaskList from './TaskList';
 import ComponentInstanceList from './ComponentInstanceList';
 import ComponentAssets from './ComponentAssets';
 import SortableWidget from './molecules/SortableWidget';
 import SlashCommandMenu from './molecules/SlashCommandMenu';
+import type { TextBlockHandlers } from './TextBlock';
 
 /**
  * Component mapping for text widgets (storage: "notes").
@@ -48,14 +49,17 @@ import SlashCommandMenu from './molecules/SlashCommandMenu';
 const TEXT_WIDGET_COMPONENTS: Partial<Record<WidgetType, React.ComponentType<{
   content: string;
   onSave: (content: string) => void;
-  autoFocus?: boolean;
-  onSlashCommand?: (caretRect: DOMRect, textBefore: string, textAfter: string) => void;
-  onDelete?: () => void;
-  onSplit?: (textBefore: string, textAfter: string) => void;
-}>>> = {
+} & TextBlockHandlers>>> = {
   paragraph: ParagraphWidget,
+  heading1: Heading1Widget,
+  heading2: Heading2Widget,
+  heading3: Heading3Widget,
+  bullet: BulletWidget,
   comment: CommentWidget,
 };
+
+/** Types entre lesquels un bloc de texte peut être transformé (menu de la poignée). */
+const TURN_INTO_TYPES: WidgetType[] = ['paragraph', 'heading1', 'heading2', 'heading3', 'bullet', 'comment'];
 
 interface ScopeItemDetailProps {
   projectId: string;
@@ -86,7 +90,9 @@ export default function ScopeItemDetail({
   const [activeId, setActiveId] = useState<string | null>(null);
   const [pendingRemove, setPendingRemove] = useState<WidgetInstance | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [autoFocusWidgetId, setAutoFocusWidgetId] = useState<string | null>(null);
+  // Demande de focus sur un bloc de texte (id, position du curseur) ; `n` relance le focus sur un même bloc.
+  const [focusReq, setFocusReq] = useState<{ id: string; caret?: number; n: number } | null>(null);
+  const requestFocus = (id: string, caret?: number) => setFocusReq(prev => ({ id, caret, n: (prev?.n ?? 0) + 1 }));
   const [slashMenu, setSlashMenu] = useState<{
     position: { top: number; left: number };
     widgetId: string;
@@ -176,6 +182,57 @@ export default function ScopeItemDetail({
     }
   }
 
+  /** Change le type d'un bloc de texte en gardant son identifiant ; `content` remplace son texte si fourni. */
+  function setWidgetType(id: string, type: WidgetType, content?: string) {
+    const updates: Partial<Component> = { widgets: activeWidgets.map(w => (w.id === id ? { ...w, type } : w)) };
+    if (content !== undefined) {
+      const notes = [...(item.notes || [])];
+      const idx = notes.findIndex(n => n.id === id);
+      if (idx >= 0) notes[idx] = { ...notes[idx], content };
+      else notes.push({ id, content });
+      updates.notes = notes;
+    }
+    onUpdate(item.id, updates);
+  }
+
+  function duplicateWidget(widget: WidgetInstance) {
+    const idx = activeWidgets.findIndex(w => w.id === widget.id);
+    const newId = crypto.randomUUID();
+    const content = item.notes?.find(n => n.id === widget.id)?.content ?? '';
+    const widgets = [...activeWidgets];
+    widgets.splice(idx + 1, 0, { id: newId, type: widget.type });
+    onUpdate(item.id, { widgets, notes: [...(item.notes || []), { id: newId, content }] });
+  }
+
+  function moveWidget(widget: WidgetInstance, delta: -1 | 1) {
+    const idx = activeWidgets.findIndex(w => w.id === widget.id);
+    const target = idx + delta;
+    if (target < 0 || target >= activeWidgets.length) return;
+    onUpdate(item.id, { widgets: arrayMove(activeWidgets, idx, target) });
+  }
+
+  /** « + » d'un bloc : insère le type choisi juste en dessous ; un bloc de texte prend aussitôt le focus. */
+  function addAfter(widget: WidgetInstance, type: WidgetType) {
+    const id = addWidget(type, activeWidgets.findIndex(w => w.id === widget.id) + 1);
+    if (isTextWidget(type)) requestFocus(id, 0);
+  }
+
+  function blockActions(widget: WidgetInstance) {
+    const idx = activeWidgets.findIndex(w => w.id === widget.id);
+    const isText = isTextWidget(widget.type) && widget.type !== 'notes';
+    return {
+      addTypes: available,
+      onAddAfter: (type: WidgetType) => addAfter(widget, type),
+      onMove: (delta: -1 | 1) => moveWidget(widget, delta),
+      canMoveUp: idx > 0,
+      canMoveDown: idx < activeWidgets.length - 1,
+      onDuplicate: isText ? () => duplicateWidget(widget) : undefined,
+      turnIntoTypes: isText ? TURN_INTO_TYPES : undefined,
+      currentType: widget.type,
+      onTurnInto: isText ? (type: WidgetType) => setWidgetType(widget.id, type) : undefined,
+    };
+  }
+
   function renderWidget(widget: WidgetInstance) {
     switch (widget.type) {
       case 'images':
@@ -248,11 +305,18 @@ export default function ScopeItemDetail({
         const TextComp = TEXT_WIDGET_COMPONENTS[widget.type];
         if (!TextComp) return null;
         const note = item.notes?.find(n => n.id === widget.id);
+        const widgetIdx = activeWidgets.findIndex(w => w.id === widget.id);
+        // Bloc de texte précédent (hors « Notes », éditeur Markdown à part) : cible de la fusion et du focus au retour arrière.
+        const prev = widgetIdx > 0 ? activeWidgets[widgetIdx - 1] : undefined;
+        const prevText = prev && isTextWidget(prev.type) && prev.type !== 'notes' ? prev : undefined;
+        const prevContent = prevText ? item.notes?.find(n => n.id === prevText.id)?.content ?? '' : '';
         return (
           <TextComp
             key={widget.id}
             content={note?.content || ''}
-            autoFocus={autoFocusWidgetId === widget.id}
+            autoFocus={focusReq?.id === widget.id}
+            focusToken={focusReq?.n}
+            focusCaret={focusReq?.id === widget.id ? focusReq.caret : undefined}
             onSave={(content) => {
               const notes = [...(item.notes || [])];
               const idx = notes.findIndex(n => n.id === widget.id);
@@ -262,7 +326,6 @@ export default function ScopeItemDetail({
                 notes.push({ id: widget.id, content });
               }
               onUpdate(item.id, { notes });
-              if (autoFocusWidgetId === widget.id) setAutoFocusWidgetId(null);
             }}
             onSlashCommand={(caretRect, textBefore, textAfter) => {
               setSlashMenu({
@@ -273,8 +336,37 @@ export default function ScopeItemDetail({
                 filter: '',
               });
             }}
-            onDelete={() => removeWidget(widget)}
+            onSlashFilter={(filter) => setSlashMenu(menu => (menu ? { ...menu, filter } : menu))}
+            onSlashClose={() => setSlashMenu(null)}
+            onDelete={() => {
+              removeWidget(widget);
+              if (prevText) requestFocus(prevText.id, prevContent.length);
+            }}
+            onShortcut={widget.type === 'paragraph' ? (type, rest) => {
+              setWidgetType(widget.id, type, rest);
+              requestFocus(widget.id, 0);
+            } : undefined}
+            onConvertToParagraph={widget.type !== 'paragraph' ? () => {
+              setWidgetType(widget.id, 'paragraph');
+              requestFocus(widget.id, 0);
+            } : undefined}
+            onMergeBack={prevText ? (value) => {
+              const notes = (item.notes || []).filter(n => n.id !== widget.id);
+              const merged = prevContent + value;
+              const at = notes.findIndex(n => n.id === prevText.id);
+              if (at >= 0) notes[at] = { ...notes[at], content: merged };
+              else notes.push({ id: prevText.id, content: merged });
+              onUpdate(item.id, { widgets: activeWidgets.filter(w => w.id !== widget.id), notes });
+              requestFocus(prevText.id, prevContent.length);
+            } : undefined}
             onSplit={(textBefore, textAfter) => {
+              // Une puce vide qu'on valide redevient un paragraphe (comme dans Notion) ; un titre est suivi d'un paragraphe.
+              if (widget.type === 'bullet' && textBefore === '' && textAfter === '') {
+                setWidgetType(widget.id, 'paragraph');
+                requestFocus(widget.id, 0);
+                return;
+              }
+              const nextType: WidgetType = widget.type.startsWith('heading') ? 'paragraph' : widget.type;
               const notes = [...(item.notes || [])];
               const idx = notes.findIndex(n => n.id === widget.id);
               if (idx >= 0) {
@@ -283,14 +375,13 @@ export default function ScopeItemDetail({
                 notes.push({ id: widget.id, content: textBefore });
               }
 
-              const widgetIdx = activeWidgets.findIndex(w => w.id === widget.id);
               const newId = crypto.randomUUID();
               const newWidgets = [...activeWidgets];
-              newWidgets.splice(widgetIdx + 1, 0, { type: widget.type, id: newId });
+              newWidgets.splice(widgetIdx + 1, 0, { type: nextType, id: newId });
               notes.push({ id: newId, content: textAfter });
 
               onUpdate(item.id, { widgets: newWidgets, notes });
-              setAutoFocusWidgetId(newId);
+              requestFocus(newId, 0);
             }}
           />
         );
@@ -316,7 +407,7 @@ export default function ScopeItemDetail({
 
   function handleAddParagraph(position: number) {
     const id = addWidget('paragraph', position);
-    setAutoFocusWidgetId(id);
+    requestFocus(id, 0);
   }
 
   function handleSlashSelect(widgetType: WidgetType) {
@@ -351,6 +442,7 @@ export default function ScopeItemDetail({
       const newId = crypto.randomUUID();
       currentWidgets.splice(insertPos, 0, { id: newId, type: widgetType });
       (updates.notes as typeof notes) = [...(updates.notes || notes), { id: newId, content: '' }];
+      requestFocus(newId, 0);
       insertPos++;
     } else {
       currentWidgets.splice(insertPos, 0, { id: widgetType, type: widgetType });
@@ -362,7 +454,7 @@ export default function ScopeItemDetail({
       const afterId = crypto.randomUUID();
       currentWidgets.splice(insertPos, 0, { id: afterId, type: 'paragraph' });
       (updates.notes as typeof notes) = [...(updates.notes || notes), { id: afterId, content: textAfter }];
-      setAutoFocusWidgetId(afterId);
+      requestFocus(afterId, 0);
     }
 
     updates.widgets = currentWidgets;
@@ -434,6 +526,7 @@ export default function ScopeItemDetail({
                   label={WIDGET_LABELS[widget.type]}
                   icon={WIDGET_ICONS[widget.type]}
                   onRemove={() => removeWidget(widget)}
+                  actions={blockActions(widget)}
                 >
                   {renderWidget(widget)}
                 </SortableWidget>

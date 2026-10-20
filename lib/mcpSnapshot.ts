@@ -1,6 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import { Component, Project } from './types';
-import { getActiveWidgets } from './categoryHelpers';
+import { getActiveWidgets, isTextWidget } from './categoryHelpers';
 import { describePin } from './pinKinds';
 import { findCompletenessIssues, isPinQualified } from './completeness';
 
@@ -21,7 +21,7 @@ export function buildMcpSnapshot(project: Project, folderPath?: string) {
     // Contenu texte des documents et blocs de texte, dans l'ordre de la fiche.
     texts: getActiveWidgets(comp)
       .map((w) => ({ id: w.id, widget: w.type, content: comp.notes?.find((n) => n.id === w.id)?.content }))
-      .filter((t) => t.content && ['notes', 'paragraph', 'comment'].includes(t.widget)),
+      .filter((t) => t.content && isTextWidget(t.widget)),
     tasks: comp.tasks.map((t) => ({
       id: t.id, name: t.name, category: t.category, completed: t.completed, outOfScope: t.scope === 'v2' || undefined, pin: t.pinRef?.pinNumber,
     })),

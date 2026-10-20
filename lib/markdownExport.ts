@@ -1,7 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { save, open } from '@tauri-apps/plugin-dialog';
 import { Project, Component } from './types';
-import { CATEGORY_SECTION_LABELS, PDF_DISPLAY_ORDER, getActiveWidgets } from './categoryHelpers';
+import { CATEGORY_SECTION_LABELS, PDF_DISPLAY_ORDER, getActiveWidgets, isBlockText, blockTextToMarkdown } from './categoryHelpers';
 import { TASK_CATEGORY_ORDER, TASK_CATEGORY_PLAIN_LABELS } from './taskCategoryHelpers';
 import { slugify } from './persistence';
 import { renderImageWithPins } from './imageHelpers';
@@ -118,14 +118,14 @@ function generateComponentBlock(component: Component, imageMap: ImageMap, allCom
 
   // Paragraphs & comments
   const textWidgets = getActiveWidgets(component)
-    .filter(w => w.type === 'paragraph' || (w.type === 'comment' && exportComments));
+    .filter(w => isBlockText(w.type) || (w.type === 'comment' && exportComments));
   for (const w of textWidgets) {
     const note = component.notes?.find(n => n.id === w.id);
     if (!note?.content) continue;
     if (w.type === 'comment') {
       parts.push(note.content.split('\n').map(line => `> ${line}`).join('\n'));
     } else {
-      parts.push(note.content);
+      parts.push(blockTextToMarkdown(w.type, note.content));
     }
   }
 
@@ -213,14 +213,14 @@ function generateDocumentBlock(component: Component, imageMap: ImageMap, exportC
   }
 
   // Paragraphs & comments (plain text)
-  const paraWidgets = widgets.filter(w => w.type === 'paragraph' || (w.type === 'comment' && exportComments));
+  const paraWidgets = widgets.filter(w => isBlockText(w.type) || (w.type === 'comment' && exportComments));
   for (const w of paraWidgets) {
     const note = component.notes?.find(n => n.id === w.id);
     if (!note?.content) continue;
     if (w.type === 'comment') {
       parts.push(note.content.split('\n').map(line => `> ${line}`).join('\n'));
     } else {
-      parts.push(note.content);
+      parts.push(blockTextToMarkdown(w.type, note.content));
     }
   }
 
