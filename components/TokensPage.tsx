@@ -8,7 +8,7 @@ import {
   DesignTokens, EffectStyleToken, FontSource, FontToken, TextStyleToken, TokenCollection, TokenValue, TokenVariable,
 } from '@/lib/types';
 import {
-  WEIGHT_NAMES, emptyTokens, fontStyleName, fontWeight, isItalic, textStyleDeclarations, tokenSource, tokensToCss, tokensToJson,
+  bySizeDesc, WEIGHT_NAMES, emptyTokens, fontStyleName, fontWeight, isItalic, textStyleDeclarations, tokenSource, tokensToCss, tokensToJson,
   variableCssNames,
 } from '@/lib/designTokens';
 import { Button } from '@/components/ui/button';
@@ -427,7 +427,8 @@ export default function TokensPage({ tokens, onChange, folderPath, className }: 
         >
           <div className="space-y-5">
             {t.textStyles.length === 0 && <p className="px-4 py-3 text-sm text-muted-foreground">Aucun style de texte.</p>}
-            {t.textStyles.map((style, i) => {
+            {/* Du plus grand au plus petit ; `i` reste l'indice d'origine, utilisé pour modifier le bon style */}
+            {bySizeDesc(t.textStyles.map((style, i) => ({ style, i, fontSize: style.fontSize }))).map(({ style, i }) => {
               const font = fontForStyle(t, style);
               const family = effectiveFamily(t, style);
               // fontTick : se réévalue quand une police du projet vient d'être chargée

@@ -79,6 +79,9 @@ function letterSpacingCss(style: TextStyleToken): string | undefined {
 
 const CASES: Record<string, string> = { UPPER: 'uppercase', LOWER: 'lowercase', TITLE: 'capitalize' };
 
+/** Styles de texte du plus grand au plus petit (à taille égale, ordre d'origine) : ordre des aperçus et des exports. */
+export const bySizeDesc = <T extends { fontSize: number }>(styles: T[]): T[] => [...styles].sort((a, b) => b.fontSize - a.fontSize);
+
 /** Déclarations CSS d'un style de texte. */
 export function textStyleDeclarations(style: TextStyleToken, fontFamily?: string): string[] {
   return [
@@ -159,7 +162,7 @@ export function tokensToCss(tokens: DesignTokens): string {
   if (root.length) blocks.push(`:root {\n${root.join('\n')}\n}`);
   for (const [selector, lines] of modeBlocks) blocks.push(`${selector} {\n${lines.join('\n')}\n}`);
 
-  for (const style of tokens.textStyles) {
+  for (const style of bySizeDesc(tokens.textStyles)) {
     const font = fontForStyle(tokens, style);
     blocks.push(`.text-${slug(style.name)} {\n${textStyleDeclarations(style, font ? `var(${fontCssName(font)})` : undefined).map(d => `  ${d};`).join('\n')}\n}`);
   }
@@ -270,7 +273,7 @@ export function tokensToMarkdown(tokens: DesignTokens | undefined, heading = '##
 
   if (tokens.textStyles.length) {
     lines.push(`${heading}# Styles de texte`, '', '| Style | Classe | Police | Taille | Graisse | Interligne | Espacement |', '|---|---|---|---|---|---|---|');
-    for (const s of tokens.textStyles) {
+    for (const s of bySizeDesc(tokens.textStyles)) {
       lines.push(`| ${cell(s.name)} | \`.text-${slug(s.name)}\` | ${(() => { const f = fontForStyle(tokens, s); return f ? `\`${fontCssName(f)}\` (${f.family})` : s.fontFamily; })()} | ${num(s.fontSize)} px | ${fontWeight(s.fontStyle)}${isItalic(s.fontStyle) ? ' italique' : ''} | ${lineHeightCss(s) ?? 'auto'} | ${letterSpacingCss(s) ?? '—'} |`);
     }
     lines.push('');

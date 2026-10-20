@@ -121,3 +121,19 @@ describe('chargement d\'un projet', () => {
     ]);
   });
 });
+
+describe('ordre des styles de texte', () => {
+  it('du plus grand au plus petit, à taille égale dans l\'ordre d\'origine', async () => {
+    const { bySizeDesc, tokensToCss: css, tokensToMarkdown: md } = await import('@/lib/designTokens');
+    const mk = (name: string, fontSize: number) => ({
+      name, fontFamily: 'Inter', fontStyle: 'Regular', fontSize, lineHeight: { unit: 'AUTO' as const }, letterSpacing: { unit: 'PIXELS' as const, value: 0 },
+    });
+    const styles = [mk('Corps', 16), mk('H1', 48), mk('Légende', 12), mk('H2', 32), mk('Autre 16', 16)];
+    expect(bySizeDesc(styles).map(s => s.name)).toEqual(['H1', 'H2', 'Corps', 'Autre 16', 'Légende']);
+    const tokens: DesignTokens = { syncedAt: '2026-10-20T00:00:00.000Z', collections: [], colorStyles: [], effectStyles: [], textStyles: styles };
+    expect(css(tokens).indexOf('.text-h1')).toBeLessThan(css(tokens).indexOf('.text-corps'));
+    expect(css(tokens).indexOf('.text-corps')).toBeLessThan(css(tokens).indexOf('.text-legende'));
+    expect(md(tokens).indexOf('| H1 |')).toBeLessThan(md(tokens).indexOf('| Légende |'));
+    expect(styles[0].name).toBe('Corps'); // les données ne sont pas réordonnées
+  });
+});
