@@ -66,6 +66,23 @@ describe('generateStoriesMd — maquettes', () => {
   });
 });
 
+describe('generateStoriesMd — légende des pins', () => {
+  it('nomme chaque image par sa légende et indique la position de chaque pin', () => {
+    const comp = makeComponent({
+      images: [
+        { id: 'a', isPrimary: true, caption: 'desktop', pins: [{ id: 'p1', number: 1, x: 12.4, y: 8, kind: 'title' }] },
+        { id: 'b', isPrimary: false, caption: 'mobile', pins: [{ id: 'p2', number: 1, x: 50, y: 49.6, kind: 'button' }] },
+      ],
+    });
+    const imageMap = new Map([['c1', [{ filename: 'home-0.png', imageIndex: 0 }, { filename: 'home-1.png', imageIndex: 1 }]]]);
+    const md = generateStoriesMd(makeProject([comp]), imageMap);
+    expect(md).toContain('**Image 1 — desktop (home-0.png)**');
+    expect(md).toContain('**Image 2 — mobile (home-1.png)**');
+    expect(md).toContain('- Pin #1 — Titre — position : 12 % / 8 %');
+    expect(md).toContain('- Pin #1 — Bouton — position : 50 % / 50 %');
+  });
+});
+
 describe('uniqueSlugs', () => {
   it('suffixe les composants de même nom', () => {
     const slugs = uniqueSlugs([makeComponent({ id: 'a', name: 'Carte' }), makeComponent({ id: 'b', name: 'Carte' })]);

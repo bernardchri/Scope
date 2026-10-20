@@ -223,7 +223,8 @@ function generateComponentBlock(component: Component, imageMap: ImageMap, allCom
     const pins = img.pins ?? [];
     if (pins.length === 0) return;
     const ref = imageRefs.find(r => r.imageIndex === i);
-    const imgLabel = ref ? `Image ${i + 1} — ${ref.filename}` : `Image ${i + 1}`;
+    // Légende de la maquette (desktop, mobile…) et fichier : le même nom que sous l'image, pour s'y retrouver.
+    const imgLabel = `Image ${i + 1}${img.caption ? ` — ${img.caption}` : ''}${ref ? ` (${ref.filename})` : ''}`;
     pinsLegendLines.push(`**${imgLabel}**`);
     [...pins].sort((a, b) => a.number - b.number).forEach(pin => {
       const linkedTask = component.tasks.find(t => t.pinRef?.pinId === pin.id);
@@ -237,6 +238,8 @@ function generateComponentBlock(component: Component, imageMap: ImageMap, allCom
         linkedTask ? `tâche : ${linkedTask.name}` : '',
         describePin(pin, collections, linkedComponent?.name, (c) => collectionLink(c, collectionBase)),
         isPinQualified(pin, component) ? '' : 'à préciser (type, contraintes)',
+        // Position sur la maquette : repère le pin sur l'image sans pins incrustés.
+        `position : ${Math.round(pin.x)} % / ${Math.round(pin.y)} %`,
       ].filter(Boolean);
       pinsLegendLines.push(`- Pin #${pin.number}${details.length ? ` — ${details.join(' — ')}` : ''}`);
     });
