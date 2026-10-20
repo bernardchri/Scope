@@ -90,3 +90,19 @@ Les pins permettent de marquer un point précis sur une maquette. Les **zones** 
 - [x] Valider `scope.json` au chargement (schéma Zod) pour se prémunir des fichiers corrompus ou d'une version future
 - [ ] Étendre la couverture de tests (`npm test`) : `markdownExport`, slices du store, helpers de crop
 - [ ] Réduire les ~23 warnings ESLint restants (`<img>` → next/image, deps de hooks, vars inutilisées)
+
+## Thèmes (projet « La Vilaine » : thème changeable depuis le backoffice)
+
+Idée (2026-10-20) : l'admin choisit le thème du site dans le backoffice. Un thème = un **mode** d'une collection de variables ; `tokens.css` émet `:root` (mode par défaut) puis `[data-mode="…"] { … }` avec seulement les variables qui changent ; le site pose `data-mode` sur `<html>` (ou sur une section, le sélecteur marche sur n'importe quel élément). Le choix vient d'une option du backoffice (champ « Thème » de type Catégorie dans une collection « Réglages »).
+
+Ce qui marche déjà : modes de variables → CSS/JSON/Markdown ; création de collections de variables et de modes dans SCOPE (collections manuelles) ; polices et styles de texte globaux.
+
+À faire :
+- [ ] **CRUD complet des collections de variables** : renommer une collection, renommer / supprimer / choisir le mode par défaut, renommer et changer le type d'une variable, supprimer une collection venue de la source, valeur d'une variable = référence à une autre variable (alias) pour qu'un thème pointe sur les primitives (`--blanc`…)
+- [ ] **Ajouter des modes à n'importe quelle collection**, y compris celle venue de Figma, sans qu'une synchronisation les écrase
+- [ ] **« Entrée unique »** sur une collection de contenu (réglages globaux du site : thème, options) au lieu d'une liste d'entrées
+- [ ] **« Collection de thèmes »** : marquer une collection de variables comme thèmes sélectionnables et dire dans l'export quel champ du backoffice choisit le thème + nom de l'attribut (`data-mode` ou `data-theme`)
+- [ ] **Polices (et styles de texte) par thème** — seulement si les thèmes changent la typographie, pas seulement les couleurs
+- [ ] Document modèle « Thème & backoffice » expliquant le mécanisme à l'IA qui développe
+
+Attention : pour qu'un thème **écrase** les mêmes variables, tous les modes doivent être dans **la même** collection (deux collections qui définissent le même nom de variable sont préfixées `--collection-nom`, donc ne s'écrasent pas). Une collection « Thème » séparée doit donc définir ses propres variables sémantiques (ex. `theme-fond`, `theme-accent`) en alias des primitives, avec un mode par thème.
