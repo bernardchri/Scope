@@ -1,7 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { save, open, ask } from '@tauri-apps/plugin-dialog';
 import { Project, Component } from './types';
-import { CATEGORY_SECTION_LABELS, PDF_DISPLAY_ORDER, getActiveWidgets, isBlockText, blockTextToMarkdown } from './categoryHelpers';
+import { CATEGORY_SECTION_LABELS, TYPE_LABELS, PDF_DISPLAY_ORDER, getActiveWidgets, isBlockText, blockTextToMarkdown } from './categoryHelpers';
 import { TASK_CATEGORY_ORDER, TASK_CATEGORY_PLAIN_LABELS } from './taskCategoryHelpers';
 import { slugify } from './persistence';
 import { renderImageWithPins } from './imageHelpers';
@@ -108,6 +108,7 @@ const READING_GUIDE = [
   '- Les images portent des pins numérotés ; la liste « Éléments repérés (pins) » donne pour chaque numéro son type, ses contraintes (longueur max, contenu éditable ou non, balise SEO…), le composant lié et les précisions.',
   '- Une version sans pins est fournie à côté de chaque image annotée : à utiliser pour reproduire la maquette fidèlement.',
   '- « Composants utilisés » liste les composants à réutiliser plutôt qu\'à recréer ; « Éléments SVG » liste les ressources prêtes à l\'emploi.',
+  '- Chaque fiche commence par son type (document, composant, template, section) : le nom du fichier ne le porte pas, pour rester stable quand un élément change de type.',
   '- « Modèle de contenu » décrit les collections (custom post types) et leurs champs ; un pin peut renvoyer à une collection (liste) ou à un champ (donnée affichée).',
   '- « Design tokens » donne les variables et styles Figma (couleurs, polices, espacements, ombres) ; utilise `tokens.css` et `tokens.json` plutôt que de relever les valeurs sur les images.',
   '- « Page » (templates) donne l\'adresse, le SEO et la collection affichée ; « Utilisé dans » liste les éléments qui réutilisent celui-ci ; « Ordre de construction suggéré » dit par quoi commencer.',
@@ -151,7 +152,7 @@ function generateComponentBlock(component: Component, imageMap: ImageMap, allCom
   const parts: string[] = [];
   parts.push(`# ${component.name}`);
   // Identifiant stable : retrouve l'élément quel que soit son nom (et dans les outils MCP).
-  parts.push(`<!-- scope-id: ${component.id} -->`);
+  parts.push(`**Type :** ${TYPE_LABELS[component.category] ?? component.category}\n\n<!-- scope-id: ${component.id} · type: ${component.category} -->`);
 
   if (component.estimatedHours && component.estimatedHours > 0) {
     parts.push(`<!-- estimate: ${component.estimatedHours}h -->`);

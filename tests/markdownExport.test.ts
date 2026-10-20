@@ -156,6 +156,9 @@ describe('noms de fichiers de l\'export multi-fichiers', () => {
   });
 
   it('écrit l\'identifiant de l\'élément dans sa fiche', () => {
-    expect(generateStoriesMd(makeProject([home]))).toContain(`<!-- scope-id: ${home.id} -->`);
+    const md = generateStoriesMd(makeProject([home]));
+    expect(md).toContain(`<!-- scope-id: ${home.id} · type: template -->`);
+    expect(md).toContain('**Type :** Template');
+    expect(generateStoriesMd(makeProject([doc]))).toContain('**Type :** Document');
   });
 });
