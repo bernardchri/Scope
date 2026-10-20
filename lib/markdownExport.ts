@@ -1,5 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
-import { save, open } from '@tauri-apps/plugin-dialog';
+import { save, open, ask } from '@tauri-apps/plugin-dialog';
 import { Project, Component } from './types';
 import { CATEGORY_SECTION_LABELS, PDF_DISPLAY_ORDER, getActiveWidgets, isBlockText, blockTextToMarkdown } from './categoryHelpers';
 import { TASK_CATEGORY_ORDER, TASK_CATEGORY_PLAIN_LABELS } from './taskCategoryHelpers';
@@ -35,6 +35,41 @@ type AssetRef = { path: string; name: string };
 type AssetMap = Map<string, AssetRef[]>;
 
 /** Slug unique par composant (suffixe -2, -3… si deux composants portent le même nom). */
+/** Début de l'identifiant d'un élément, assez long pour être unique dans le projet (6 caractères, davantage en cas de collision). */
+function shortIds(components: Component[]): Map<string, string> {
+  const compact = (id: string) => id.replace(/-/g, '');
+  for (let length = 6; length <= 32; length += 2) {
+    const ids = new Map(components.map(c => [c.id, compact(c.id).slice(0, length)]));
+    if (new Set(ids.values()).size === ids.size) return ids;
+  }
+  return new Map(components.map(c => [c.id, compact(c.id)]));
+}
+
+/**
+ * Nom de fichier de chaque fiche en export multi-fichiers : `<type>_<nom>_<id>.md`. L'identifiant (début de l'id de
+ * l'élément) ne change ni quand on déplace un élément, ni quand on en ajoute : un nouvel export réécrit les mêmes
+ * fichiers au lieu d'en créer de nouveaux comme le faisait le numéro d'ordre.
+ */
+export function exportFileNames(components: Component[], slugs: Map<string, string>): Map<string, string> {
+  const ids = shortIds(components);
+  const names = new Map<string, string>();
+  for (const category of CATEGORY_ORDER) {
+    for (const comp of components.filter(c => c.category === category)) {
+      names.set(comp.id, `${comp.category}_${slugs.get(comp.id)}_${ids.get(comp.id)}.md`);
+    }
+  }
+  return names;
+}
+
+const LEGACY_EXPORT_FILE = /^\d{2}_(document|component|template|section)_.+\.md$/;
+const EXPORT_FILE = /^(document|component|template|section)_.+_[0-9a-f]{6,32}\.md$/;
+
+/** Fichiers d'un ancien export (numérotés, ou renommés depuis) qui ne correspondent plus à aucun élément. `index.md` et les fichiers d'autres noms ne sont jamais concernés. */
+export function staleExportFiles(existing: string[], current: Map<string, string>): string[] {
+  const keep = new Set(current.values());
+  return existing.filter(name => !keep.has(name) && (LEGACY_EXPORT_FILE.test(name) || EXPORT_FILE.test(name)));
+}
+
 export function uniqueSlugs(components: Component[]): Map<string, string> {
   const used = new Set<string>();
   const slugs = new Map<string, string>();
@@ -98,6 +133,8 @@ function componentRef(comp: Component, links: LinkMap): string {
 function generateComponentBlock(component: Component, imageMap: ImageMap, allComponents: Component[] = [], exportComments = false, assetMap: AssetMap = new Map(), links: LinkMap = new Map(), collections: Collection[] = [], collectionBase = ''): string {
   const parts: string[] = [];
   parts.push(`# ${component.name}`);
+  // Identifiant stable : retrouve l'élément quel que soit son nom (et dans les outils MCP).
+  parts.push(`<!-- scope-id: ${component.id} -->`);
 
   if (component.estimatedHours && component.estimatedHours > 0) {
     parts.push(`<!-- estimate: ${component.estimatedHours}h -->`);
@@ -443,13 +480,7 @@ async function exportProjectMarkdownMulti(project: Project, folderPath?: string,
   indexLines.push('');
 
   // Noms de fichiers calculés d'avance : les fiches se renvoient les unes aux autres.
-  const fileNames = new Map<string, string>();
-  let counter = 1;
-  for (const category of CATEGORY_ORDER) {
-    for (const comp of project.components.filter(c => c.category === category)) {
-      fileNames.set(comp.id, `${String(counter++).padStart(2, '0')}_${comp.category}_${slugs.get(comp.id)}.md`);
-    }
-  }
+  const fileNames = exportFileNames(project.components, slugs);
   const links: LinkMap = new Map([...fileNames].map(([id, name]) => [id, `./${name}`]));
 
   const contentModel = generateContentModelMd(project.collections, '##', project.components, (c) => links.get(c.id));
@@ -482,4 +513,16 @@ async function exportProjectMarkdownMulti(project: Project, folderPath?: string,
 
   await invoke('write_text_file', { path: `${destDir}/index.md`, content: indexLines.join('\n') });
   await writeTokenFiles(project, destDir as string);
+  await removeStaleExportFiles(destDir as string, fileNames);
+}
+
+/** Propose de supprimer les fiches d'un export précédent (numérotées ou renommées) devenues sans objet. */
+async function removeStaleExportFiles(dir: string, current: Map<string, string>): Promise<void> {
+  const stale = staleExportFiles(await invoke<string[]>('list_markdown_files', { dir }), current);
+  if (stale.length === 0) return;
+  const confirmed = await ask(
+    `${stale.length} ancien${stale.length > 1 ? 's' : ''} fichier${stale.length > 1 ? 's' : ''} d'export ne correspond${stale.length > 1 ? 'ent' : ''} plus à aucun élément (renommé${stale.length > 1 ? 's' : ''}, supprimé${stale.length > 1 ? 's' : ''} ou ancienne numérotation) :\n\n${stale.slice(0, 12).join('\n')}${stale.length > 12 ? '\n…' : ''}\n\nLes supprimer ?`,
+    { title: 'Nettoyer le dossier d\'export', kind: 'warning' },
+  );
+  if (confirmed) await invoke('delete_markdown_files', { dir, names: stale });
 }

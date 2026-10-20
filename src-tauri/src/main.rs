@@ -152,6 +152,37 @@ fn write_text_file(path: String, content: String) -> Result<(), String> {
         .map_err(|e| format!("Erreur écriture fichier: {}", e))
 }
 
+/// Noms des fichiers `.md` d'un dossier d'export (sans descendre dans les sous-dossiers).
+#[tauri::command]
+fn list_markdown_files(dir: String) -> Result<Vec<String>, String> {
+    let entries = std::fs::read_dir(&dir).map_err(|e| format!("Lecture du dossier impossible: {}", e))?;
+    let mut names: Vec<String> = entries
+        .filter_map(|entry| entry.ok())
+        .filter(|entry| entry.path().is_file())
+        .filter_map(|entry| entry.file_name().into_string().ok())
+        .filter(|name| name.ends_with(".md"))
+        .collect();
+    names.sort();
+    Ok(names)
+}
+
+/// Supprime des fichiers `.md` d'un dossier d'export, désignés par leur nom seul (jamais un chemin).
+#[tauri::command]
+fn delete_markdown_files(dir: String, names: Vec<String>) -> Result<usize, String> {
+    let mut deleted = 0;
+    for name in names {
+        if name.contains('/') || name.contains('\\') || name.contains("..") || !name.ends_with(".md") {
+            return Err(format!("Nom de fichier refusé: {}", name));
+        }
+        let path = PathBuf::from(&dir).join(&name);
+        if path.is_file() {
+            std::fs::remove_file(&path).map_err(|e| format!("Suppression impossible ({}): {}", name, e))?;
+            deleted += 1;
+        }
+    }
+    Ok(deleted)
+}
+
 #[tauri::command]
 fn get_figma_bridge_info(
     info: tauri::State<figma_bridge::FigmaBridgeInfo>,
@@ -270,6 +301,8 @@ pub fn run() {
             write_pdf_file,
             write_binary_file,
             write_text_file,
+            list_markdown_files,
+            delete_markdown_files,
             create_project_folder,
             save_project_to_folder,
             load_project_from_folder,

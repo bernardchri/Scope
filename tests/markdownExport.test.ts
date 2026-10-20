@@ -4,7 +4,7 @@ import type { Component, Project } from '@/lib/types';
 vi.mock('@tauri-apps/api/core', () => ({ invoke: vi.fn() }));
 vi.mock('@tauri-apps/plugin-dialog', () => ({ save: vi.fn(), open: vi.fn() }));
 
-const { generateStoriesMd, uniqueSlugs } = await import('@/lib/markdownExport');
+const { generateStoriesMd, uniqueSlugs, exportFileNames, staleExportFiles } = await import('@/lib/markdownExport');
 
 function makeComponent(overrides: Partial<Component> = {}): Component {
   return { id: 'c1', name: 'Home', category: 'template', instances: [], tasks: [], ...overrides };
@@ -112,5 +112,42 @@ describe('generateStoriesMd — documents avec notes', () => {
     expect(md).toContain('API contenus');
     expect(md).toContain('v2: Version anglaise');
     expect(md).toContain('## Composants utilisés');
+  });
+});
+
+describe('noms de fichiers de l\'export multi-fichiers', () => {
+  const doc = makeComponent({ id: '7d3f2a10-1111-4222-8333-444455556666', name: 'Stack technique', category: 'document' });
+  const home = makeComponent({ id: 'c9e81b22-aaaa-4bbb-8ccc-ddddeeeeffff', name: 'Accueil', category: 'template' });
+  const header = makeComponent({ id: '5a6b7c8d-0000-4111-8222-333344445555', name: 'Header', category: 'component' });
+
+  it('utilise le début de l\'id plutôt qu\'un numéro d\'ordre : déplacer un élément ne change aucun nom', () => {
+    const slugs = (list: Component[]) => uniqueSlugs(list);
+    const before = exportFileNames([doc, home, header], slugs([doc, home, header]));
+    const after = exportFileNames([header, home, doc], slugs([header, home, doc]));
+    expect(before.get(doc.id)).toBe('document_stack-technique_7d3f2a.md');
+    expect(before.get(home.id)).toBe('template_accueil_c9e81b.md');
+    expect([...after.entries()].sort()).toEqual([...before.entries()].sort());
+  });
+
+  it('allonge l\'identifiant quand deux éléments commencent pareil', () => {
+    const twin = makeComponent({ id: '7d3f2a10-ffff-4222-8333-444455556666', name: 'Stack technique', category: 'document' });
+    const names = exportFileNames([doc, twin], uniqueSlugs([doc, twin]));
+    expect(new Set(names.values()).size).toBe(2);
+    expect(names.get(doc.id)).toMatch(/_7d3f2a10[0-9a-f]*\.md$/);
+  });
+
+  it('repère les anciens fichiers à supprimer, jamais index.md ni les fichiers étrangers', () => {
+    const current = exportFileNames([doc, home], uniqueSlugs([doc, home]));
+    const existing = [
+      'index.md', 'notes-perso.md', 'README.md',
+      '01_document_stack-technique.md', '02_template_accueil.md', // ancienne numérotation
+      'template_ancien-nom_c9e81b.md', // renommé depuis
+      ...current.values(),
+    ];
+    expect(staleExportFiles(existing, current).sort()).toEqual(['01_document_stack-technique.md', '02_template_accueil.md', 'template_ancien-nom_c9e81b.md']);
+  });
+
+  it('écrit l\'identifiant de l\'élément dans sa fiche', () => {
+    expect(generateStoriesMd(makeProject([home]))).toContain(`<!-- scope-id: ${home.id} -->`);
   });
 });
