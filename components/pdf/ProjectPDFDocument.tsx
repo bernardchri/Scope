@@ -9,6 +9,9 @@ import {
 import { Project, Component, ImagePin, TaskCategory, ComponentCategory } from '@/lib/types';
 import { collectionUsage, describeField, flattenFields } from '@/lib/collections';
 import { describePin } from '@/lib/pinKinds';
+import { bySizeDesc, hasTokensContent, textStyleSpecs, tokenSource, variableCssNames } from '@/lib/designTokens';
+import { fontCssName, fontForStyle } from '@/lib/fonts';
+import type { TokenValue } from '@/lib/types';
 import { renderMarkdown } from './renderMarkdown';
 import { CoverPage } from './CoverPage';
 import { CATEGORY_SECTION_LABELS, PDF_DISPLAY_ORDER, getActiveWidgets, isTextWidget, blockTextToMarkdown } from '@/lib/categoryHelpers';
@@ -80,6 +83,21 @@ function TocRow({ component, showEstimations = true }: { component: Component; s
       </View>
     </Link>
   );
+}
+
+/** Valeur d'une variable de design : pastille et code pour une couleur, sinon la valeur ; un alias renvoie à sa cible. */
+function TokenValueCell({ value }: { value: TokenValue | undefined }) {
+  if (value === undefined) return <Text style={s.tokenCell}>—</Text>;
+  if (typeof value === 'object') return <Text style={s.tokenCell}>→ {value.alias}</Text>;
+  if (typeof value === 'string' && /^#[0-9a-f]{6}([0-9a-f]{2})?$/i.test(value)) {
+    return (
+      <View style={s.tokenCell}>
+        <View style={[s.tokenSwatch, { backgroundColor: value.slice(0, 7) }]} />
+        <Text>{value}</Text>
+      </View>
+    );
+  }
+  return <Text style={s.tokenCell}>{String(value)}</Text>;
 }
 
 function ComponentDetailBlock({
@@ -223,10 +241,6 @@ function ComponentDetailBlock({
               </View>
             );
           }
-          if (w.type === 'comment') {
-            return (
-              <View key={w.id} style={{ marginTop: 8, paddingLeft: 8, borderLeft: '2px solid #9ca3af' }}>
-                <Text style={{ fontSize: 10, lineHeight: 1, color: '#6b7280' }}>{note.content}</Text>
           // Titres et puces : rendus comme du Markdown, sans l'intitulé « Contenu » des notes.
           if (w.type === 'heading1' || w.type === 'heading2' || w.type === 'heading3' || w.type === 'bullet') {
             return (
@@ -235,6 +249,10 @@ function ComponentDetailBlock({
               </View>
             );
           }
+          if (w.type === 'comment') {
+            return (
+              <View key={w.id} style={{ marginTop: 8, paddingLeft: 8, borderLeft: '2px solid #9ca3af' }}>
+                <Text style={{ fontSize: 10, lineHeight: 1, color: '#6b7280' }}>{note.content}</Text>
               </View>
             );
           }
@@ -376,6 +394,17 @@ export function ProjectPDFDocument({ project, pinsByImage, showEstimations = tru
           </View>
         ))}
 
+        {hasTokensContent(project.tokens) && (
+          <View style={s.tocCategorySection}>
+            <Text style={s.tocCategoryHeader}>Design tokens</Text>
+            <Link src="#design-tokens">
+              <View style={s.tocRow}>
+                <Text style={s.tocName}>Polices, variables, styles de texte et de couleur</Text>
+              </View>
+            </Link>
+          </View>
+        )}
+
         {collections.length > 0 && (
           <View style={s.tocCategorySection}>
             <Text style={s.tocCategoryHeader}>Modèle de contenu</Text>
@@ -458,6 +487,109 @@ export function ProjectPDFDocument({ project, pinsByImage, showEstimations = tru
           <PageFooter studioName={studioName} />
         </Page>
       )}
+
+      {/* ── Design tokens (variables, polices, styles) ──────────────────────── */}
+      {hasTokensContent(project.tokens) && (() => {
+        const tokens = project.tokens!;
+        const names = variableCssNames(tokens.collections);
+        return (
+          <Page size="A4" style={s.page}>
+            <PageHeader projectName={project.name} date={today} />
+
+            <View id="design-tokens" style={s.categoryHeader} wrap={false}>
+              <Text style={s.categoryTitle}>Design tokens</Text>
+            </View>
+            <Text style={s.description}>Variables et styles {tokenSource(tokens)}. Les fichiers tokens.css et tokens.json accompagnent l&apos;export Markdown.</Text>
+
+            {(tokens.fonts ?? []).length > 0 && (
+              <View style={s.collectionBlock}>
+                <Text style={s.collectionName}>Polices</Text>
+                {tokens.fonts!.map(font => (
+                  <View key={font.id} style={s.fieldRow} wrap={false}>
+                    <Text style={s.fieldName}>{font.name}</Text>
+                    <Text style={s.fieldDesc}>
+                      {font.family}, {font.fallback ?? 'sans-serif'} — {fontCssName(font)} — {font.sources.map(src => (src.kind === 'google' ? 'Google Fonts' : `fichier ${src.filename}`)).join(', ') || 'installée'}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            )}
+
+            {tokens.collections.filter(c => c.variables.length > 0).map(collection => (
+              <View key={collection.name} style={s.collectionBlock}>
+                <View wrap={false}>
+                  <Text style={s.collectionName}>Variables — {collection.name}</Text>
+                  {collection.modes.length > 1 && (
+                    <Text style={s.collectionMeta}>
+                      Modes (thèmes) : {collection.modes.map(m => (m === (collection.defaultMode || collection.modes[0]) ? `${m} (par défaut)` : m)).join(', ')}
+                    </Text>
+                  )}
+                </View>
+                <View style={s.fieldRow} wrap={false}>
+                  <Text style={s.fieldName}>Variable</Text>
+                  {collection.modes.map(mode => <Text key={mode} style={[s.tokenCell, { fontWeight: 700 }]}>{mode}</Text>)}
+                </View>
+                {collection.variables.map(variable => (
+                  <View key={variable.name} style={s.fieldRow} wrap={false}>
+                    <Text style={s.fieldName}>{names.get(`${collection.name}/${variable.name}`)}</Text>
+                    {collection.modes.map(mode => <TokenValueCell key={mode} value={variable.values[mode]} />)}
+                  </View>
+                ))}
+              </View>
+            ))}
+
+            {tokens.textStyles.length > 0 && (
+              <View style={s.collectionBlock}>
+                <Text style={s.collectionName}>Styles de texte</Text>
+                {bySizeDesc(tokens.textStyles).map(style => {
+                  const specs = textStyleSpecs(style);
+                  const font = fontForStyle(tokens, style);
+                  return (
+                    <View key={style.name} style={s.fieldRow} wrap={false}>
+                      <Text style={s.fieldName}>{style.name}</Text>
+                      <Text style={s.fieldDesc}>
+                        {font ? `${font.name} (${font.family})` : style.fontFamily} — {specs.size}, graisse {specs.weight}, interligne {specs.lineHeight}, espacement {specs.letterSpacing}
+                      </Text>
+                    </View>
+                  );
+                })}
+              </View>
+            )}
+
+            {tokens.colorStyles.length > 0 && (
+              <View style={s.collectionBlock}>
+                <Text style={s.collectionName}>Styles de couleur</Text>
+                {tokens.colorStyles.map(style => {
+                  const paint = style.paints[0];
+                  const solid = paint && 'color' in paint ? paint.color : undefined;
+                  return (
+                    <View key={style.name} style={s.fieldRow} wrap={false}>
+                      <Text style={s.fieldName}>{style.name}</Text>
+                      {solid ? <TokenValueCell value={solid} /> : <Text style={s.fieldDesc}>Dégradé</Text>}
+                    </View>
+                  );
+                })}
+              </View>
+            )}
+
+            {tokens.effectStyles.length > 0 && (
+              <View style={s.collectionBlock}>
+                <Text style={s.collectionName}>Effets</Text>
+                {tokens.effectStyles.map(style => (
+                  <View key={style.name} style={s.fieldRow} wrap={false}>
+                    <Text style={s.fieldName}>{style.name}</Text>
+                    <Text style={s.fieldDesc}>
+                      {style.effects.map(e => ('color' in e ? `${e.type === 'INNER_SHADOW' ? 'ombre interne' : 'ombre'} ${e.x} ${e.y} ${e.blur} ${e.spread} ${e.color}` : `flou ${'blur' in e ? e.blur : ''}px`)).join(', ')}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            )}
+
+            <PageFooter studioName={studioName} />
+          </Page>
+        );
+      })()}
 
       {/* ── Bon pour accord ─────────────────────────────────────────────────── */}
       <Page size="A4" style={s.page}>

@@ -247,11 +247,25 @@ function displayValue(value: TokenValue | undefined): string {
   return `\`${value}\``;
 }
 
+/** Les tokens contiennent-ils quelque chose à documenter (variables, polices, styles) ? */
+export function hasTokensContent(tokens: DesignTokens | undefined): tokens is DesignTokens {
+  return !!tokens && (tokens.collections.some(c => c.variables.length) || tokens.textStyles.length > 0 || tokens.colorStyles.length > 0
+    || tokens.effectStyles.length > 0 || (tokens.fonts?.length ?? 0) > 0);
+}
+
+/** Caractéristiques d'un style de texte, en texte : taille, graisse, interligne, espacement des lettres. */
+export function textStyleSpecs(style: TextStyleToken) {
+  return {
+    size: `${num(style.fontSize)} px`,
+    weight: `${fontWeight(style.fontStyle)}${isItalic(style.fontStyle) ? ' italique' : ''}`,
+    lineHeight: lineHeightCss(style) ?? 'auto',
+    letterSpacing: letterSpacingCss(style) ?? '—',
+  };
+}
+
 /** Section Markdown « Design tokens » : tableaux lisibles par un humain ou une IA (vide s'il n'y a rien). */
 export function tokensToMarkdown(tokens: DesignTokens | undefined, heading = '##'): string {
-  if (!tokens) return '';
-  const hasContent = tokens.collections.some(c => c.variables.length) || tokens.textStyles.length || tokens.colorStyles.length || tokens.effectStyles.length || tokens.fonts?.length;
-  if (!hasContent) return '';
+  if (!hasTokensContent(tokens)) return '';
   const names = variableCssNames(tokens.collections);
   const lines: string[] = [
     `${heading} Design tokens`,
@@ -262,7 +276,15 @@ export function tokensToMarkdown(tokens: DesignTokens | undefined, heading = '##
   ];
 
   for (const collection of tokens.collections.filter(c => c.variables.length)) {
-    lines.push(`${heading}# Variables — ${collection.name}${collection.modes.length > 1 ? ` (modes : ${collection.modes.join(', ')})` : ''}`, '');
+    lines.push(`${heading}# Variables — ${collection.name}${collection.modes.length > 1 ? ` (modes : ${collection.modes.map(m => m === (collection.defaultMode || collection.modes[0]) ? `${m} — par défaut` : m).join(', ')})` : ''}`, '');
+    if (collection.modes.length > 1) {
+      const base = collection.defaultMode || collection.modes[0];
+      lines.push(
+        `Plusieurs modes (thèmes) : « ${base} » s'applique par défaut (\`:root\`) ; les autres s'activent en posant l'attribut sur \`<html>\` ou sur n'importe quel élément ` +
+        `(${collection.modes.filter(m => m !== base).map(m => `\`data-mode="${slug(m)}"\``).join(', ')}) et ne redéfinissent que les variables qui diffèrent.`,
+        '',
+      );
+    }
     lines.push(`| Variable | CSS | ${collection.modes.map(cell).join(' | ')} |`, `|---|---|${collection.modes.map(() => '---').join('|')}|`);
     for (const variable of collection.variables) {
       const css = names.get(aliasKey(collection.name, variable.name)) ?? '';

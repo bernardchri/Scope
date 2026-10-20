@@ -358,6 +358,21 @@ export const s = StyleSheet.create({
     color: '#888',
     marginBottom: 6,
   },
+  tokenSwatch: {
+    width: 10,
+    height: 10,
+    borderRadius: 2,
+    borderWidth: 1,
+    borderColor: '#d4d4d4',
+    borderStyle: 'solid',
+    marginRight: 5,
+  },
+  tokenCell: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    fontSize: 8,
+  },
   fieldRow: {
     flexDirection: 'row',
     gap: 8,

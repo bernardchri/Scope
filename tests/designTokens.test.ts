@@ -78,7 +78,7 @@ describe('designTokens', () => {
   it('écrit les tableaux Markdown', () => {
     const md = tokensToMarkdown(tokens);
     expect(md).toContain('## Design tokens');
-    expect(md).toContain('### Variables — Primitives (modes : Light, Dark)');
+    expect(md).toContain('### Variables — Primitives (modes : Light — par défaut, Dark)');
     expect(md).toContain('| color/primary | `--primitives-color-primary` | `#1a2b3c` | `#ffffff` |');
     expect(md).toContain('| color/surface | `--color-surface` | → `color/primary` | `#000000` |');
     expect(md).toContain('| Heading/H1 | `.text-heading-h1` | Inter | 40 px | 600 italique | 48px | -0.02em |');
@@ -218,5 +218,22 @@ describe('collections de variables : modes et renommages', () => {
     expect(targets.map(t => t.name)).toEqual(expect.arrayContaining(['color/primary', 'color/surface']));
     expect(targets.some(t => t.name === 'spacing/4')).toBe(false);
     expect(targets.some(t => t.collection === 'Thème')).toBe(false);
+  });
+});
+
+describe('documentation des modes (thèmes)', () => {
+  it('explique comment activer un mode et marque le mode par défaut', () => {
+    const themed: DesignTokens = {
+      ...tokens,
+      collections: [{
+        name: 'Couleurs', defaultMode: 'La Vilaine', modes: ['La Vilaine', 'Roazhör'],
+        variables: [{ name: 'base', type: 'COLOR', values: { 'La Vilaine': '#ffffff', 'Roazhör': '#ecf4f8' } }],
+      }],
+    };
+    const md = tokensToMarkdown(themed);
+    expect(md).toContain('(modes : La Vilaine — par défaut, Roazhör)');
+    expect(md).toContain('`data-mode="roazhor"`');
+    expect(md).toContain('s\'applique par défaut (`:root`)');
+    expect(tokensToCss(themed)).toContain('[data-mode="roazhor"]');
   });
 });
