@@ -357,14 +357,15 @@ export default function TokensPage({ tokens, onChange, folderPath, className }: 
             Déclare chaque police une fois (font-type-1, font-type-2…) : les styles de texte y renvoient. Changer la famille ici change tous les styles qui l&apos;utilisent.
           </p>
           {fontError && <p className="text-xs text-destructive">{fontError}</p>}
-          <div className="space-y-3">
+          <div className="space-y-5">
             {fonts.length === 0 && <p className="text-sm text-muted-foreground">Aucune police déclarée.</p>}
             {fonts.map(font => {
               // fontTick : se réévalue quand une police du projet vient d'être chargée
               const available = fontTick >= 0 && isFontAvailable(font.family);
               const usedBy = t.textStyles.filter(s => fontForStyle(t, s)?.id === font.id).length;
               return (
-                <div key={font.id} className="border rounded-lg p-3 space-y-2">
+                <div key={font.id} className="border rounded-lg p-4 space-y-3">
+                  <div className="pb-3 border-b break-words text-3xl" style={{ fontFamily: fontCssValue(font) }}>Aa — Les éditions de la Vilaine</div>
                   <div className="flex flex-wrap items-center gap-2">
                     <Input
                       key={`name-${font.id}-${font.name}`} className="h-8 w-36 text-sm font-medium" defaultValue={font.name} title="Nom du rôle (devient la variable CSS)"
@@ -407,7 +408,6 @@ export default function TokensPage({ tokens, onChange, folderPath, className }: 
                       </span>
                     ))}
                   </div>
-                  <div className="truncate text-2xl" style={{ fontFamily: fontCssValue(font) }}>Aa — Les éditions de la Vilaine</div>
                 </div>
               );
             })}
@@ -419,7 +419,7 @@ export default function TokensPage({ tokens, onChange, folderPath, className }: 
           title="Styles de texte"
           action={<Button size="sm" variant="outline" className="h-7 gap-1" onClick={addTextStyle}><Plus className="h-3.5 w-3.5" /> Style</Button>}
         >
-          <div className="border rounded-lg divide-y">
+          <div className="space-y-5">
             {t.textStyles.length === 0 && <p className="px-4 py-3 text-sm text-muted-foreground">Aucun style de texte.</p>}
             {t.textStyles.map((style, i) => {
               const font = fontForStyle(t, style);
@@ -434,7 +434,11 @@ export default function TokensPage({ tokens, onChange, folderPath, className }: 
 
               const lineUnit = style.lineHeight.unit;
               return (
-                <div key={style.name} className="px-4 py-3 space-y-2">
+                <div key={style.name} className="border rounded-lg p-4 space-y-3">
+                  {/* Rendu en premier : c'est ce qu'on juge, les réglages viennent dessous */}
+                  <div className="pb-3 border-b break-words" style={{ ...css, fontSize: Math.min(style.fontSize, 64) }}>
+                    Aa — Les éditions de la Vilaine
+                  </div>
                   <div className="flex flex-wrap items-center gap-2">
                     <Input
                       key={`name-${style.name}`} className="h-8 w-44 text-sm font-medium" defaultValue={style.name}
@@ -506,7 +510,6 @@ export default function TokensPage({ tokens, onChange, folderPath, className }: 
                   {!available && (
                     <p className="text-xs text-amber-600">⚠ Police « {family} » absente : l&apos;aperçu utilise une police de remplacement{font ? ' — ajoute une source dans la section Polices' : ' — déclare-la dans la section Polices'}.</p>
                   )}
-                  <div className="truncate" style={{ ...css, fontSize: Math.min(style.fontSize, 40) }}>Aa — Les éditions de la Vilaine</div>
                 </div>
               );
             })}
