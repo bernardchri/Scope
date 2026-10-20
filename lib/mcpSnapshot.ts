@@ -3,6 +3,7 @@ import { Component, Project } from './types';
 import { getActiveWidgets, isTextWidget } from './categoryHelpers';
 import { describePin } from './pinKinds';
 import { figmaNodeUrl } from './figmaUrl';
+import { tokensToCss, tokensToJson, tokensToMarkdown } from './designTokens';
 import { findCompletenessIssues, isPinQualified } from './completeness';
 
 /**
@@ -71,6 +72,9 @@ export function buildMcpSnapshot(project: Project, folderPath?: string) {
     },
     components,
     collections,
+    tokens: project.tokens
+      ? { summary: tokensToMarkdown(project.tokens), css: tokensToCss(project.tokens), json: tokensToJson(project.tokens) }
+      : undefined,
     issues: findCompletenessIssues(project),
   };
 }

@@ -162,6 +162,65 @@ const componentSchema = z.object({
   page: pageSchema,
 });
 
+const tokenValueSchema = z.union([
+  z.string(),
+  z.number(),
+  z.boolean(),
+  z.object({ alias: z.string(), collection: z.string().catch('') }),
+]);
+
+const tokensSchema = z
+  .object({
+    fileKey: z.string().optional(),
+    fileName: z.string().optional(),
+    syncedAt: z.string().catch(''),
+    collections: resilientArray(
+      z.object({
+        name: z.string().catch(''),
+        defaultMode: z.string().catch(''),
+        modes: z.array(z.string()).catch([]),
+        variables: resilientArray(
+          z.object({
+            name: z.string(),
+            type: z.string().catch('STRING'),
+            description: z.string().optional(),
+            values: z.record(z.string(), tokenValueSchema).catch({}),
+          })
+        ),
+      })
+    ),
+    textStyles: resilientArray(
+      z.object({
+        name: z.string(),
+        description: z.string().optional(),
+        fontFamily: z.string().catch(''),
+        fontStyle: z.string().catch(''),
+        fontSize: z.number().catch(16),
+        lineHeight: z.object({ unit: z.enum(['AUTO', 'PIXELS', 'PERCENT']).catch('AUTO'), value: z.number().optional() }).catch({ unit: 'AUTO' }),
+        letterSpacing: z.object({ unit: z.enum(['PIXELS', 'PERCENT']).catch('PIXELS'), value: z.number().catch(0) }).catch({ unit: 'PIXELS', value: 0 }),
+        textCase: z.string().optional(),
+        textDecoration: z.string().optional(),
+        paragraphSpacing: z.number().optional(),
+      })
+    ),
+    colorStyles: resilientArray(
+      z.object({
+        name: z.string(),
+        description: z.string().optional(),
+        paints: z.array(z.any()).catch([]),
+      })
+    ),
+    effectStyles: resilientArray(
+      z.object({
+        name: z.string(),
+        description: z.string().optional(),
+        effects: z.array(z.any()).catch([]),
+      })
+    ),
+  })
+  .optional()
+  .catch(undefined);
+
 const projectSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1),
@@ -182,6 +241,7 @@ const projectSchema = z.object({
   quoteValidityDays: z.number().optional(),
   components: resilientArray(componentSchema),
   collections: resilientArray(collectionSchema).optional(),
+  tokens: tokensSchema,
   createdAt: z.string().catch(() => new Date().toISOString()),
   formatVersion: z.number().optional(),
 });

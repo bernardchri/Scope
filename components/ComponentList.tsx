@@ -14,6 +14,8 @@ import { message } from '@tauri-apps/plugin-dialog';
 import { publishFigmaComponentCatalog } from '@/lib/figmaBridge';
 import { publishMcpSnapshot } from '@/lib/mcpSnapshot';
 import { runMcpCommand } from '@/lib/mcpCommands';
+import { tokensFromPayload } from '@/lib/designTokens';
+import TokensPage from './TokensPage';
 import { invoke } from '@tauri-apps/api/core';
 import { useShortcuts } from '@/lib/hooks/useShortcuts';
 import ComponentSidebar from './ComponentSidebar';
@@ -55,6 +57,8 @@ export default function ComponentList({ projectId }: ComponentListProps) {
   const [refreshing, setRefreshing] = useState(false);
   // Collection ouverte dans la zone principale (choisie dans la sidebar) ; exclusive avec un élément ouvert.
   const [selectedCollectionId, setSelectedCollectionId] = useState<string | null>(null);
+  // Design tokens ouverts dans la zone principale (exclusif avec un élément ou une collection).
+  const [tokensOpen, setTokensOpen] = useState(false);
   const [syncRecap, setSyncRecap] = useState<SyncRecapEntry[]>([]);
   const bulkQueueRef = useRef(Promise.resolve());
   const detailScrollRef = useRef<HTMLDivElement>(null);
@@ -112,6 +116,11 @@ export default function ComponentList({ projectId }: ComponentListProps) {
 
   useEffect(() => {
     const unlisten = listen<FigmaImportPayload>('figma-import', (event) => {
+      // Variables et styles du document : pas liés à une frame, ils remplacent les tokens du projet.
+      if ((event.payload as { kind?: string }).kind === 'tokens') {
+        updateProject(projectId, { tokens: tokensFromPayload(event.payload as unknown as Record<string, unknown>) });
+        return;
+      }
       if (event.payload.bulk) {
         bulkQueueRef.current = bulkQueueRef.current.then(() => autoApplyFigmaImport(event.payload));
       } else {
@@ -119,7 +128,7 @@ export default function ComponentList({ projectId }: ComponentListProps) {
       }
     });
     return () => { unlisten.then(fn => fn()); };
-  }, [autoApplyFigmaImport]);
+  }, [autoApplyFigmaImport, projectId, updateProject]);
 
   // Liste servie au plugin Figma (GET /scope-components) pour lier chaque
   // composant coché dans une frame à un composant SCOPE.
@@ -197,6 +206,7 @@ export default function ComponentList({ projectId }: ComponentListProps) {
 
   function selectFromSidebar(id: string | null) {
     setSelectedCollectionId(null);
+    setTokensOpen(false);
     setNavHistory(id ? [id] : []);
   }
 
@@ -275,13 +285,16 @@ export default function ComponentList({ projectId }: ComponentListProps) {
       <ComponentSidebar
         components={activeProject!.components}
         selectedComponentId={selectedComponentId}
-        showingDashboard={showingDashboard && !selectedCollectionId}
+        showingDashboard={showingDashboard && !selectedCollectionId && !tokensOpen}
+        hasTokens={!!activeProject!.tokens}
+        tokensActive={tokensOpen && !selectedComponentId}
+        onOpenTokens={() => { setTokensOpen(true); setSelectedCollectionId(null); setNavHistory([]); afterNavigate?.(); }}
         onSelectComponent={(id) => { selectFromSidebar(id); afterNavigate?.(); }}
         onReorderComponents={(ids, categoryChange) => reorderComponents(activeProject!.id, ids, categoryChange)}
-        onGoHome={then(() => { setSelectedCollectionId(null); setNavHistory([]); })}
+        onGoHome={then(() => { setSelectedCollectionId(null); setTokensOpen(false); setNavHistory([]); })}
         collections={activeProject!.collections}
         selectedCollectionId={selectedComponentId ? null : selectedCollectionId}
-        onSelectCollection={(id) => { setSelectedCollectionId(id); setNavHistory([]); afterNavigate?.(); }}
+        onSelectCollection={(id) => { setSelectedCollectionId(id); setTokensOpen(false); setNavHistory([]); afterNavigate?.(); }}
         onToggleSidebar={() => setSidebarOpen(false)}
         onNewElement={then(() => setIsModalOpen(true))}
       />
@@ -366,6 +379,8 @@ export default function ComponentList({ projectId }: ComponentListProps) {
                 onCreateCollection={handleCreateCollection}
               />
           </div>
+        ) : tokensOpen && activeProject.tokens ? (
+          <TokensPage key={refreshKey} tokens={activeProject.tokens} className="flex-1" />
         ) : selectedCollectionId && activeProject.collections?.some(c => c.id === selectedCollectionId) ? (
           <CollectionsPage
             key={`${selectedCollectionId}-${refreshKey}`}

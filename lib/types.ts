@@ -184,6 +184,8 @@ export interface Project {
   components: Component[];
   /** Modèle de contenu du site. */
   collections?: Collection[];
+  /** Variables et styles du document Figma (design tokens). */
+  tokens?: DesignTokens;
   createdAt: string;
   formatVersion?: number; // 2 = folder format
 }
@@ -210,3 +212,68 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
   comment: { exportComments: false },
   defaultEstimates: {},
 };
+
+// ─── Design tokens (variables et styles Figma) ────────────────────────────────
+
+/** Valeur d'une variable pour un mode : couleur en hex, nombre, texte, booléen, ou alias vers une autre variable. */
+export type TokenValue = string | number | boolean | { alias: string; collection: string };
+
+export interface TokenVariable {
+  name: string;
+  /** COLOR, FLOAT, STRING ou BOOLEAN (types des variables Figma). */
+  type: string;
+  description?: string;
+  /** Valeur par nom de mode. */
+  values: Record<string, TokenValue>;
+}
+
+export interface TokenCollection {
+  name: string;
+  defaultMode: string;
+  modes: string[];
+  variables: TokenVariable[];
+}
+
+export interface TextStyleToken {
+  name: string;
+  description?: string;
+  fontFamily: string;
+  fontStyle: string;
+  fontSize: number;
+  lineHeight: { unit: 'AUTO' | 'PIXELS' | 'PERCENT'; value?: number };
+  letterSpacing: { unit: 'PIXELS' | 'PERCENT'; value: number };
+  textCase?: string;
+  textDecoration?: string;
+  paragraphSpacing?: number;
+}
+
+export type PaintToken =
+  | { type: 'SOLID'; color: string }
+  | { type: string; stops: { position: number; color: string }[] };
+
+export interface ColorStyleToken {
+  name: string;
+  description?: string;
+  paints: PaintToken[];
+}
+
+export type EffectToken =
+  | { type: 'DROP_SHADOW' | 'INNER_SHADOW'; color: string; x: number; y: number; blur: number; spread: number }
+  | { type: string; blur: number };
+
+export interface EffectStyleToken {
+  name: string;
+  description?: string;
+  effects: EffectToken[];
+}
+
+/** Variables et styles du document Figma, remplacés à chaque envoi depuis le plugin (Figma reste la source). */
+export interface DesignTokens {
+  fileKey?: string;
+  fileName?: string;
+  syncedAt: string;
+  collections: TokenCollection[];
+  textStyles: TextStyleToken[];
+  colorStyles: ColorStyleToken[];
+  effectStyles: EffectStyleToken[];
+}

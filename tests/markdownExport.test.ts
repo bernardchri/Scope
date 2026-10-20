@@ -73,3 +73,21 @@ describe('uniqueSlugs', () => {
     expect(slugs.get('b')).toBe('carte-2');
   });
 });
+
+describe('generateStoriesMd — design tokens', () => {
+  it('ajoute la section et le guide de lecture quand le projet a des tokens', () => {
+    const project = {
+      ...makeProject([makeComponent()]),
+      tokens: {
+        syncedAt: '2026-10-20T10:00:00.000Z', fileName: 'Site',
+        collections: [{ name: 'Couleurs', defaultMode: 'Mode 1', modes: ['Mode 1'], variables: [{ name: 'brand', type: 'COLOR', values: { 'Mode 1': '#ff0000' } }] }],
+        textStyles: [], colorStyles: [], effectStyles: [],
+      },
+    } as Project;
+    const md = generateStoriesMd(project);
+    expect(md).toContain('## Design tokens');
+    expect(md).toContain('| brand | `--brand` | `#ff0000` |');
+    expect(md).toContain('tokens.css');
+    expect(generateStoriesMd(makeProject([makeComponent()]))).not.toContain('## Design tokens');
+  });
+});

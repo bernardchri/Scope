@@ -8,7 +8,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
-import { ChevronRight, Database, GripVertical, Home, Plus } from 'lucide-react';
+import { ChevronRight, Database, GripVertical, Home, Palette, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   CollisionDetection,
@@ -156,6 +156,10 @@ const collisionDetection: CollisionDetection = (args) => {
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
 
 interface ComponentSidebarProps {
+  /** Design tokens du document Figma (lecture seule) : un accès en tête de liste quand il y en a. */
+  hasTokens?: boolean;
+  tokensActive?: boolean;
+  onOpenTokens?: () => void;
   /** Modèle de contenu : listé comme les autres éléments, sous leurs sections. */
   collections?: Collection[];
   selectedCollectionId?: string | null;
@@ -171,6 +175,9 @@ interface ComponentSidebarProps {
 }
 
 export default function ComponentSidebar({
+  hasTokens,
+  tokensActive,
+  onOpenTokens,
   collections = [],
   selectedCollectionId,
   onSelectCollection,
@@ -234,6 +241,17 @@ export default function ComponentSidebar({
       </div>
 
       <div className="p-4 space-y-2 overflow-y-auto flex-1">
+        {hasTokens && onOpenTokens && (
+          <Button
+            variant={tokensActive ? 'secondary' : 'ghost'}
+            size="sm"
+            className="w-full justify-start gap-2"
+            onClick={onOpenTokens}
+          >
+            <Palette className="h-4 w-4" /> Design tokens
+          </Button>
+        )}
+
         {collections.length > 0 && onSelectCollection && (
           <Collapsible defaultOpen className="space-y-1">
             <CollapsibleTrigger className="flex w-full items-center justify-between p-2 hover:bg-accent rounded-md group">

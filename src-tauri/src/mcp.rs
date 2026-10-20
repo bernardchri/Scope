@@ -226,6 +226,11 @@ fn tools() -> Value {
             }
         },
         {
+            "name": "get_design_tokens",
+            "description": "Design tokens du projet, synchronisés depuis Figma : variables (par collection et mode), styles de texte, de couleur et d'effet. Renvoie un résumé en tableaux Markdown, le CSS (variables et classes .text-*) et le JSON au format Design Tokens.",
+            "inputSchema": { "type": "object", "properties": {} }
+        },
+        {
             "name": "get_issues",
             "description": "Ce qui reste à compléter : pins sans type ni précision, collections ou relations incomplètes, références cassées.",
             "inputSchema": { "type": "object", "properties": {} }
@@ -361,6 +366,13 @@ fn call_tool(name: &str, args: &Value, snapshot: &Value, dispatch: Dispatch) -> 
             Err(message) => error_result(&message),
         },
         "list_collections" => text_result(&snapshot["collections"]),
+        "get_design_tokens" => {
+            if snapshot["tokens"].is_null() {
+                error_result("Aucun token : envoie les variables et styles depuis le plugin Figma (section « Design tokens »).")
+            } else {
+                text_result(&snapshot["tokens"])
+            }
+        }
         "get_issues" => text_result(&snapshot["issues"]),
         _ => error_result(&format!("Outil inconnu : {}", name)),
     }
@@ -482,7 +494,7 @@ mod tests {
     fn tous_les_outils_sont_annonces() {
         let r = call("tools/list", json!({}));
         let names: Vec<&str> = r["result"]["tools"].as_array().unwrap().iter().map(|t| t["name"].as_str().unwrap()).collect();
-        for expected in ["get_project", "list_components", "get_component", "get_component_image", "qualify_pin", "add_pin", "update_component", "add_task", "update_task", "delete_task", "set_text", "delete_text", "list_collections", "get_issues"] {
+        for expected in ["get_project", "list_components", "get_component", "get_component_image", "qualify_pin", "add_pin", "update_component", "add_task", "update_task", "delete_task", "set_text", "delete_text", "list_collections", "get_design_tokens", "get_issues"] {
             assert!(names.contains(&expected), "{} manquant", expected);
         }
     }

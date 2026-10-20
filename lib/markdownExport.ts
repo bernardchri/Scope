@@ -12,6 +12,7 @@ import { generateBuildOrderMd, usedBy } from './buildOrder';
 import { isPinQualified } from './completeness';
 import { Collection } from './types';
 import { figmaNodeUrl } from './figmaUrl';
+import { tokensToCss, tokensToJson, tokensToMarkdown } from './designTokens';
 import { getImageBase64 } from './imageManager';
 import { getAppSettings } from './persistence';
 
@@ -56,6 +57,7 @@ const READING_GUIDE = [
   '- Une version sans pins est fournie à côté de chaque image annotée : à utiliser pour reproduire la maquette fidèlement.',
   '- « Composants utilisés » liste les composants à réutiliser plutôt qu\'à recréer ; « Éléments SVG » liste les ressources prêtes à l\'emploi.',
   '- « Modèle de contenu » décrit les collections (custom post types) et leurs champs ; un pin peut renvoyer à une collection (liste) ou à un champ (donnée affichée).',
+  '- « Design tokens » donne les variables et styles Figma (couleurs, polices, espacements, ombres) ; utilise `tokens.css` et `tokens.json` plutôt que de relever les valeurs sur les images.',
   '- « Page » (templates) donne l\'adresse, le SEO et la collection affichée ; « Utilisé dans » liste les éléments qui réutilisent celui-ci ; « Ordre de construction suggéré » dit par quoi commencer.',
   '- « Source Figma » donne le fichier d\'origine ; chaque image indique sa taille (point de rupture) et le lien de sa frame.',
 ].join('\n');
@@ -306,6 +308,8 @@ export function generateStoriesMd(project: Project, imageMap: ImageMap = new Map
   sections.push(READING_GUIDE + '\n\n---');
   const contentModel = generateContentModelMd(project.collections, '##', project.components);
   if (contentModel) sections.push(contentModel + '\n---');
+  const tokensMd = tokensToMarkdown(project.tokens);
+  if (tokensMd) sections.push(tokensMd + '\n---');
   const buildOrder = generateBuildOrderMd(project.components);
   if (buildOrder) sections.push(buildOrder + '\n---');
 
@@ -425,6 +429,13 @@ async function collectAssets(project: Project, dir: string, folderPath: string |
   return assetMap;
 }
 
+/** `tokens.json` (format Design Tokens) et `tokens.css` à côté du Markdown, si le projet a des tokens. */
+async function writeTokenFiles(project: Project, dir: string): Promise<void> {
+  if (!tokensToMarkdown(project.tokens)) return;
+  await invoke('write_text_file', { path: `${dir}/tokens.json`, content: JSON.stringify(tokensToJson(project.tokens!), null, 2) + '\n' });
+  await invoke('write_text_file', { path: `${dir}/tokens.css`, content: tokensToCss(project.tokens!) });
+}
+
 export async function exportProjectMarkdown(project: Project, folderPath?: string): Promise<void> {
   const settings = await getAppSettings();
   if (settings.markdown.multiFile) {
@@ -449,6 +460,7 @@ export async function exportProjectMarkdown(project: Project, folderPath?: strin
   const assetMap = await collectAssets(project, dir, folderPath, slugs);
   const content = generateStoriesMd(project, imageMap, settings.comment.exportComments, assetMap);
   await invoke('write_text_file', { path: filePath, content });
+  await writeTokenFiles(project, dir);
 }
 
 async function exportProjectMarkdownMulti(project: Project, folderPath?: string, exportComments = false): Promise<void> {
@@ -491,6 +503,8 @@ async function exportProjectMarkdownMulti(project: Project, folderPath?: string,
 
   const contentModel = generateContentModelMd(project.collections, '##', project.components, (c) => links.get(c.id));
   if (contentModel) indexLines.push(contentModel, '---', '');
+  const tokensMd = tokensToMarkdown(project.tokens);
+  if (tokensMd) indexLines.push(tokensMd, '---', '');
   const buildOrder = generateBuildOrderMd(project.components, '##', (c) => links.get(c.id));
   if (buildOrder) indexLines.push(buildOrder, '---', '');
 
@@ -520,4 +534,5 @@ async function exportProjectMarkdownMulti(project: Project, folderPath?: string,
   }
 
   await invoke('write_text_file', { path: `${destDir}/index.md`, content: indexLines.join('\n') });
+  await writeTokenFiles(project, destDir as string);
 }
