@@ -1,10 +1,11 @@
 'use client';
 
-import { Collection, ImagePin } from '@/lib/types';
+import { Collection, ImagePin, Task } from '@/lib/types';
 import { PIN_KINDS, PinKind, getPinKind } from '@/lib/pinKinds';
 import { ask } from '@tauri-apps/plugin-dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
 import { flattenFields } from '@/lib/collections';
 import SpecFields from './SpecFields';
 import CollectionPicker from './CollectionPicker';
@@ -16,6 +17,10 @@ interface PinSpecEditorProps {
   collections?: Collection[];
   /** Nom du composant relié à ce pin (permet « chaque ligne = ce composant » pour un répéteur). */
   linkedComponentName?: string;
+  /** Tâches liées à ce pin : le pin devient un point de la todo-liste, avec son état d'avancement. */
+  linkedTasks?: Task[];
+  onAddTask?: () => void;
+  onToggleTask?: (taskId: string) => void;
   onCreateCollection?: (collection: Collection) => void;
 }
 
@@ -31,7 +36,7 @@ function visibleKind(kind: PinKind, pin: ImagePin, linked: boolean): PinKind {
  * au type (longueur max, éditable en backoffice, balise SEO…). Exporté dans le
  * Markdown (prompt IA) et lu par le développeur.
  */
-export default function PinSpecEditor({ pin, onChange, collections = [], linkedComponentName, onCreateCollection = () => {} }: PinSpecEditorProps) {
+export default function PinSpecEditor({ pin, onChange, collections = [], linkedComponentName, linkedTasks = [], onAddTask, onToggleTask, onCreateCollection = () => {} }: PinSpecEditorProps) {
   const kind = getPinKind(pin.kind);
   const fieldOptions = collections.flatMap((c) =>
     flattenFields(c.fields).filter((f) => f.field.name).map((f) => ({ value: `${c.id}:${f.field.id}`, label: `${c.name} › ${f.path}` }))
@@ -99,6 +104,28 @@ export default function PinSpecEditor({ pin, onChange, collections = [], linkedC
             {fieldOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
         </label>
+      )}
+
+      {/* Tâches du pin : son état d'avancement (à faire, en cours, fait) en découle */}
+      {onAddTask && (
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <span>
+              {linkedTasks.length === 0
+                ? 'Aucune tâche liée à ce pin'
+                : `Tâches de ce pin : ${linkedTasks.filter(t => t.completed).length}/${linkedTasks.length} faite${linkedTasks.filter(t => t.completed).length > 1 ? 's' : ''}`}
+            </span>
+            <Button type="button" size="sm" variant="outline" className="h-6 px-2 text-xs" onClick={onAddTask}>
+              {linkedTasks.length === 0 ? 'Créer la tâche de ce pin' : '+ Tâche'}
+            </Button>
+          </div>
+          {linkedTasks.map((task) => (
+            <label key={task.id} className="flex items-center gap-2 text-sm cursor-pointer">
+              <Checkbox checked={task.completed} onCheckedChange={() => onToggleTask?.(task.id)} />
+              <span className={task.completed ? 'line-through text-muted-foreground' : ''}>{task.name}</span>
+            </label>
+          ))}
+        </div>
       )}
 
       {/* Nom de l'élément : sans lui, « Titre, max 128 » ne dit pas de quel titre de la page il s'agit. */}

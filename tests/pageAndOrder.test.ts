@@ -84,3 +84,50 @@ describe('MCP — page d\'un template', () => {
     expect(runMcpCommand(project, 'update_component', { component: 'Accueil', collectionRole: 'autre' }).ok).toBe(false);
   });
 });
+
+describe('brief de développement', () => {
+  it('réunit reste à faire, tokens, collections concernées et éléments à réutiliser dans l\'ordre', async () => {
+    const { generateBriefMd } = await import('@/lib/markdownExport');
+    const nav = c('nav', 'Navigation', 'component');
+    const push = c('push', 'Push', 'component', ['nav']);
+    const slider = c('slider', 'Slider', 'section', ['push', 'nav'], {
+      estimatedHours: 4,
+      tasks: [
+        { id: 'task-1', name: 'Structure', completed: true, category: 'frontend' },
+        { id: 'task-2', name: 'Navigation', completed: false, category: 'frontend', pinRef: { imageId: 'i', pinId: 'p', pinNumber: 3 } },
+        { id: 'task-3', name: 'Version anglaise', completed: false, category: 'frontend', scope: 'v2' },
+      ],
+      images: [{ id: 'i', isPrimary: true, pins: [{ id: 'p', number: 3, x: 1, y: 1, kind: 'list', collectionId: 'ouv' }] }],
+    });
+    const other = { id: 'zzz', name: 'Autre collection', slug: 'autre', fields: [] };
+    const brief = generateBriefMd({
+      ...project, components: [home, slider, push, nav],
+      collections: [ouvrages, other],
+      tokens: { syncedAt: '2026-10-20T00:00:00.000Z', collections: [], textStyles: [], effectStyles: [], colorStyles: [{ name: 'Accent', origin: 'manual', paints: [{ type: 'SOLID', color: '#b694b5' }] }] },
+    } as Project, 'slider')!;
+    expect(brief).toContain('# Brief de développement : Slider');
+    expect(brief).toContain('**Avancement :** 1/2 · 50 % tâches');
+    expect(brief).toContain('- [ ] Navigation — `frontend`, id : `task-2` (pin #3)');
+    expect(brief).not.toContain('task-3'); // évolution v2 : hors périmètre
+    expect(brief).not.toContain('id : `task-1`'); // déjà faite
+    expect(brief).toContain('## Design tokens');
+    expect(brief).toContain('Collection « Ouvrages »');
+    expect(brief).not.toContain('Autre collection');
+    expect(brief).toContain('Dans l\'ordre de construction : Navigation → Push.');
+    expect(brief.indexOf('# Navigation')).toBeLessThan(brief.indexOf('# Push'));
+    expect(brief.indexOf('# Push')).toBeLessThan(brief.indexOf('# Slider'));
+    expect(brief).toContain('update_task');
+    expect(generateBriefMd(project, 'absent')).toBeNull();
+  });
+
+  it('propose de planifier quand il n\'y a aucune tâche', async () => {
+    const { generateBriefMd } = await import('@/lib/markdownExport');
+    expect(generateBriefMd(project, 'logo')).toContain('Aucune tâche n\'est planifiée');
+  });
+
+  it('le brief est une lecture : rien à appliquer au projet', () => {
+    const out = runMcpCommand(project, 'get_build_brief', { component: 'Accueil' });
+    expect(out.ok && out.query).toBe(true);
+    expect(out.ok && typeof out.result).toBe('string');
+  });
+});

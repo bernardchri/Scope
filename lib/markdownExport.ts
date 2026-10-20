@@ -7,8 +7,8 @@ import { slugify } from './persistence';
 import { renderImageWithPins } from './imageHelpers';
 import { describePin } from './pinKinds';
 import { generateContentModelMd, collectionLink } from './collections';
-import { findCollection } from './collectionLookup';
-import { generateBuildOrderMd, usedBy } from './buildOrder';
+import { findCollection, flattenFields } from './collectionLookup';
+import { buildOrder, generateBuildOrderMd, usedBy } from './buildOrder';
 import { isPinQualified } from './completeness';
 import { Collection } from './types';
 import { figmaNodeUrl } from './figmaUrl';
@@ -295,6 +295,82 @@ function pageInfoLines(component: Component, collections: Collection[], collecti
     collection ? `- Affiche ${role} de la collection ${collectionLink(collection, collectionBase)}` : '',
   ].filter(Boolean);
   return lines.length ? ['## Page', '', ...lines].join('\n') : '';
+}
+
+/**
+ * Brief de développement d'un élément : tout ce qu'une IA (ou un développeur) doit lire pour le construire, en un
+ * seul texte — reste à faire, design tokens, modèle de contenu concerné, éléments à réutiliser (en ordre de
+ * construction), puis la fiche de l'élément. Les images ne sont pas incluses (outil `get_component_image`).
+ */
+export function generateBriefMd(project: Project, componentId: string): string | null {
+  const component = project.components.find(c => c.id === componentId);
+  if (!component) return null;
+  const all = project.components;
+  const collections = project.collections ?? [];
+
+  // Éléments utilisés, à tous les niveaux : à construire avant celui-ci.
+  const needed = new Map<string, Component>();
+  const collect = (c: Component) => {
+    for (const instance of c.instances) {
+      const dependency = all.find(x => x.id === instance.componentId);
+      if (dependency && dependency.id !== component.id && !needed.has(dependency.id)) {
+        needed.set(dependency.id, dependency);
+        collect(dependency);
+      }
+    }
+  };
+  collect(component);
+  const dependencies = buildOrder([...needed.values()]);
+
+  // Collections touchées par l'élément et ses dépendances (pins, page), et celles que leurs champs relient.
+  const touched = new Set<string>();
+  for (const c of [component, ...dependencies]) {
+    if (c.page?.collectionId) touched.add(c.page.collectionId);
+    for (const pin of (c.images ?? []).flatMap(i => i.pins ?? [])) {
+      if (pin.collectionId) touched.add(pin.collectionId);
+      if (pin.fieldRef) touched.add(pin.fieldRef.collectionId);
+    }
+  }
+  for (const id of [...touched]) {
+    for (const field of flattenFields(findCollection(collections, id)?.fields ?? [])) {
+      if (field.field.relationTo) touched.add(field.field.relationTo);
+    }
+  }
+  const relevantCollections = collections.filter(c => touched.has(c.id));
+
+  const remaining = component.tasks.filter(t => !t.completed && t.scope !== 'v2');
+  const progress = componentProgress(component);
+  const parts: string[] = [
+    `# Brief de développement : ${component.name}`,
+    [
+      `**Type :** ${TYPE_LABELS[component.category] ?? component.category}`,
+      progress.total > 0 ? `**Avancement :** ${progressLabel(progress)} tâches` : '**Avancement :** aucune tâche planifiée',
+    ].join(' · '),
+    [
+      '## Comment travailler',
+      '',
+      '- Construis d\'abord les éléments à réutiliser (section « Éléments à réutiliser », déjà dans l\'ordre), puis cet élément.',
+      '- Regarde la maquette avec l\'outil `get_component_image` (le texte ne remplace pas l\'image).',
+      '- Utilise les design tokens fournis (variables CSS, classes `.text-*`) plutôt que de relever des valeurs sur l\'image.',
+      '- Au fil du développement, coche chaque tâche terminée avec `update_task` (`completed: true`), ajoute celles que tu découvres avec `add_task`, et consigne une décision importante avec `set_text`.',
+    ].join('\n'),
+    remaining.length > 0
+      ? ['## Reste à faire', '', ...remaining.map(t => `- [ ] ${t.name} — \`${t.category}\`, id : \`${t.id}\`${t.pinRef ? ` (pin #${t.pinRef.pinNumber})` : ''}`)].join('\n')
+      : progress.total > 0 ? '## Reste à faire\n\nToutes les tâches sont faites.' : '## Reste à faire\n\nAucune tâche n\'est planifiée : propose-en une liste avec `add_task` à partir des pins et de la description.',
+  ];
+  const tokensMd = tokensToMarkdown(project.tokens);
+  if (tokensMd) parts.push(tokensMd);
+  const model = generateContentModelMd(relevantCollections, '##', all);
+  if (model) parts.push(model);
+  if (dependencies.length > 0) {
+    parts.push(`## Éléments à réutiliser\n\nDans l'ordre de construction : ${dependencies.map(d => d.name).join(' → ')}.`);
+    for (const dependency of dependencies) {
+      parts.push(generateComponentBlock(dependency, new Map(), all, false, new Map(), new Map(), collections));
+    }
+  }
+  parts.push('## Élément à construire');
+  parts.push(generateComponentBlock(component, new Map(), all, false, new Map(), new Map(), collections));
+  return parts.join('\n\n');
 }
 
 /** Client, version et total d'heures estimées, en une ligne (vide si rien n'est renseigné). */

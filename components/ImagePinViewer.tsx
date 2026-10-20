@@ -36,9 +36,12 @@ interface ImagePinViewerProps {
   /** Modèle de contenu : permet de relier un pin « Liste » à une collection, ou un pin à un champ. */
   collections?: Collection[];
   onCreateCollection?: (collection: Collection) => void;
+  /** Crée une tâche liée à un pin / coche une tâche : le pin suit l'avancement de ses tâches. */
+  onAddTaskForPin?: (imageId: string, pin: ImagePin) => void;
+  onToggleTask?: (taskId: string) => void;
 }
 
-export default function ImagePinViewer({ images, tasks, folderPath, onUpdateImages, instances, allComponents, onNavigate, collections, onCreateCollection }: ImagePinViewerProps) {
+export default function ImagePinViewer({ images, tasks, folderPath, onUpdateImages, instances, allComponents, onNavigate, collections, onCreateCollection, onAddTaskForPin, onToggleTask }: ImagePinViewerProps) {
   const thumbnailSensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
   );
@@ -393,6 +396,9 @@ export default function ImagePinViewer({ images, tasks, folderPath, onUpdateImag
           collections={collections}
           onCreateCollection={onCreateCollection}
           linkedComponentName={linkedNameFor(selectedPinId)}
+          linkedTasks={tasks.filter(t => t.pinRef?.pinId === selectedPinId)}
+          onAddTask={onAddTaskForPin && currentImage ? () => onAddTaskForPin(currentImage.id, currentPins.find(p => p.id === selectedPinId)!) : undefined}
+          onToggleTask={onToggleTask}
         />
       )}
 
@@ -438,6 +444,8 @@ export default function ImagePinViewer({ images, tasks, folderPath, onUpdateImag
         collections={collections}
         onCreateCollection={onCreateCollection}
         linkedNameFor={linkedNameFor}
+        onAddTaskForPin={onAddTaskForPin}
+        onToggleTask={onToggleTask}
         onClose={() => setZoomOpen(false)}
       />
 

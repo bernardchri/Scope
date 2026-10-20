@@ -164,7 +164,7 @@ export default function ComponentList({ projectId }: ComponentListProps) {
       } else {
         const run = runMcpCommand(project, tool, args ?? {});
         if (run.ok) {
-          state.updateComponent(project.id, run.componentId, run.updates);
+          if (!run.query) state.updateComponent(project.id, run.componentId, run.updates);
           outcome = { ok: true, result: run.result };
         } else {
           outcome = { ok: false, error: run.error };

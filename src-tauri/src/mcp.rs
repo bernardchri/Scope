@@ -51,7 +51,7 @@ pub fn resolve(pending: &McpPending, id: &str, outcome: Value) {
 
 const SERVER_INSTRUCTIONS: &str = "SCOPE est un outil de documentation de projets web (composants, templates, sections, documents). \
 Les éléments portent des images annotées par des pins numérotés ; chaque pin peut être qualifié (type, contraintes, collection de contenu). \
-Commence par get_project puis get_issues pour voir ce qui reste à compléter. get_component_image montre la maquette ; qualify_pin et add_pin qualifient les pins (mêmes types et précisions que l'éditeur de SCOPE) ; update_component, add_task, update_task, delete_task, set_text et delete_text modifient la description, les tâches et les textes des documents. Les modifications sont appliquées dans l'app et annulables (Cmd+Z).";
+Commence par get_project puis get_issues pour voir ce qui reste à compléter ; get_build_brief donne en un appel tout ce qu'il faut pour construire un élément, et tu coches ses tâches avec update_task au fil du développement. get_component_image montre la maquette ; qualify_pin et add_pin qualifient les pins (mêmes types et précisions que l'éditeur de SCOPE) ; update_component, add_task, update_task, delete_task, set_text et delete_text modifient la description, les tâches et les textes des documents. Les modifications sont appliquées dans l'app et annulables (Cmd+Z).";
 
 fn tools() -> Value {
     json!([
@@ -231,6 +231,15 @@ fn tools() -> Value {
             "inputSchema": { "type": "object", "properties": {} }
         },
         {
+            "name": "get_build_brief",
+            "description": "Brief de développement d'un élément, en un seul appel : reste à faire (avec les id de tâches), design tokens, modèle de contenu concerné, éléments à réutiliser dans l'ordre de construction, puis la fiche complète. À lire avant de coder un élément ; la maquette se regarde avec get_component_image.",
+            "inputSchema": {
+                "type": "object",
+                "properties": { "component": { "type": "string", "description": "Id ou nom de l'élément." } },
+                "required": ["component"]
+            }
+        },
+        {
             "name": "get_issues",
             "description": "Ce qui reste à compléter : pins sans type ni précision, collections ou relations incomplètes, références cassées.",
             "inputSchema": { "type": "object", "properties": {} }
@@ -238,8 +247,13 @@ fn tools() -> Value {
     ])
 }
 
+/// Un texte (ex. un brief Markdown) est renvoyé tel quel ; tout autre JSON est mis en forme.
 fn text_result(value: &Value) -> Value {
-    json!({ "content": [{ "type": "text", "text": serde_json::to_string_pretty(value).unwrap_or_default() }] })
+    let text = match value.as_str() {
+        Some(raw) => raw.to_string(),
+        None => serde_json::to_string_pretty(value).unwrap_or_default(),
+    };
+    json!({ "content": [{ "type": "text", "text": text }] })
 }
 
 fn error_result(message: &str) -> Value {
@@ -361,7 +375,7 @@ fn call_tool(name: &str, args: &Value, snapshot: &Value, dispatch: Dispatch) -> 
             None => error_result("Élément introuvable : donne un id ou un nom exact (voir list_components)."),
         },
         "get_component_image" => image_result(args, snapshot),
-        "qualify_pin" | "add_pin" | "update_component" | "add_task" | "update_task" | "delete_task" | "set_text" | "delete_text" => match dispatch(name, args) {
+        "qualify_pin" | "add_pin" | "get_build_brief" | "update_component" | "add_task" | "update_task" | "delete_task" | "set_text" | "delete_text" => match dispatch(name, args) {
             Ok(result) => text_result(&result),
             Err(message) => error_result(&message),
         },
@@ -494,7 +508,7 @@ mod tests {
     fn tous_les_outils_sont_annonces() {
         let r = call("tools/list", json!({}));
         let names: Vec<&str> = r["result"]["tools"].as_array().unwrap().iter().map(|t| t["name"].as_str().unwrap()).collect();
-        for expected in ["get_project", "list_components", "get_component", "get_component_image", "qualify_pin", "add_pin", "update_component", "add_task", "update_task", "delete_task", "set_text", "delete_text", "list_collections", "get_design_tokens", "get_issues"] {
+        for expected in ["get_project", "list_components", "get_component", "get_component_image", "qualify_pin", "add_pin", "update_component", "add_task", "update_task", "delete_task", "set_text", "delete_text", "get_build_brief", "list_collections", "get_design_tokens", "get_issues"] {
             assert!(names.contains(&expected), "{} manquant", expected);
         }
     }

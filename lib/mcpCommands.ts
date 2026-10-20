@@ -4,12 +4,13 @@ import { PIN_KINDS, describePin, getPinKind } from './pinKinds';
 import { findCollection, flattenFields } from './collectionLookup';
 import { isPinQualified } from './completeness';
 import { nextPinNumber } from './pinHelpers';
+import { generateBriefMd } from './markdownExport';
 
 /** Arguments d'un outil MCP d'écriture, tels que reçus de Claude (non fiables : tout est revalidé). */
 export type McpArgs = Record<string, unknown>;
 
 export type McpOutcome =
-  | { ok: true; componentId: string; updates: Partial<Component>; result: unknown }
+  | { ok: true; componentId: string; updates: Partial<Component>; result: unknown; /** Lecture seule : rien à appliquer au projet. */ query?: true }
   | { ok: false; error: string };
 
 const fail = (error: string): McpOutcome => ({ ok: false, error });
@@ -384,6 +385,10 @@ export function runMcpCommand(project: Project, tool: string, args: McpArgs): Mc
     case 'set_text':
     case 'delete_text':
       return runTextCommand(component, tool, args);
+    case 'get_build_brief': {
+      const brief = generateBriefMd(project, component.id);
+      return brief ? { ok: true, query: true, componentId: component.id, updates: {}, result: brief } : fail('Élément introuvable.');
+    }
     default:
       return fail(`Outil inconnu : ${tool}`);
   }

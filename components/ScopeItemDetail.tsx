@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { Collection, Component, FigmaLink, ScopeItemType, WidgetType, WidgetInstance } from '@/lib/types';
+import { getPinKind } from '@/lib/pinKinds';
+import { Collection, Component, FigmaLink, ImagePin, ScopeItemType, WidgetType, WidgetInstance } from '@/lib/types';
 import { getCategoryLabel, getCategoryColor, getActiveWidgets, getAvailableWidgetTypes, WIDGET_LABELS, WIDGET_ICONS, widgetHasContent, isTextWidget } from '@/lib/categoryHelpers';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -208,6 +209,25 @@ export default function ScopeItemDetail({
     }
   }
 
+  /** Crée la tâche d'un pin (nommée d'après lui) : le pin passe alors « à faire » et suit son avancement. */
+  function addTaskForPin(imageId: string, pin: ImagePin) {
+    const kind = getPinKind(pin.kind);
+    const backendKinds = ['list', 'relation', 'repeater', 'category', 'form'];
+    onUpdate(item.id, {
+      tasks: [...item.tasks, {
+        id: crypto.randomUUID(),
+        name: pin.label || kind?.label || `Pin #${pin.number}`,
+        completed: false,
+        category: backendKinds.includes(pin.kind ?? '') ? 'backend' : 'frontend',
+        pinRef: { imageId, pinId: pin.id, pinNumber: pin.number },
+      }],
+    });
+  }
+
+  function toggleTask(taskId: string) {
+    onUpdate(item.id, { tasks: item.tasks.map(t => (t.id === taskId ? { ...t, completed: !t.completed } : t)) });
+  }
+
   /** Change le type d'un bloc de texte en gardant son identifiant ; `content` remplace son texte si fourni. */
   function setWidgetType(id: string, type: WidgetType, content?: string) {
     const updates: Partial<Component> = { widgets: activeWidgets.map(w => (w.id === id ? { ...w, type } : w)) };
@@ -274,6 +294,8 @@ export default function ScopeItemDetail({
             onNavigate={onNavigate}
             collections={collections}
             onCreateCollection={onCreateCollection}
+            onAddTaskForPin={addTaskForPin}
+            onToggleTask={toggleTask}
           />
         );
       case 'notes': {
