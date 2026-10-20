@@ -38,10 +38,12 @@ interface SortableWidgetProps {
   icon: LucideIcon;
   onRemove: () => void;
   actions?: BlockActions;
+  /** Espacement vertical du bloc (par défaut celui d'un gros bloc). */
+  spacing?: string;
   children: ReactNode;
 }
 
-export default function SortableWidget({ id, onRemove, actions, children }: SortableWidgetProps) {
+export default function SortableWidget({ id, onRemove, actions, spacing = 'py-4', children }: SortableWidgetProps) {
   const {
     attributes,
     listeners,
@@ -64,7 +66,7 @@ export default function SortableWidget({ id, onRemove, actions, children }: Sort
         transition,
         opacity: isDragging ? 0.4 : 1,
       }}
-      className={`rounded-xl py-4 group/widget relative flex gap-1 ${isDragging ? 'h-8 overflow-hidden rounded-lg border border-dashed border-muted-foreground/30 bg-muted/30' : ''}`}
+      className={`rounded-xl ${spacing} group/widget relative flex gap-1 ${isDragging ? 'h-8 overflow-hidden rounded-lg border border-dashed border-muted-foreground/30 bg-muted/30' : ''}`}
     >
       {!isDragging && (
         <div
