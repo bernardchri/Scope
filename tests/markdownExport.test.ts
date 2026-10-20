@@ -119,32 +119,40 @@ describe('noms de fichiers de l\'export multi-fichiers', () => {
   const doc = makeComponent({ id: '7d3f2a10-1111-4222-8333-444455556666', name: 'Stack technique', category: 'document' });
   const home = makeComponent({ id: 'c9e81b22-aaaa-4bbb-8ccc-ddddeeeeffff', name: 'Accueil', category: 'template' });
   const header = makeComponent({ id: '5a6b7c8d-0000-4111-8222-333344445555', name: 'Header', category: 'component' });
+  const names = (list: Component[]) => exportFileNames(list, uniqueSlugs(list));
 
-  it('utilise le début de l\'id plutôt qu\'un numéro d\'ordre : déplacer un élément ne change aucun nom', () => {
-    const slugs = (list: Component[]) => uniqueSlugs(list);
-    const before = exportFileNames([doc, home, header], slugs([doc, home, header]));
-    const after = exportFileNames([header, home, doc], slugs([header, home, doc]));
-    expect(before.get(doc.id)).toBe('document_stack-technique_7d3f2a.md');
-    expect(before.get(home.id)).toBe('template_accueil_c9e81b.md');
-    expect([...after.entries()].sort()).toEqual([...before.entries()].sort());
+  it('utilise le début de l\'id : ni déplacement ni changement de type ne changent le nom', () => {
+    const before = names([doc, home, header]);
+    expect(before.get(doc.id)).toBe('stack-technique_7d3f2a.md');
+    expect(before.get(home.id)).toBe('accueil_c9e81b.md');
+    expect([...names([header, home, doc]).entries()].sort()).toEqual([...before.entries()].sort());
+    // document → section → composant : même fichier
+    for (const category of ['section', 'component'] as const) {
+      expect(names([{ ...doc, category }, home, header]).get(doc.id)).toBe('stack-technique_7d3f2a.md');
+    }
   });
 
   it('allonge l\'identifiant quand deux éléments commencent pareil', () => {
     const twin = makeComponent({ id: '7d3f2a10-ffff-4222-8333-444455556666', name: 'Stack technique', category: 'document' });
-    const names = exportFileNames([doc, twin], uniqueSlugs([doc, twin]));
-    expect(new Set(names.values()).size).toBe(2);
-    expect(names.get(doc.id)).toMatch(/_7d3f2a10[0-9a-f]*\.md$/);
+    const both = names([doc, twin]);
+    expect(new Set(both.values()).size).toBe(2);
+    expect(both.get(doc.id)).toMatch(/_7d3f2a10[0-9a-f]*\.md$/);
   });
 
-  it('repère les anciens fichiers à supprimer, jamais index.md ni les fichiers étrangers', () => {
-    const current = exportFileNames([doc, home], uniqueSlugs([doc, home]));
+  it('remplace sans demander un fichier du même élément sous un autre nom, et signale les orphelins', () => {
+    const current = names([doc, home]);
     const existing = [
-      'index.md', 'notes-perso.md', 'README.md',
-      '01_document_stack-technique.md', '02_template_accueil.md', // ancienne numérotation
-      'template_ancien-nom_c9e81b.md', // renommé depuis
+      'index.md', 'notes-perso.md', 'README.md', 'tokens.css',
       ...current.values(),
+      'ancien-nom_7d3f2a.md', // doc renommé
+      'document_stack-technique_7d3f2a.md', // ancien format (type dans le nom), même élément
+      '02_template_accueil.md', // ancienne numérotation : pas d'identifiant
+      'section_supprimee_123abc.md', // élément supprimé
+      'supprime_9f8e7d.md', // élément supprimé, format actuel
     ];
-    expect(staleExportFiles(existing, current).sort()).toEqual(['01_document_stack-technique.md', '02_template_accueil.md', 'template_ancien-nom_c9e81b.md']);
+    const { replaced, orphans } = staleExportFiles(existing, current);
+    expect(replaced.sort()).toEqual(['ancien-nom_7d3f2a.md', 'document_stack-technique_7d3f2a.md']);
+    expect(orphans.sort()).toEqual(['02_template_accueil.md', 'section_supprimee_123abc.md', 'supprime_9f8e7d.md']);
   });
 
   it('écrit l\'identifiant de l\'élément dans sa fiche', () => {

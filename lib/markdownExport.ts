@@ -46,28 +46,45 @@ function shortIds(components: Component[]): Map<string, string> {
 }
 
 /**
- * Nom de fichier de chaque fiche en export multi-fichiers : `<type>_<nom>_<id>.md`. L'identifiant (début de l'id de
- * l'élément) ne change ni quand on déplace un élément, ni quand on en ajoute : un nouvel export réécrit les mêmes
- * fichiers au lieu d'en créer de nouveaux comme le faisait le numéro d'ordre.
+ * Nom de fichier de chaque fiche en export multi-fichiers : `<nom>_<id>.md`. L'identifiant (début de l'id de
+ * l'élément) ne change ni quand on déplace un élément, ni quand on en ajoute, ni quand on change son type
+ * (document, section, composant…) : un nouvel export réécrit le même fichier. Le type est dans la fiche
+ * et dans `index.md`, pas dans le nom.
  */
 export function exportFileNames(components: Component[], slugs: Map<string, string>): Map<string, string> {
   const ids = shortIds(components);
   const names = new Map<string, string>();
   for (const category of CATEGORY_ORDER) {
     for (const comp of components.filter(c => c.category === category)) {
-      names.set(comp.id, `${comp.category}_${slugs.get(comp.id)}_${ids.get(comp.id)}.md`);
+      names.set(comp.id, `${slugs.get(comp.id)}_${ids.get(comp.id)}.md`);
     }
   }
   return names;
 }
 
-const LEGACY_EXPORT_FILE = /^\d{2}_(document|component|template|section)_.+\.md$/;
-const EXPORT_FILE = /^(document|component|template|section)_.+_[0-9a-f]{6,32}\.md$/;
+/** Anciennes numérotations : `01_document_nom.md` (ordre), `document_nom_ab12cd.md` (type dans le nom). */
+const LEGACY_EXPORT_FILE = /^(?:\d{2}_(?:document|component|template|section)_.+|(?:document|component|template|section)_.+_[0-9a-f]{6,32})\.md$/;
+/** Format actuel : `nom_ab12cd.md` ; le groupe capture l'identifiant. */
+const EXPORT_FILE = /^.+_([0-9a-f]{6,32})\.md$/;
 
-/** Fichiers d'un ancien export (numérotés, ou renommés depuis) qui ne correspondent plus à aucun élément. `index.md` et les fichiers d'autres noms ne sont jamais concernés. */
-export function staleExportFiles(existing: string[], current: Map<string, string>): string[] {
+/**
+ * Fichiers d'un export précédent qui n'existent plus sous ce nom :
+ * - `replaced` : même élément (même identifiant) sous un autre nom, parce qu'il a été renommé ou que l'ancien format
+ *   mettait le type dans le nom. La fiche actuelle les remplace : on peut les supprimer sans rien demander ;
+ * - `orphans` : plus aucun élément correspondant (supprimé, ou ancienne numérotation sans identifiant) : à confirmer.
+ * `index.md` et les fichiers d'autres noms ne sont jamais concernés.
+ */
+export function staleExportFiles(existing: string[], current: Map<string, string>): { replaced: string[]; orphans: string[] } {
   const keep = new Set(current.values());
-  return existing.filter(name => !keep.has(name) && (LEGACY_EXPORT_FILE.test(name) || EXPORT_FILE.test(name)));
+  const currentIds = new Set([...current.values()].map(name => name.match(EXPORT_FILE)?.[1]));
+  const replaced: string[] = [];
+  const orphans: string[] = [];
+  for (const name of existing) {
+    if (keep.has(name) || !(LEGACY_EXPORT_FILE.test(name) || EXPORT_FILE.test(name))) continue;
+    const id = name.match(/_([0-9a-f]{6,32})\.md$/)?.[1];
+    (id !== undefined && currentIds.has(id) ? replaced : orphans).push(name);
+  }
+  return { replaced, orphans };
 }
 
 export function uniqueSlugs(components: Component[]): Map<string, string> {
@@ -516,13 +533,18 @@ async function exportProjectMarkdownMulti(project: Project, folderPath?: string,
   await removeStaleExportFiles(destDir as string, fileNames);
 }
 
-/** Propose de supprimer les fiches d'un export précédent (numérotées ou renommées) devenues sans objet. */
+/**
+ * Nettoie le dossier d'export après écriture : les fiches remplacées (élément renommé, ancien format du nom)
+ * partent sans rien demander ; celles dont l'élément n'existe plus sont proposées à la suppression.
+ */
 async function removeStaleExportFiles(dir: string, current: Map<string, string>): Promise<void> {
-  const stale = staleExportFiles(await invoke<string[]>('list_markdown_files', { dir }), current);
-  if (stale.length === 0) return;
+  const { replaced, orphans } = staleExportFiles(await invoke<string[]>('list_markdown_files', { dir }), current);
+  if (replaced.length > 0) await invoke('delete_markdown_files', { dir, names: replaced });
+  if (orphans.length === 0) return;
+  const plural = orphans.length > 1;
   const confirmed = await ask(
-    `${stale.length} ancien${stale.length > 1 ? 's' : ''} fichier${stale.length > 1 ? 's' : ''} d'export ne correspond${stale.length > 1 ? 'ent' : ''} plus à aucun élément (renommé${stale.length > 1 ? 's' : ''}, supprimé${stale.length > 1 ? 's' : ''} ou ancienne numérotation) :\n\n${stale.slice(0, 12).join('\n')}${stale.length > 12 ? '\n…' : ''}\n\nLes supprimer ?`,
+    `${orphans.length} ancien${plural ? 's' : ''} fichier${plural ? 's' : ''} d'export ne correspond${plural ? 'ent' : ''} plus à aucun élément (supprimé${plural ? 's' : ''} ou ancienne numérotation) :\n\n${orphans.slice(0, 12).join('\n')}${orphans.length > 12 ? '\n…' : ''}\n\nLes supprimer ?`,
     { title: 'Nettoyer le dossier d\'export', kind: 'warning' },
   );
-  if (confirmed) await invoke('delete_markdown_files', { dir, names: stale });
+  if (confirmed) await invoke('delete_markdown_files', { dir, names: orphans });
 }
