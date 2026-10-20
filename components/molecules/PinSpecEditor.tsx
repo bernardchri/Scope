@@ -101,6 +101,17 @@ export default function PinSpecEditor({ pin, onChange, collections = [], linkedC
         </label>
       )}
 
+      {/* Nom de l'élément : sans lui, « Titre, max 128 » ne dit pas de quel titre de la page il s'agit. */}
+      {!linkedComponentName && (
+        <Input
+          key={`${pin.id}-label`}
+          className="h-8 text-sm"
+          placeholder="Nom de l'élément (ex. Titre du hero, Bouton « Acheter »)"
+          defaultValue={pin.label ?? ''}
+          onBlur={(e) => onChange({ ...pin, label: e.target.value.trim() || undefined })}
+        />
+      )}
+
       <Input
         key={`${pin.id}-note`}
         className="h-8 text-sm"

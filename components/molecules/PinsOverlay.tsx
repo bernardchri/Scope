@@ -66,9 +66,9 @@ export default function PinsOverlay({
             `}
           >
             {pin.number}
-            {!link && getPinKind(pin.kind) && (
+            {!link && (pin.label || getPinKind(pin.kind)) && (
               <span className="absolute left-full ml-1.5 whitespace-nowrap rounded bg-background/90 px-1.5 py-0.5 text-xs font-medium text-foreground shadow ring-1 ring-border pointer-events-none">
-                {getPinKind(pin.kind)!.label}
+                {pin.label || getPinKind(pin.kind)!.label}
               </span>
             )}
             {link && (

@@ -2,6 +2,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { Component, Project } from './types';
 import { getActiveWidgets, isTextWidget } from './categoryHelpers';
 import { describePin } from './pinKinds';
+import { figmaNodeUrl } from './figmaUrl';
 import { findCompletenessIssues, isPinQualified } from './completeness';
 
 /**
@@ -32,6 +33,9 @@ export function buildMcpSnapshot(project: Project, folderPath?: string) {
       id: img.id,
       caption: img.caption,
       filename: img.filename,
+      width: img.figmaWidth,
+      height: img.figmaHeight,
+      figmaUrl: figmaNodeUrl(comp.figmaLink?.fileKey, img.figmaNodeId),
       isPrimary: img.isPrimary,
       pins: (img.pins ?? []).map((pin) => {
         const instance = comp.instances.find((i) => i.pinRef?.pinId === pin.id);

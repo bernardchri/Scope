@@ -53,6 +53,19 @@ describe('generateStoriesMd — export lisible comme un prompt', () => {
   });
 });
 
+describe('generateStoriesMd — maquettes', () => {
+  it('donne la taille et le lien Figma de chaque image, sans lien exploitable pour un groupe d\'états', () => {
+    const home = makeComponent({ figmaLink: { fileKey: 'FILE', groupNodeId: '0:1:accueil' } });
+    const imageMap = new Map([['c1', [
+      { filename: 'home-0.png', caption: 'desktop', imageIndex: 0, width: 1440, height: 900, figmaUrl: 'https://www.figma.com/design/FILE?node-id=12-34' },
+    ]]]);
+    const md = generateStoriesMd(makeProject([home]), imageMap);
+    expect(md).toContain('_desktop — maquette 1440×900 px · [frame dans Figma](https://www.figma.com/design/FILE?node-id=12-34)_');
+    expect(md).toContain('Source Figma : fichier `FILE` — le lien de chaque maquette est donné sous son image.');
+    expect(md).not.toContain('0:1:accueil');
+  });
+});
+
 describe('uniqueSlugs', () => {
   it('suffixe les composants de même nom', () => {
     const slugs = uniqueSlugs([makeComponent({ id: 'a', name: 'Carte' }), makeComponent({ id: 'b', name: 'Carte' })]);

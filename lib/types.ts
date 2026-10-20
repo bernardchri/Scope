@@ -107,6 +107,9 @@ export interface ComponentImage {
   crop?: CropRect;
   /** id du node Figma dont cette image est issue, si importée. */
   figmaNodeId?: string;
+  /** Taille en px de la frame Figma d'origine (point de rupture d'une maquette desktop/mobile). */
+  figmaWidth?: number;
+  figmaHeight?: number;
   /** Transitoire (export PDF) : largeur native en px, pour ne pas agrandir une petite image. */
   pdfWidth?: number;
 }

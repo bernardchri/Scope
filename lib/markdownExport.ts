@@ -9,12 +9,23 @@ import { describePin } from './pinKinds';
 import { generateContentModelMd, collectionLink } from './collections';
 import { isPinQualified } from './completeness';
 import { Collection } from './types';
+import { figmaNodeUrl } from './figmaUrl';
 import { getImageBase64 } from './imageManager';
 import { getAppSettings } from './persistence';
 
 const CATEGORY_ORDER = PDF_DISPLAY_ORDER;
 
-type ImageRef = { filename: string; /** Même image sans pins incrustés, si des pins sont dessinés. */ cleanFilename?: string; caption?: string; imageIndex: number };
+type ImageRef = {
+  filename: string;
+  /** Même image sans pins incrustés, si des pins sont dessinés. */
+  cleanFilename?: string;
+  caption?: string;
+  imageIndex: number;
+  /** Taille de la frame Figma d'origine (px) et lien vers elle. */
+  width?: number;
+  height?: number;
+  figmaUrl?: string;
+};
 type ImageMap = Map<string, ImageRef[]>;
 /** Chemins relatifs (depuis le Markdown) des SVG exportés, par composant. */
 type AssetRef = { path: string; name: string };
@@ -57,6 +68,11 @@ function imagesSection(refs: ImageRef[], fallbackAlt: string): string {
   const lines = ['## Images', ''];
   for (const ref of refs) {
     lines.push(`![${ref.caption ?? fallbackAlt}](stories-img/${ref.filename})`);
+    const meta = [
+      ref.width && ref.height ? `maquette ${ref.width}×${ref.height} px` : '',
+      ref.figmaUrl ? `[frame dans Figma](${ref.figmaUrl})` : '',
+    ].filter(Boolean);
+    if (meta.length) lines.push(`_${ref.caption ? `${ref.caption} — ` : ''}${meta.join(' · ')}_`);
     if (ref.cleanFilename) lines.push(`_Même image sans pins : [${ref.cleanFilename}](stories-img/${ref.cleanFilename})_`);
   }
   return lines.join('\n');
@@ -87,7 +103,12 @@ function generateComponentBlock(component: Component, imageMap: ImageMap, allCom
   }
 
   if (component.figmaLink?.fileKey || component.figmaLink?.groupNodeId) {
-    parts.push(`Source Figma : fichier \`${component.figmaLink.fileKey}\`, node \`${component.figmaLink.groupNodeId}\``);
+    // Le « node » d'un groupe d'états (desktop/mobile) est fabriqué par le plugin : seuls les liens des images sont exploitables.
+    const groupUrl = figmaNodeUrl(component.figmaLink.fileKey, component.figmaLink.groupNodeId);
+    parts.push(
+      `Source Figma : fichier \`${component.figmaLink.fileKey}\`` +
+      (groupUrl ? `, node \`${component.figmaLink.groupNodeId}\` ([ouvrir](${groupUrl}))` : ' — le lien de chaque maquette est donné sous son image.')
+    );
   }
 
   const imageRefs = imageMap.get(component.id) ?? [];
@@ -318,7 +339,15 @@ async function collectImages(project: Project, dir: string, folderPath: string |
         cleanFilename = `${compSlug}-${i}-clean.${hasCrop ? 'png' : getImageExtension(base64)}`;
         await invoke('write_binary_file', { path: `${dir}/stories-img/${cleanFilename}`, base64Data: cleanBase64 });
       }
-      refs.push({ filename, cleanFilename, caption: img.caption, imageIndex: i });
+      refs.push({
+        filename,
+        cleanFilename,
+        caption: img.caption,
+        imageIndex: i,
+        width: img.figmaWidth,
+        height: img.figmaHeight,
+        figmaUrl: figmaNodeUrl(comp.figmaLink?.fileKey, img.figmaNodeId),
+      });
     }
 
     imageMap.set(comp.id, refs);

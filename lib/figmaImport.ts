@@ -47,6 +47,9 @@ export interface FigmaImportPayload {
   groupNodeId: string;
   /** Id du node exporté (l'état précis) — matche une ComponentImage donnée. */
   nodeId: string;
+  /** Taille de la frame exportée, en px Figma. */
+  frameWidth?: number;
+  frameHeight?: number;
   /** PNG en base64 brut (sans préfixe data:). */
   image: string;
   pins: FigmaImportPin[];
@@ -193,6 +196,8 @@ export async function applyFigmaImport(
     isPrimary: existingImage?.isPrimary ?? !existing?.images?.length,
     pins: allPins.length ? allPins : undefined,
     figmaNodeId: payload.nodeId,
+    figmaWidth: payload.frameWidth ?? existingImage?.figmaWidth,
+    figmaHeight: payload.frameHeight ?? existingImage?.figmaHeight,
   };
 
   const images = existingImage

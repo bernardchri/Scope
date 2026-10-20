@@ -89,6 +89,8 @@ const componentImageSchema = z.object({
   pins: resilientArray(imagePinSchema).optional(),
   crop: cropRectSchema,
   figmaNodeId: z.string().optional(),
+  figmaWidth: z.number().optional(),
+  figmaHeight: z.number().optional(),
 });
 
 const assetSchema = z.object({
