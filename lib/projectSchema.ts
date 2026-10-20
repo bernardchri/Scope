@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import type { CollectionField, Project } from './types';
+import { migrateFonts } from './fonts';
 
 /**
  * Schéma de validation défensive pour `scope.json`.
@@ -171,6 +172,11 @@ const tokenValueSchema = z.union([
 
 const origin = z.literal('manual').optional().catch(undefined);
 
+const fontSourceSchema = z.union([
+  z.object({ kind: z.literal('google'), url: z.string().optional() }),
+  z.object({ kind: z.literal('file'), filename: z.string(), weight: z.union([z.number(), z.literal('variable')]).catch(400), italic: z.boolean().catch(false) }),
+]);
+
 const tokensSchema = z
   .object({
     fileKey: z.string().optional(),
@@ -199,6 +205,7 @@ const tokensSchema = z
         name: z.string(),
         description: z.string().optional(),
         fontFamily: z.string().catch(''),
+        fontRef: z.string().optional(),
         fontStyle: z.string().catch(''),
         fontSize: z.number().catch(16),
         lineHeight: z.object({ unit: z.enum(['AUTO', 'PIXELS', 'PERCENT']).catch('AUTO'), value: z.number().optional() }).catch({ unit: 'AUTO' }),
@@ -216,8 +223,16 @@ const tokensSchema = z
         paints: z.array(z.any()).catch([]),
       })
     ),
+    // Polices déclarées ; l'ancien format (une entrée par source, sans `name`) est regroupé par `migrateFonts`.
     fonts: resilientArray(
       z.union([
+        z.object({
+          id: z.string(),
+          name: z.string(),
+          family: z.string(),
+          fallback: z.enum(['sans-serif', 'serif', 'monospace']).optional().catch(undefined),
+          sources: resilientArray(fontSourceSchema),
+        }),
         z.object({ id: z.string(), family: z.string(), kind: z.literal('google'), url: z.string().optional() }),
         z.object({ id: z.string(), family: z.string(), kind: z.literal('file'), filename: z.string(), weight: z.union([z.number(), z.literal('variable')]).catch(400), italic: z.boolean().catch(false) }),
       ])
@@ -286,5 +301,7 @@ export function parseProject(raw: unknown): ParseResult {
     if (dropped > 0) issues.push(`${dropped} composant(s) invalide(s) ignoré(s)`);
   }
 
-  return { project: result.data as Project, issues };
+  const project = result.data as Project;
+  if (project.tokens) project.tokens = migrateFonts(project.tokens);
+  return { project, issues };
 }

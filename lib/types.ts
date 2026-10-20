@@ -243,7 +243,10 @@ export interface TextStyleToken {
   origin?: TokenOrigin;
   name: string;
   description?: string;
+  /** Famille d'origine (Figma) ou saisie ; la police déclarée (`fontRef`) la remplace quand elle existe. */
   fontFamily: string;
+  /** Police déclarée du projet utilisée par ce style. */
+  fontRef?: string;
   fontStyle: string;
   fontSize: number;
   lineHeight: { unit: 'AUTO' | 'PIXELS' | 'PERCENT'; value?: number };
@@ -275,10 +278,25 @@ export interface EffectStyleToken {
   effects: EffectToken[];
 }
 
-/** Police utilisée par un style de texte, rendue dans l'aperçu : fichier du projet (`fonts/`) ou Google Fonts. */
-export type TokenFont =
-  | { id: string; family: string; kind: 'google'; /** URL de la feuille de style si elle diffère du lien automatique. */ url?: string }
-  | { id: string; family: string; kind: 'file'; filename: string; weight: number | 'variable'; italic: boolean };
+/** D'où vient une police pour l'aperçu et la remise au développeur : Google Fonts ou fichier du projet (`fonts/`). */
+export type FontSource =
+  | { kind: 'google'; /** URL de la feuille de style si elle diffère du lien automatique. */ url?: string }
+  | { kind: 'file'; filename: string; weight: number | 'variable'; italic: boolean };
+
+/**
+ * Police déclarée une fois pour tout le projet (ex. « font-type-1 » = Playfair Display). Les styles de texte y renvoient
+ * par `fontRef` : changer la famille ici change tous les styles qui l'utilisent.
+ */
+export interface FontToken {
+  id: string;
+  /** Nom du rôle, devient la variable CSS : « font-type-1 » → `--font-type-1`. */
+  name: string;
+  /** Famille CSS réelle, ex. « Playfair Display ». */
+  family: string;
+  /** Famille générique de repli. */
+  fallback?: 'sans-serif' | 'serif' | 'monospace';
+  sources: FontSource[];
+}
 
 /**
  * Variables et styles du projet. Ceux qui viennent d'une source (plugin Figma) sont remplacés à chaque envoi ;
@@ -293,6 +311,6 @@ export interface DesignTokens {
   textStyles: TextStyleToken[];
   colorStyles: ColorStyleToken[];
   effectStyles: EffectStyleToken[];
-  /** Polices fournies pour l'aperçu (et la remise au développeur) ; saisies dans SCOPE, jamais écrasées par un envoi. */
-  fonts?: TokenFont[];
+  /** Polices du projet, déclarées dans SCOPE (jamais écrasées par un envoi) ; les styles de texte y renvoient. */
+  fonts?: FontToken[];
 }

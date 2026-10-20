@@ -1,4 +1,4 @@
-import { googleFontsUrl } from './fonts';
+import { fontCssName, fontCssValue, fontForStyle, googleFontsUrl } from './fonts';
 import {
   ColorStyleToken, DesignTokens, EffectStyleToken, TextStyleToken, TokenCollection, TokenValue, TokenVariable,
 } from './types';
@@ -80,9 +80,9 @@ function letterSpacingCss(style: TextStyleToken): string | undefined {
 const CASES: Record<string, string> = { UPPER: 'uppercase', LOWER: 'lowercase', TITLE: 'capitalize' };
 
 /** Déclarations CSS d'un style de texte. */
-export function textStyleDeclarations(style: TextStyleToken): string[] {
+export function textStyleDeclarations(style: TextStyleToken, fontFamily?: string): string[] {
   return [
-    `font-family: ${JSON.stringify(style.fontFamily)}, sans-serif`,
+    `font-family: ${fontFamily ?? `${JSON.stringify(style.fontFamily)}, sans-serif`}`,
     `font-size: ${num(style.fontSize)}px`,
     `font-weight: ${fontWeight(style.fontStyle)}`,
     isItalic(style.fontStyle) ? 'font-style: italic' : '',
@@ -122,12 +122,14 @@ export function tokensToCss(tokens: DesignTokens): string {
   const fonts = tokens.fonts ?? [];
   const blocks: string[] = [
     // @import doit précéder toute règle.
-    ...fonts.filter(f => f.kind === 'google').map(f => `@import url('${f.url ?? googleFontsUrl(f.family)}');`),
+    ...fonts.flatMap(f => f.sources.filter(s => s.kind === 'google').map(s => `@import url('${s.url ?? googleFontsUrl(f.family)}');`)),
     `/* Design tokens — ${tokenSource(tokens)} */`,
-    ...fonts.filter(f => f.kind === 'file').map(f => `/* Police « ${f.family} » : fichier \`fonts/${'filename' in f ? f.filename : ''}\` du projet SCOPE, à fournir avec le site. */`),
+    ...fonts.flatMap(f => f.sources.filter(s => s.kind === 'file').map(s => `/* Police « ${f.family} » : fichier \`fonts/${s.filename}\` du projet SCOPE, à fournir avec le site. */`)),
   ];
 
   const root: string[] = [];
+  // Polices déclarées une fois : les classes de texte y renvoient par var(--font-…).
+  for (const font of fonts) root.push(`  ${fontCssName(font)}: ${fontCssValue(font)};`);
   const modeBlocks = new Map<string, string[]>();
   for (const collection of tokens.collections) {
     const defaultMode = collection.defaultMode || collection.modes[0];
@@ -158,7 +160,8 @@ export function tokensToCss(tokens: DesignTokens): string {
   for (const [selector, lines] of modeBlocks) blocks.push(`${selector} {\n${lines.join('\n')}\n}`);
 
   for (const style of tokens.textStyles) {
-    blocks.push(`.text-${slug(style.name)} {\n${textStyleDeclarations(style).map(d => `  ${d};`).join('\n')}\n}`);
+    const font = fontForStyle(tokens, style);
+    blocks.push(`.text-${slug(style.name)} {\n${textStyleDeclarations(style, font ? `var(${fontCssName(font)})` : undefined).map(d => `  ${d};`).join('\n')}\n}`);
   }
   return blocks.join('\n\n') + '\n';
 }
@@ -200,12 +203,17 @@ export function tokensToJson(tokens: DesignTokens) {
     }
   }
 
+  const fontFamilies: Tree = {};
+  for (const font of tokens.fonts ?? []) {
+    put(fontFamilies, font.name, { $type: 'fontFamily', $value: [font.family, font.fallback ?? 'sans-serif'] });
+  }
   const textStyles: Tree = {};
   for (const style of tokens.textStyles) {
+    const font = fontForStyle(tokens, style);
     put(textStyles, style.name, {
       $type: 'typography',
       $value: {
-        fontFamily: style.fontFamily,
+        fontFamily: font ? `{fonts.${font.name}}` : style.fontFamily,
         fontWeight: fontWeight(style.fontStyle),
         fontSize: `${num(style.fontSize)}px`,
         lineHeight: lineHeightCss(style) ?? 'normal',
@@ -225,7 +233,7 @@ export function tokensToJson(tokens: DesignTokens) {
     const effect = effectCss(style);
     if (effect) put(effectStyles, style.name, { $type: 'shadow', $value: effect.value });
   }
-  return { $description: `Design tokens — ${tokenSource(tokens)}`, variables, textStyles, colorStyles, effectStyles };
+  return { $description: `Design tokens — ${tokenSource(tokens)}`, variables, fonts: fontFamilies, textStyles, colorStyles, effectStyles };
 }
 
 const cell = (text: string) => text.replace(/\|/g, '\\|');
@@ -263,14 +271,17 @@ export function tokensToMarkdown(tokens: DesignTokens | undefined, heading = '##
   if (tokens.textStyles.length) {
     lines.push(`${heading}# Styles de texte`, '', '| Style | Classe | Police | Taille | Graisse | Interligne | Espacement |', '|---|---|---|---|---|---|---|');
     for (const s of tokens.textStyles) {
-      lines.push(`| ${cell(s.name)} | \`.text-${slug(s.name)}\` | ${s.fontFamily} | ${num(s.fontSize)} px | ${fontWeight(s.fontStyle)}${isItalic(s.fontStyle) ? ' italique' : ''} | ${lineHeightCss(s) ?? 'auto'} | ${letterSpacingCss(s) ?? '—'} |`);
+      lines.push(`| ${cell(s.name)} | \`.text-${slug(s.name)}\` | ${(() => { const f = fontForStyle(tokens, s); return f ? `\`${fontCssName(f)}\` (${f.family})` : s.fontFamily; })()} | ${num(s.fontSize)} px | ${fontWeight(s.fontStyle)}${isItalic(s.fontStyle) ? ' italique' : ''} | ${lineHeightCss(s) ?? 'auto'} | ${letterSpacingCss(s) ?? '—'} |`);
     }
     lines.push('');
   }
   if (tokens.fonts?.length) {
-    lines.push(`${heading}# Polices`, '', '| Famille | Source |', '|---|---|');
+    lines.push(`${heading}# Polices`, '', 'Déclarées une fois pour tout le projet : les styles de texte y renvoient (`var(--font-…)`), changer la famille ici les change tous.', '', '| Nom | CSS | Famille | Source |', '|---|---|---|---|');
     for (const f of tokens.fonts) {
-      lines.push(`| ${cell(f.family)} | ${f.kind === 'google' ? `Google Fonts (\`@import\` dans \`tokens.css\`)` : `fichier \`fonts/${f.filename}\` du projet SCOPE`} |`);
+      const source = f.sources.length
+        ? f.sources.map(s => s.kind === 'google' ? 'Google Fonts (`@import` dans `tokens.css`)' : `fichier \`fonts/${s.filename}\` du projet SCOPE`).join(', ')
+        : 'installée / à fournir';
+      lines.push(`| ${cell(f.name)} | \`${fontCssName(f)}\` | ${cell(f.family)}, ${f.fallback ?? 'sans-serif'} | ${source} |`);
     }
     lines.push('');
   }
@@ -328,7 +339,11 @@ export function mergeSyncedTokens(existing: DesignTokens | undefined, incoming: 
   return {
     ...incoming,
     collections: [...synced, ...manualCollections],
-    textStyles: mergeNamed(existing?.textStyles, incoming.textStyles),
+    // Un style revenu de la source garde la police déclarée qu'il utilisait (si elle existe encore).
+    textStyles: mergeNamed(existing?.textStyles, incoming.textStyles.map(style => {
+      const ref = existing?.textStyles.find(s => s.name === style.name)?.fontRef;
+      return ref && existing?.fonts?.some(f => f.id === ref) ? { ...style, fontRef: ref } : style;
+    })),
     colorStyles: mergeNamed(existing?.colorStyles, incoming.colorStyles),
     effectStyles: mergeNamed(existing?.effectStyles, incoming.effectStyles),
     fonts: existing?.fonts?.length ? existing.fonts : incoming.fonts,

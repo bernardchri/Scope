@@ -5,7 +5,7 @@ import { Copy, Plus, Trash2 } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
 import { open } from '@tauri-apps/plugin-dialog';
 import {
-  DesignTokens, EffectStyleToken, TextStyleToken, TokenCollection, TokenValue, TokenVariable,
+  DesignTokens, EffectStyleToken, FontSource, FontToken, TextStyleToken, TokenCollection, TokenValue, TokenVariable,
 } from '@/lib/types';
 import {
   WEIGHT_NAMES, emptyTokens, fontStyleName, fontWeight, isItalic, textStyleDeclarations, tokenSource, tokensToCss, tokensToJson,
@@ -14,7 +14,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
-import { describeFontFile, isFontAvailable, parseGoogleFontsUrl } from '@/lib/fonts';
+import { describeFontFile, effectiveFamily, fontCssName, fontCssValue, fontForStyle, isFontAvailable, nextFontName, parseGoogleFontsUrl } from '@/lib/fonts';
 import { usePreviewFonts } from '@/lib/hooks/usePreviewFonts';
 
 interface TokensPageProps {
@@ -160,39 +160,56 @@ export default function TokensPage({ tokens, onChange, folderPath, className }: 
     });
   }
 
-  // ── Polices ────────────────────────────────────────────────────────────────
-  const addGoogleFont = (family: string, url?: string) =>
-    update({ fonts: [...(t.fonts ?? []).filter(f => !(f.kind === 'google' && f.family === family)), { id: crypto.randomUUID(), family, kind: 'google', url }] });
+  // ── Polices déclarées ──────────────────────────────────────────────────────
+  const fonts = t.fonts ?? [];
+  const setFont = (id: string, patch: Partial<FontToken>) =>
+    update({ fonts: fonts.map(f => (f.id === id ? { ...f, ...patch } : f)) });
 
-  /** URL collée (adresse, `<link>` ou `@import` de Google Fonts) : enregistrée pour la famille du style. */
-  function addGoogleFontFromUrl(family: string, pasted: string) {
+  function addFont() {
+    update({ fonts: [...fonts, { id: crypto.randomUUID(), name: nextFontName(fonts), family: 'Inter', sources: [] }] });
+  }
+
+  function removeFont(font: FontToken) {
+    // Les styles qui l'utilisaient gardent sa famille en saisie libre.
+    update({
+      fonts: fonts.filter(f => f.id !== font.id),
+      textStyles: t.textStyles.map(s => (s.fontRef === font.id ? { ...s, fontRef: undefined, fontFamily: font.family } : s)),
+    });
+  }
+
+  const addSource = (font: FontToken, source: FontSource) => setFont(font.id, { sources: [...font.sources, source] });
+  const removeSource = (font: FontToken, index: number) => setFont(font.id, { sources: font.sources.filter((_, i) => i !== index) });
+
+  /** URL collée (adresse, `<link>` ou `@import` de Google Fonts) : enregistrée comme source de la police. */
+  function addGoogleFromUrl(font: FontToken, pasted: string) {
     const parsed = parseGoogleFontsUrl(pasted);
     if (!parsed) { setFontError('Aucune adresse Google Fonts reconnue (https://fonts.googleapis.com/css2?family=…).'); return; }
     setFontError(null);
-    addGoogleFont(family, parsed.url);
+    setFont(font.id, {
+      family: parsed.family ?? font.family,
+      sources: [...font.sources.filter(s => s.kind !== 'google'), { kind: 'google', url: parsed.url }],
+    });
   }
 
-  const removeFont = (id: string) => update({ fonts: (t.fonts ?? []).filter(f => f.id !== id) });
-
-  /** Copie des fichiers choisis dans `fonts/` du projet et enregistrement pour la famille. */
-  async function addFontFiles(family: string) {
+  /** Copie des fichiers choisis dans `fonts/` du projet et ajout comme sources de la police. */
+  async function addFontFiles(font: FontToken) {
     if (!folderPath) { setFontError('Ouvre un projet pour y ajouter une police.'); return; }
     setFontError(null);
     const picked = await open({ multiple: true, filters: [{ name: 'Police', extensions: ['ttf', 'otf', 'woff', 'woff2'] }] });
     const paths = Array.isArray(picked) ? picked : picked ? [picked] : [];
-    const added: NonNullable<DesignTokens['fonts']> = [];
+    const added: FontSource[] = [];
     try {
       for (const path of paths) {
         const filename = path.split('/').pop()!;
-        if ((t.fonts ?? []).some(f => f.kind === 'file' && f.filename === filename)) continue;
+        if (font.sources.some(s => s.kind === 'file' && s.filename === filename)) continue;
         const data = await invoke<string>('read_image_as_base64', { filePath: path });
         await invoke('write_binary_file', { path: `${folderPath}/fonts/${filename}`, base64Data: data });
-        added.push({ id: crypto.randomUUID(), family, kind: 'file', filename, ...describeFontFile(filename) });
+        added.push({ kind: 'file', filename, ...describeFontFile(filename) });
       }
     } catch (e) {
       setFontError(`Police non ajoutée : ${e instanceof Error ? e.message : e}`);
     }
-    if (added.length) update({ fonts: [...(t.fonts ?? []), ...added] });
+    if (added.length) setFont(font.id, { sources: [...font.sources, ...added] });
   }
 
   // ── Styles de couleur et d'effet ───────────────────────────────────────────
@@ -331,6 +348,72 @@ export default function TokensPage({ tokens, onChange, folderPath, className }: 
           </div>
         </Section>
 
+        {/* ── Polices déclarées ─────────────────────────────────────────── */}
+        <Section
+          title="Polices"
+          action={<Button size="sm" variant="outline" className="h-7 gap-1" onClick={addFont}><Plus className="h-3.5 w-3.5" /> Police</Button>}
+        >
+          <p className="text-xs text-muted-foreground">
+            Déclare chaque police une fois (font-type-1, font-type-2…) : les styles de texte y renvoient. Changer la famille ici change tous les styles qui l&apos;utilisent.
+          </p>
+          {fontError && <p className="text-xs text-destructive">{fontError}</p>}
+          <div className="space-y-3">
+            {fonts.length === 0 && <p className="text-sm text-muted-foreground">Aucune police déclarée.</p>}
+            {fonts.map(font => {
+              // fontTick : se réévalue quand une police du projet vient d'être chargée
+              const available = fontTick >= 0 && isFontAvailable(font.family);
+              const usedBy = t.textStyles.filter(s => fontForStyle(t, s)?.id === font.id).length;
+              return (
+                <div key={font.id} className="border rounded-lg p-3 space-y-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Input
+                      key={font.name} className="h-8 w-36 text-sm font-medium" defaultValue={font.name} title="Nom du rôle (devient la variable CSS)"
+                      onBlur={(e) => e.target.value.trim() && !fonts.some(f => f.id !== font.id && f.name === e.target.value.trim()) && setFont(font.id, { name: e.target.value.trim() })}
+                    />
+                    <code className="text-xs text-muted-foreground">{fontCssName(font)}</code>
+                    <Input
+                      key={font.family} className="h-8 w-48 text-sm" placeholder="Famille (ex. Playfair Display)" defaultValue={font.family}
+                      onBlur={(e) => e.target.value.trim() && setFont(font.id, { family: e.target.value.trim() })}
+                    />
+                    <select className={SELECT} value={font.fallback ?? 'sans-serif'} title="Famille générique de repli" onChange={(e) => setFont(font.id, { fallback: e.target.value as FontToken['fallback'] })}>
+                      <option value="sans-serif">sans-serif</option>
+                      <option value="serif">serif</option>
+                      <option value="monospace">monospace</option>
+                    </select>
+                    <span className="text-xs text-muted-foreground">{usedBy} style{usedBy > 1 ? 's' : ''}</span>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 ml-auto" title="Supprimer la police" onClick={() => removeFont(font)}>
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2 text-xs">
+                    {available
+                      ? <span className="text-muted-foreground">✓ Police disponible pour l&apos;aperçu</span>
+                      : <span className="text-amber-600">⚠ Police absente : l&apos;aperçu utilise une police de remplacement</span>}
+                    {!available && !font.sources.some(s => s.kind === 'google') && (
+                      <Button variant="outline" size="sm" className="h-6 px-2 text-xs" onClick={() => addSource(font, { kind: 'google' })}>Charger depuis Google Fonts</Button>
+                    )}
+                    {!available && (
+                      <Input
+                        className="h-6 w-64 text-xs" placeholder="ou colle l'URL Google Fonts (Entrée)"
+                        onKeyDown={(e) => { if (e.key === 'Enter') { addGoogleFromUrl(font, e.currentTarget.value); e.currentTarget.value = ''; } }}
+                        onPaste={(e) => { const text = e.clipboardData.getData('text'); if (parseGoogleFontsUrl(text)) { e.preventDefault(); addGoogleFromUrl(font, text); } }}
+                      />
+                    )}
+                    <Button variant="outline" size="sm" className="h-6 px-2 text-xs" onClick={() => addFontFiles(font)}>Ajouter un fichier de police…</Button>
+                    {font.sources.map((source, index) => (
+                      <span key={index} className="inline-flex items-center gap-1 rounded bg-muted px-1.5 py-0.5 text-muted-foreground">
+                        {source.kind === 'google' ? 'Google Fonts' : source.filename}
+                        <button className="hover:text-destructive" title="Retirer cette source" onClick={() => removeSource(font, index)}>×</button>
+                      </span>
+                    ))}
+                  </div>
+                  <div className="truncate text-2xl" style={{ fontFamily: fontCssValue(font) }}>Aa — Les éditions de la Vilaine</div>
+                </div>
+              );
+            })}
+          </div>
+        </Section>
+
         {/* ── Styles de texte ───────────────────────────────────────────── */}
         <Section
           title="Styles de texte"
@@ -339,14 +422,16 @@ export default function TokensPage({ tokens, onChange, folderPath, className }: 
           <div className="border rounded-lg divide-y">
             {t.textStyles.length === 0 && <p className="px-4 py-3 text-sm text-muted-foreground">Aucun style de texte.</p>}
             {t.textStyles.map((style, i) => {
+              const font = fontForStyle(t, style);
+              const family = effectiveFamily(t, style);
+              // fontTick : se réévalue quand une police du projet vient d'être chargée
+              const available = fontTick >= 0 && isFontAvailable(family);
               const css = Object.fromEntries(
-                textStyleDeclarations(style).map(d => d.split(': ') as [string, string])
+                textStyleDeclarations(style, font ? fontCssValue(font) : undefined).map(d => d.split(': ') as [string, string])
                   .map(([k, v]) => [k.replace(/-([a-z])/g, (_, c) => c.toUpperCase()), v.replace(/"/g, '')]),
               );
               const weight = fontWeight(style.fontStyle);
-              // fontTick : se réévalue quand une police du projet vient d'être chargée
-              const available = fontTick >= 0 && isFontAvailable(style.fontFamily);
-              const provided = (t.fonts ?? []).filter(f => f.family === style.fontFamily);
+
               const lineUnit = style.lineHeight.unit;
               return (
                 <div key={style.name} className="px-4 py-3 space-y-2">
@@ -356,7 +441,20 @@ export default function TokensPage({ tokens, onChange, folderPath, className }: 
                       onBlur={(e) => e.target.value.trim() && !t.textStyles.some((s, k) => k !== i && s.name === e.target.value.trim()) && setText(i, { name: e.target.value.trim() })}
                     />
                     <ManualBadge show={style.origin === 'manual'} />
-                    <Input className="h-8 w-32 text-sm" placeholder="Police" defaultValue={style.fontFamily} onBlur={(e) => setText(i, { fontFamily: e.target.value.trim() || 'Inter' })} />
+                    <select
+                      className={SELECT} title="Police du style"
+                      value={style.fontRef && fonts.some(f => f.id === style.fontRef) ? style.fontRef : font ? font.id : '__free__'}
+                      onChange={(e) => {
+                        const chosen = fonts.find(f => f.id === e.target.value);
+                        setText(i, chosen ? { fontRef: chosen.id, fontFamily: chosen.family } : { fontRef: undefined });
+                      }}
+                    >
+                      {fonts.map(f => <option key={f.id} value={f.id}>{f.name} — {f.family}</option>)}
+                      <option value="__free__">Autre police (saisie libre)</option>
+                    </select>
+                    {!font && (
+                      <Input key={style.fontFamily} className="h-8 w-36 text-sm" placeholder="Famille" defaultValue={style.fontFamily} onBlur={(e) => setText(i, { fontFamily: e.target.value.trim() || 'Inter' })} />
+                    )}
                     <select className={SELECT} value={weight} onChange={(e) => setText(i, { fontStyle: fontStyleName(Number(e.target.value), isItalic(style.fontStyle)) })}>
                       {WEIGHT_NAMES.map(([w, label]) => <option key={w} value={w}>{label} ({w})</option>)}
                     </select>
@@ -405,29 +503,9 @@ export default function TokensPage({ tokens, onChange, folderPath, className }: 
                       <option value="TITLE">Capitales</option>
                     </select>
                   </div>
-                  <div className="flex flex-wrap items-center gap-2 text-xs">
-                    {available
-                      ? <span className="text-muted-foreground">✓ Police disponible pour l&apos;aperçu</span>
-                      : <span className="text-amber-600">⚠ Police absente : l&apos;aperçu utilise une police de remplacement</span>}
-                    {!available && !provided.some(f => f.kind === 'google') && (
-                      <Button variant="outline" size="sm" className="h-6 px-2 text-xs" onClick={() => addGoogleFont(style.fontFamily)}>Charger depuis Google Fonts</Button>
-                    )}
-                    {!available && (
-                      <Input
-                        className="h-6 w-64 text-xs" placeholder="ou colle l'URL Google Fonts (Entrée)"
-                        onKeyDown={(e) => { if (e.key === 'Enter') { addGoogleFontFromUrl(style.fontFamily, e.currentTarget.value); e.currentTarget.value = ''; } }}
-                        onPaste={(e) => { const text = e.clipboardData.getData('text'); if (parseGoogleFontsUrl(text)) { e.preventDefault(); addGoogleFontFromUrl(style.fontFamily, text); } }}
-                      />
-                    )}
-                    <Button variant="outline" size="sm" className="h-6 px-2 text-xs" onClick={() => addFontFiles(style.fontFamily)}>Ajouter un fichier de police…</Button>
-                    {provided.map(f => (
-                      <span key={f.id} className="inline-flex items-center gap-1 rounded bg-muted px-1.5 py-0.5 text-muted-foreground">
-                        {f.kind === 'google' ? 'Google Fonts' : f.filename}
-                        <button className="hover:text-destructive" title="Retirer cette police" onClick={() => removeFont(f.id)}>×</button>
-                      </span>
-                    ))}
-                  </div>
-                  {fontError && <p className="text-xs text-destructive">{fontError}</p>}
+                  {!available && (
+                    <p className="text-xs text-amber-600">⚠ Police « {family} » absente : l&apos;aperçu utilise une police de remplacement{font ? ' — ajoute une source dans la section Polices' : ' — déclare-la dans la section Polices'}.</p>
+                  )}
                   <div className="truncate" style={{ ...css, fontSize: Math.min(style.fontSize, 40) }}>Aa — Les éditions de la Vilaine</div>
                 </div>
               );
