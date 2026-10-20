@@ -38,6 +38,10 @@ export interface Task {
   /** 'v2' = hors périmètre / évolution : exclu du chiffrage, listé à part dans les exports. */
   scope?: 'v2';
   pinRef?: { imageId: string; pinId: string; pinNumber: number };
+  /** Trace de ce qui a été fait (fichier, commit, décision), écrite à la main ou par l'IA qui a développé. */
+  note?: string;
+  /** Date à laquelle la tâche a été cochée. */
+  completedAt?: string;
   /** Créée automatiquement pour un pin (un pin = une tâche) : suit le pin, disparaît avec lui tant qu'elle n'est pas faite. */
   auto?: boolean;
 }
@@ -147,6 +151,14 @@ export interface PageInfo {
   collectionRole?: 'single' | 'list';
 }
 
+/** Où se trouve le code d'un élément : fichiers du site, branche, commit. Renseigné par l'IA ou à la main. */
+export interface CodeLink {
+  files: string[];
+  branch?: string;
+  commit?: string;
+  updatedAt?: string;
+}
+
 export interface Component {
   id: string;
   name: string;
@@ -164,6 +176,7 @@ export interface Component {
   tasks: Task[];
   figmaLink?: FigmaLink;
   page?: PageInfo;
+  code?: CodeLink;
 }
 
 export interface ClientInfo {

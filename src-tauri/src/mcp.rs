@@ -51,7 +51,7 @@ pub fn resolve(pending: &McpPending, id: &str, outcome: Value) {
 
 const SERVER_INSTRUCTIONS: &str = "SCOPE est un outil de documentation de projets web (composants, templates, sections, documents). \
 Les éléments portent des images annotées par des pins numérotés ; chaque pin peut être qualifié (type, contraintes, collection de contenu). \
-Commence par get_project puis get_issues pour voir ce qui reste à compléter ; get_build_brief donne en un appel tout ce qu'il faut pour construire un élément, et tu coches ses tâches avec update_task au fil du développement. get_component_image montre la maquette ; qualify_pin et add_pin qualifient les pins (mêmes types et précisions que l'éditeur de SCOPE) ; update_component, add_task, update_task, delete_task, set_text et delete_text modifient la description, les tâches et les textes des documents. Les modifications sont appliquées dans l'app et annulables (Cmd+Z).";
+Commence par get_project puis get_issues pour voir ce qui reste à compléter ; get_build_brief donne en un appel tout ce qu'il faut pour construire un élément, et tu coches ses tâches avec update_task au fil du développement. get_component_image montre la maquette ; qualify_pin et add_pin qualifient les pins (mêmes types et précisions que l'éditeur de SCOPE) ; update_component, add_task, update_task, delete_task, set_text et delete_text modifient la description, les tâches et les textes des documents. Les modifications sont appliquées dans l'app et annulables (Cmd+Z). Pour avancer : get_next_tasks, puis update_tasks pour cocher (avec une note), link_code pour dire où est le code.";
 
 fn tools() -> Value {
     json!([
@@ -167,6 +167,7 @@ fn tools() -> Value {
                     "component": { "type": "string" },
                     "name": { "type": "string", "description": "Intitulé de la tâche." },
                     "category": { "type": "string", "enum": ["frontend", "backend", "seo", "motion"], "description": "frontend par défaut." },
+                    "note": { "type": "string", "description": "Précision ou trace de ce qui a été fait." },
                     "outOfScope": { "type": "boolean" },
                     "completed": { "type": "boolean" },
                     "pin": { "type": "integer", "description": "Numéro du pin à relier." },
@@ -183,6 +184,8 @@ fn tools() -> Value {
                 "properties": {
                     "component": { "type": "string" },
                     "task": { "type": "string", "description": "Id ou nom exact de la tâche (voir get_component)." },
+                    "forPin": { "type": "integer", "description": "À la place de `task` : numéro du pin auquel la tâche est liée." },
+                    "note": { "type": "string", "description": "Trace de ce qui a été fait : fichier, commit, décision." },
                     "name": { "type": "string" },
                     "category": { "type": "string", "enum": ["frontend", "backend", "seo", "motion"] },
                     "completed": { "type": "boolean" },
@@ -230,6 +233,65 @@ fn tools() -> Value {
             "name": "get_design_tokens",
             "description": "Design tokens du projet, synchronisés depuis Figma : variables (par collection et mode), styles de texte, de couleur et d'effet. Renvoie un résumé en tableaux Markdown, le CSS (variables et classes .text-*) et le JSON au format Design Tokens.",
             "inputSchema": { "type": "object", "properties": {} }
+        },
+        {
+            "name": "get_next_tasks",
+            "description": "Prochaines tâches à faire dans tout le projet, dans l'ordre de construction (les éléments dont les autres dépendent d'abord), avec l'avancement global. Évite de parcourir les éléments un par un. Filtres : category (frontend, backend, seo, motion), component, limit (10 par défaut, 50 au plus).",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "limit": { "type": "integer" },
+                    "category": { "type": "string", "enum": ["frontend", "backend", "seo", "motion"] },
+                    "component": { "type": "string", "description": "Id ou nom d'un élément : ses tâches seulement." }
+                }
+            }
+        },
+        {
+            "name": "get_progress",
+            "description": "Avancement du projet : pourcentage global (pondéré par les heures estimées), tâches faites par catégorie (front-end, back-end, SEO, motion) et avancement de chaque élément.",
+            "inputSchema": { "type": "object", "properties": {} }
+        },
+        {
+            "name": "update_tasks",
+            "description": "Modifie plusieurs tâches d'un élément d'un coup (tout ou rien) : coche, annote, renomme, change de catégorie. Chaque item désigne sa tâche par `task` (id ou nom exact) ou par `forPin` (numéro de son pin).",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "component": { "type": "string" },
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "task": { "type": "string" },
+                                "forPin": { "type": "integer" },
+                                "completed": { "type": "boolean" },
+                                "note": { "type": "string", "description": "Trace de ce qui a été fait : fichier, commit, décision." },
+                                "name": { "type": "string" },
+                                "category": { "type": "string", "enum": ["frontend", "backend", "seo", "motion"] },
+                                "outOfScope": { "type": "boolean" }
+                            }
+                        }
+                    }
+                },
+                "required": ["component", "items"]
+            }
+        },
+        {
+            "name": "link_code",
+            "description": "Enregistre où se trouve le code d'un élément (fichiers du site, branche, commit) : affiché dans SCOPE et dans l'export Markdown. Les fichiers s'ajoutent à ceux déjà connus (replace: true pour remplacer, clear: true pour effacer).",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "component": { "type": "string" },
+                    "files": { "type": "array", "items": { "type": "string" } },
+                    "branch": { "type": "string" },
+                    "commit": { "type": "string" },
+                    "replace": { "type": "boolean" },
+                    "clear": { "type": "boolean" }
+                },
+                "required": ["component"]
+            }
         },
         {
             "name": "get_build_brief",
@@ -376,7 +438,7 @@ fn call_tool(name: &str, args: &Value, snapshot: &Value, dispatch: Dispatch) -> 
             None => error_result("Élément introuvable : donne un id ou un nom exact (voir list_components)."),
         },
         "get_component_image" => image_result(args, snapshot),
-        "qualify_pin" | "add_pin" | "get_build_brief" | "update_component" | "add_task" | "update_task" | "delete_task" | "set_text" | "delete_text" => match dispatch(name, args) {
+        "qualify_pin" | "add_pin" | "get_build_brief" | "get_next_tasks" | "get_progress" | "update_tasks" | "link_code" | "update_component" | "add_task" | "update_task" | "delete_task" | "set_text" | "delete_text" => match dispatch(name, args) {
             Ok(result) => text_result(&result),
             Err(message) => error_result(&message),
         },
@@ -401,6 +463,69 @@ fn rpc_error(id: &Value, code: i64, message: &str) -> Value {
     json!({ "jsonrpc": "2.0", "id": id, "error": { "code": code, "message": message } })
 }
 
+/// Commandes proposées par Claude Code (`/mcp__scope__construire slider-home`) : un texte de consignes, avec le brief si besoin.
+fn prompts() -> Value {
+    let element = json!([{ "name": "element", "description": "Nom ou id de l'élément (voir list_components).", "required": true }]);
+    json!([
+        { "name": "construire", "description": "Construire un élément : brief complet, puis développement tâche par tâche en cochant l'avancement dans SCOPE.", "arguments": element },
+        { "name": "planifier", "description": "Créer la todo-liste d'un élément à partir de sa maquette, de ses pins et de sa description.", "arguments": element },
+        { "name": "point", "description": "Faire le point sur l'avancement du projet et proposer les prochaines tâches.", "arguments": [] }
+    ])
+}
+
+fn prompt_message(description: &str, text: String) -> Value {
+    json!({ "description": description, "messages": [{ "role": "user", "content": { "type": "text", "text": text } }] })
+}
+
+fn get_prompt(params: &Value, dispatch: Dispatch) -> Result<Value, String> {
+    let name = params["name"].as_str().unwrap_or("");
+    let element = params["arguments"]["element"].as_str().unwrap_or("").trim().to_string();
+    let brief = |element: &str| -> Result<String, String> {
+        if element.is_empty() {
+            return Err("Précise l'élément (argument `element`).".to_string());
+        }
+        match dispatch("get_build_brief", &json!({ "component": element }))? {
+            Value::String(text) => Ok(text),
+            other => Ok(other.to_string()),
+        }
+    };
+    match name {
+        "construire" => Ok(prompt_message(
+            "Construire un élément",
+            format!(
+                "Tu développes le site décrit dans SCOPE. Voici le brief de l'élément « {} ».\n\n\
+                 1. Regarde la maquette (`get_component_image`) avant d'écrire du code.\n\
+                 2. Construis dans l'ordre indiqué, en réutilisant les éléments déjà faits.\n\
+                 3. Au fil de l'eau, coche les tâches terminées avec `update_tasks` (`completed: true`) et une `note` courte : fichier, commit ou décision.\n\
+                 4. Si tu découvres un travail non prévu, ajoute la tâche avec `add_task` ; si un pin ou un champ est ambigu, dis-le plutôt que d'inventer.\n\
+                 5. À la fin, enregistre où est le code avec `link_code`, puis fais le point avec `get_progress`.\n\n---\n\n{}",
+                element,
+                brief(&element)?
+            ),
+        )),
+        "planifier" => Ok(prompt_message(
+            "Planifier un élément",
+            format!(
+                "Planifie l'élément « {} » dans SCOPE. Lis le brief ci-dessous et regarde la maquette (`get_component_image`).\n\n\
+                 - Chaque pin a déjà sa tâche automatique : ne les double pas.\n\
+                 - Ajoute avec `add_task` ce qui ne se voit pas sur l'image : comportement (interactions, états), responsive, accessibilité, SEO, travail côté données/serveur, motion. Une tâche = un livrable vérifiable, rangée dans la bonne catégorie.\n\
+                 - Renseigne `estimatedHours` avec `update_component` s'il manque, en cohérence avec la liste.\n\
+                 - Ne code rien : propose la liste, crée-la, puis résume-la en quelques lignes.\n\n---\n\n{}",
+                element,
+                brief(&element)?
+            ),
+        )),
+        "point" => Ok(prompt_message(
+            "Point d'avancement",
+            "Fais le point sur le projet SCOPE : appelle `get_progress` puis `get_next_tasks` (limit 10) et `get_issues`. \
+             Résume en cinq lignes : avancement global, ce qui est fait, ce qui n'est pas planifié ou reste à préciser, \
+             et propose les trois prochaines tâches à attaquer."
+                .to_string(),
+        )),
+        _ => Err(format!("Commande inconnue : {}", name)),
+    }
+}
+
 /// Traite un message JSON-RPC. `None` = notification (pas de réponse à envoyer).
 pub fn handle(body: &str, snapshot_json: &str, dispatch: Dispatch) -> Option<String> {
     let request: Value = match serde_json::from_str(body) {
@@ -421,13 +546,18 @@ pub fn handle(body: &str, snapshot_json: &str, dispatch: Dispatch) -> Option<Str
             &id,
             json!({
                 "protocolVersion": request["params"]["protocolVersion"].as_str().unwrap_or("2025-03-26"),
-                "capabilities": { "tools": {} },
+                "capabilities": { "tools": {}, "prompts": {} },
                 "serverInfo": { "name": "scope", "version": env!("CARGO_PKG_VERSION") },
                 "instructions": SERVER_INSTRUCTIONS,
             }),
         ),
         "ping" => rpc_result(&id, json!({})),
         "tools/list" => rpc_result(&id, json!({ "tools": tools() })),
+        "prompts/list" => rpc_result(&id, json!({ "prompts": prompts() })),
+        "prompts/get" => match get_prompt(&request["params"], dispatch) {
+            Ok(result) => rpc_result(&id, result),
+            Err(message) => rpc_error(&id, -32602, &message),
+        },
         "tools/call" => {
             let snapshot: Value = serde_json::from_str(snapshot_json).unwrap_or(Value::Null);
             let name = request["params"]["name"].as_str().unwrap_or("");
@@ -509,9 +639,34 @@ mod tests {
     fn tous_les_outils_sont_annonces() {
         let r = call("tools/list", json!({}));
         let names: Vec<&str> = r["result"]["tools"].as_array().unwrap().iter().map(|t| t["name"].as_str().unwrap()).collect();
-        for expected in ["get_project", "list_components", "get_component", "get_component_image", "qualify_pin", "add_pin", "update_component", "add_task", "update_task", "delete_task", "set_text", "delete_text", "get_build_brief", "list_collections", "get_design_tokens", "get_issues"] {
+        for expected in ["get_project", "list_components", "get_component", "get_component_image", "qualify_pin", "add_pin", "update_component", "add_task", "update_task", "delete_task", "set_text", "delete_text", "get_build_brief", "get_next_tasks", "get_progress", "update_tasks", "link_code", "list_collections", "get_design_tokens", "get_issues"] {
             assert!(names.contains(&expected), "{} manquant", expected);
         }
+    }
+
+    #[test]
+    fn commandes_claude_code() {
+        let r = call("prompts/list", json!({}));
+        let names: Vec<&str> = r["result"]["prompts"].as_array().unwrap().iter().map(|p| p["name"].as_str().unwrap()).collect();
+        assert_eq!(names, ["construire", "planifier", "point"]);
+        let r = call("initialize", json!({}));
+        assert!(r["result"]["capabilities"]["prompts"].is_object());
+
+        // « point » n'a besoin d'aucun élément ; « construire » embarque le brief fourni par l'app.
+        let r = call("prompts/get", json!({ "name": "point" }));
+        assert!(r["result"]["messages"][0]["content"]["text"].as_str().unwrap().contains("get_progress"));
+        let body = json!({ "jsonrpc": "2.0", "id": 1, "method": "prompts/get", "params": { "name": "construire", "arguments": { "element": "slider-home" } } }).to_string();
+        let r: Value = serde_json::from_str(&handle(&body, SNAPSHOT, &|tool, args| {
+            assert_eq!(tool, "get_build_brief");
+            assert_eq!(args["component"], "slider-home");
+            Ok(json!("# Brief de développement : slider-home"))
+        }).unwrap()).unwrap();
+        let text = r["result"]["messages"][0]["content"]["text"].as_str().unwrap();
+        assert!(text.contains("update_tasks") && text.contains("# Brief de développement : slider-home"));
+
+        // sans élément ou avec une commande inconnue : erreur JSON-RPC claire
+        assert!(call("prompts/get", json!({ "name": "construire" }))["error"]["message"].as_str().unwrap().contains("élément"));
+        assert!(call("prompts/get", json!({ "name": "inconnue" }))["error"].is_object());
     }
 
     #[test]

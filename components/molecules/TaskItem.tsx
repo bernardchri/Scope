@@ -171,6 +171,7 @@ export default function TaskItem({
             onDoubleClick={onStartEdit}
           >
             {task.name}
+            {task.note && <span className="block text-xs text-muted-foreground">{task.note}</span>}
           </span>
 
           {/* Badge pin associé */}

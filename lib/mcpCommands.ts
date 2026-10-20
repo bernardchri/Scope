@@ -6,6 +6,8 @@ import { isPinQualified } from './completeness';
 import { nextPinNumber } from './pinHelpers';
 import { generateBriefMd } from './markdownExport';
 import { optOutPinOfDeletedTask } from './pinTasks';
+import { buildOrder } from './buildOrder';
+import { componentProgress, projectProgress } from './progress';
 
 /** Arguments d'un outil MCP d'écriture, tels que reçus de Claude (non fiables : tout est revalidé). */
 export type McpArgs = Record<string, unknown>;
@@ -266,7 +268,34 @@ function taskPinRef(component: Component, args: McpArgs): { pinRef: Task['pinRef
 
 const taskView = (t: Task) => ({
   id: t.id, name: t.name, category: t.category, completed: t.completed, outOfScope: t.scope === 'v2', pin: t.pinRef?.pinNumber,
+  note: t.note, completedAt: t.completedAt,
 });
+
+/** Tâche désignée par le numéro de son pin (`forPin`), sans connaître son identifiant. */
+function findTaskForPin(component: Component, args: McpArgs): Task | string {
+  const number = Number(args.forPin);
+  const image = args.image === undefined ? undefined : findImage(component, args.image);
+  if (typeof image === 'string') return image;
+  const matches = component.tasks.filter(t => t.pinRef?.pinNumber === number && (!image || t.pinRef.imageId === image.id));
+  if (matches.length === 1) return matches[0];
+  return matches.length === 0
+    ? `Aucune tâche liée au pin #${args.forPin}.`
+    : `Plusieurs tâches sont liées au pin #${args.forPin} : ${matches.map(t => `« ${t.name} » (${t.id})`).join(', ')}. Utilise l'id.`;
+}
+
+/** Applique `completed`, `note`, `name`, `category`, `outOfScope` à une tâche ; la date de réalisation suit l'état. */
+function patchTask(found: Task, args: McpArgs, category?: TaskCategory, name?: string): Task {
+  const completed = args.completed === undefined ? found.completed : args.completed === true;
+  return {
+    ...found,
+    ...(name ? { name } : {}),
+    ...(category ? { category } : {}),
+    completed,
+    completedAt: completed ? (found.completed ? found.completedAt : new Date().toISOString()) : undefined,
+    ...(args.outOfScope !== undefined ? { scope: args.outOfScope === true ? ('v2' as const) : undefined } : {}),
+    ...(args.note !== undefined ? { note: str(args.note)?.trim() || undefined } : {}),
+  };
+}
 
 function runTaskCommand(component: Component, tool: string, args: McpArgs): McpOutcome {
   const category = args.category === undefined ? undefined : (args.category as TaskCategory);
@@ -289,10 +318,12 @@ function runTaskCommand(component: Component, tool: string, args: McpArgs): McpO
       category: category ?? 'frontend',
       scope: args.outOfScope === true ? 'v2' : undefined,
       pinRef: link?.pinRef,
+      note: str(args.note)?.trim() || undefined,
+      completedAt: args.completed === true ? new Date().toISOString() : undefined,
     };
     tasks = [...component.tasks, target];
   } else {
-    const found = findTask(component, args.task);
+    const found = args.task === undefined && args.forPin !== undefined ? findTaskForPin(component, args) : findTask(component, args.task);
     if (typeof found === 'string') return fail(found);
     if (tool === 'delete_task') {
       // Supprimer la tâche d'un pin dit que ce pin n'est pas une tâche (sinon elle serait recréée).
@@ -306,14 +337,7 @@ function runTaskCommand(component: Component, tool: string, args: McpArgs): McpO
     } else {
       const name = args.name === undefined ? undefined : str(args.name)?.trim();
       if (args.name !== undefined && !name) return fail('`name` ne peut pas être vide.');
-      target = {
-        ...found,
-        ...(name ? { name } : {}),
-        ...(category ? { category } : {}),
-        ...(args.completed !== undefined ? { completed: args.completed === true } : {}),
-        ...(args.outOfScope !== undefined ? { scope: args.outOfScope === true ? ('v2' as const) : undefined } : {}),
-        ...(link ? { pinRef: link.pinRef } : {}),
-      };
+      target = { ...patchTask(found, args, category, name), ...(link ? { pinRef: link.pinRef } : {}) };
       tasks = component.tasks.map((t) => (t.id === found.id ? target! : t));
     }
   }
@@ -380,8 +404,98 @@ function runTextCommand(component: Component, tool: string, args: McpArgs): McpO
   };
 }
 
+/** Plusieurs tâches d'un élément d'un coup (`items`) : tout ou rien, pour ne jamais laisser une moitié appliquée. */
+function runUpdateTasks(component: Component, args: McpArgs): McpOutcome {
+  if (!Array.isArray(args.items) || args.items.length === 0) return fail('`items` : liste non vide d\'objets { task | forPin, completed?, note?, name?, category?, outOfScope? }.');
+  let working = component;
+  const errors: string[] = [];
+  args.items.forEach((raw, index) => {
+    const item = (raw ?? {}) as McpArgs;
+    const category = item.category === undefined ? undefined : (item.category as TaskCategory);
+    const found = item.task === undefined && item.forPin !== undefined ? findTaskForPin(working, item) : findTask(working, item.task);
+    if (typeof found === 'string') { errors.push(`#${index + 1} : ${found}`); return; }
+    if (category !== undefined && !TASK_CATEGORIES.includes(category)) { errors.push(`#${index + 1} : catégorie inconnue.`); return; }
+    const patched = patchTask(found, item, category, str(item.name)?.trim());
+    working = { ...working, tasks: working.tasks.map(t => (t.id === found.id ? patched : t)) };
+  });
+  if (errors.length > 0) return fail(`Rien n'a été modifié. ${errors.join(' ')}`);
+  return {
+    ok: true,
+    componentId: component.id,
+    updates: { tasks: working.tasks },
+    result: { component: component.name, updated: args.items.length, tasks: working.tasks.map(taskView) },
+  };
+}
+
+/** Où est le code de l'élément : fichiers, branche, commit (ajoutés à ceux déjà connus, ou remplacés avec `replace`). */
+function runLinkCode(component: Component, args: McpArgs): McpOutcome {
+  const files = args.files === undefined ? [] : Array.isArray(args.files) ? args.files.map(f => String(f).trim()).filter(Boolean) : null;
+  if (files === null) return fail('`files` doit être une liste de chemins.');
+  if (args.clear === true) {
+    return { ok: true, componentId: component.id, updates: { code: undefined }, result: { component: component.name, code: null } };
+  }
+  const previous = component.code ?? { files: [] };
+  const code = {
+    files: args.replace === true ? files : [...new Set([...previous.files, ...files])],
+    branch: args.branch === undefined ? previous.branch : str(args.branch)?.trim() || undefined,
+    commit: args.commit === undefined ? previous.commit : str(args.commit)?.trim() || undefined,
+    updatedAt: new Date().toISOString(),
+  };
+  if (code.files.length === 0 && !code.branch && !code.commit) return fail('Rien à enregistrer : donne `files`, `branch` ou `commit`.');
+  return { ok: true, componentId: component.id, updates: { code }, result: { component: component.name, code } };
+}
+
+const queryOutcome = (result: unknown): McpOutcome => ({ ok: true, query: true, componentId: '', updates: {}, result });
+
+/** Prochaines tâches du projet, dans l'ordre de construction (ce qui sert aux autres d'abord), avec l'avancement global. */
+function runNextTasks(project: Project, args: McpArgs): McpOutcome {
+  const limit = Math.min(Math.max(Number(args.limit) || 10, 1), 50);
+  const category = args.category === undefined ? undefined : (args.category as TaskCategory);
+  if (category !== undefined && !TASK_CATEGORIES.includes(category)) return fail(`Catégorie inconnue. Catégories : ${TASK_CATEGORIES.join(', ')}.`);
+  let only: Component | undefined;
+  if (args.component !== undefined) {
+    const found = findComponent(project, args.component);
+    if (typeof found === 'string') return fail(found);
+    only = found;
+  }
+  const ordered = [...buildOrder(project.components), ...project.components.filter((c) => c.category === 'document')];
+  const pending = ordered
+    .filter((c) => !only || c.id === only.id)
+    .flatMap((c) =>
+      c.tasks
+        .filter((t) => !t.completed && t.scope !== 'v2' && (!category || t.category === category))
+        .map((t) => ({
+          element: c.name, elementId: c.id, type: c.category, task: t.id, name: t.name, category: t.category,
+          pin: t.pinRef?.pinNumber, note: t.note,
+        })),
+    );
+  return queryOutcome({ progress: projectProgress(project), remaining: pending.length, next: pending.slice(0, limit) });
+}
+
+/** Avancement du projet, par catégorie de tâche et par élément. */
+function runProgress(project: Project): McpOutcome {
+  const byCategory = Object.fromEntries(
+    TASK_CATEGORIES.map((category) => {
+      const tasks = project.components.flatMap((c) => c.tasks.filter((t) => t.scope !== 'v2' && t.category === category));
+      return [category, { done: tasks.filter((t) => t.completed).length, total: tasks.length }];
+    }),
+  );
+  const elements = project.components
+    .map((c) => ({ c, p: componentProgress(c) }))
+    .filter(({ c, p }) => p.total > 0 || (c.estimatedHours ?? 0) > 0)
+    .map(({ c, p }) => ({
+      element: c.name, id: c.id, type: c.category, done: p.done, total: p.total,
+      percent: Math.round(p.ratio * 100), estimatedHours: c.estimatedHours,
+    }))
+    .sort((a, b) => b.percent - a.percent || b.total - a.total);
+  return queryOutcome({ project: projectProgress(project), byCategory, elements });
+}
+
 /** Exécute un outil MCP d'écriture sur le projet ouvert ; ne modifie rien, renvoie les mises à jour à appliquer. */
 export function runMcpCommand(project: Project, tool: string, args: McpArgs): McpOutcome {
+  // Questions sur tout le projet : pas d'élément à désigner.
+  if (tool === 'get_next_tasks') return runNextTasks(project, args);
+  if (tool === 'get_progress') return runProgress(project);
   const component = findComponent(project, args.component);
   if (typeof component === 'string') return fail(component);
   switch (tool) {
@@ -394,6 +508,10 @@ export function runMcpCommand(project: Project, tool: string, args: McpArgs): Mc
     case 'update_task':
     case 'delete_task':
       return runTaskCommand(component, tool, args);
+    case 'update_tasks':
+      return runUpdateTasks(component, args);
+    case 'link_code':
+      return runLinkCode(component, args);
     case 'set_text':
     case 'delete_text':
       return runTextCommand(component, tool, args);

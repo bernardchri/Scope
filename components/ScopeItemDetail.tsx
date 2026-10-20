@@ -585,6 +585,21 @@ export default function ScopeItemDetail({
             Estimation : {item.estimatedHours}h
           </p>
         )}
+        {item.code && (item.code.files.length > 0 || item.code.branch || item.code.commit) && (
+          <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+            <span className="font-medium">Code</span>
+            {item.code.files.map(file => (
+              <code key={file} className="rounded bg-muted px-1.5 py-0.5 text-foreground">{file}</code>
+            ))}
+            {item.code.branch && <span>branche <code className="text-foreground">{item.code.branch}</code></span>}
+            {item.code.commit && <span>commit <code className="text-foreground">{item.code.commit}</code></span>}
+            <button
+              className="hover:text-destructive"
+              title="Oublier ces références de code"
+              onClick={() => onUpdate(item.id, { code: undefined })}
+            >×</button>
+          </div>
+        )}
         {itemProgress.total > 0 && (
           <div className="w-full max-w-md space-y-1">
             <div className="flex items-baseline justify-between text-sm">

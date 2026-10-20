@@ -116,3 +116,76 @@ describe('éléments, tâches et textes', () => {
     expect(out.ok && out.updates.notes![0].content).toBe('# Titre');
   });
 });
+
+describe('suivi du développement : prochaines tâches, avancement, notes et code', () => {
+  const task = (id: string, name: string, completed: boolean, extra: Record<string, unknown> = {}) => ({ id, name, completed, category: 'frontend', ...extra });
+  const dev = {
+    id: 'p', name: 'Site', createdAt: '', components: [
+      { id: 'home', name: 'Accueil', category: 'template', estimatedHours: 6, instances: [{ id: 'i1', componentId: 'slider' }], tasks: [task('h1', 'Page', false)], images: [] },
+      { id: 'slider', name: 'Slider', category: 'section', estimatedHours: 4, instances: [{ id: 'i2', componentId: 'nav' }],
+        tasks: [task('s1', 'Structure', true), task('s2', 'Navigation', false, { pinRef: { imageId: 'im', pinId: 'pp', pinNumber: 3 } }), task('s3', 'Évolution', false, { scope: 'v2' }), task('s4', 'Motion', false, { category: 'motion' })],
+        images: [{ id: 'im', isPrimary: true, pins: [{ id: 'pp', number: 3, x: 0, y: 0 }] }] },
+      { id: 'nav', name: 'Navigation', category: 'component', estimatedHours: 1, instances: [], tasks: [task('n1', 'Flèches', false)], images: [] },
+      { id: 'doc', name: 'Cahier', category: 'document', instances: [], tasks: [task('d1', 'Valider la charte', false)], images: [] },
+    ],
+  } as unknown as Project;
+
+  it('propose les prochaines tâches dans l\'ordre de construction, sans les v2 ni les faites', () => {
+    const out = runMcpCommand(dev, 'get_next_tasks', {});
+    expect(out.ok && out.query).toBe(true);
+    const result = (out.ok ? out.result : {}) as { remaining: number; next: { element: string; name: string }[]; progress: { percent: number } };
+    expect(result.next.map(n => `${n.element} / ${n.name}`)).toEqual([
+      'Navigation / Flèches', 'Slider / Navigation', 'Slider / Motion', 'Accueil / Page', 'Cahier / Valider la charte',
+    ]);
+    expect(result.remaining).toBe(5);
+    expect(result.progress.percent).toBeGreaterThan(0);
+  });
+
+  it('filtre par catégorie, par élément et limite le nombre', () => {
+    const motion = runMcpCommand(dev, 'get_next_tasks', { category: 'motion' });
+    expect((motion.ok ? (motion.result as { next: unknown[] }).next : []).length).toBe(1);
+    const only = runMcpCommand(dev, 'get_next_tasks', { component: 'Slider', limit: 1 });
+    expect((only.ok ? (only.result as { next: { name: string }[] }).next : []).map(n => n.name)).toEqual(['Navigation']);
+    expect(runMcpCommand(dev, 'get_next_tasks', { category: 'design' }).ok).toBe(false);
+  });
+
+  it('résume l\'avancement par catégorie et par élément', () => {
+    const out = runMcpCommand(dev, 'get_progress', {});
+    const r = (out.ok ? out.result : {}) as { byCategory: Record<string, { done: number; total: number }>; elements: { element: string; percent: number }[] };
+    expect(r.byCategory.frontend).toEqual({ done: 1, total: 5 }); // la tâche v2 ne compte pas
+    expect(r.byCategory.motion).toEqual({ done: 0, total: 1 });
+    expect(r.elements.find(e => e.element === 'Slider')?.percent).toBe(33);
+  });
+
+  it('coche une tâche avec une note, retrouvée par son pin, et date la réalisation', () => {
+    const out = runMcpCommand(dev, 'update_task', { component: 'Slider', forPin: 3, completed: true, note: 'fait dans slider.php (commit ab12cd)' });
+    expect(out.ok).toBe(true);
+    const done = out.ok ? out.updates.tasks!.find(t => t.id === 's2')! : undefined;
+    expect(done).toMatchObject({ completed: true, note: 'fait dans slider.php (commit ab12cd)' });
+    expect(done?.completedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+    const undone = runMcpCommand(dev, 'update_task', { component: 'Slider', task: 's1', completed: false });
+    expect(undone.ok && undone.updates.tasks!.find(t => t.id === 's1')!.completedAt).toBeUndefined();
+    expect(runMcpCommand(dev, 'update_task', { component: 'Slider', forPin: 9, completed: true }).ok).toBe(false);
+  });
+
+  it('coche plusieurs tâches d\'un coup, ou rien si l\'une est introuvable', () => {
+    const ok = runMcpCommand(dev, 'update_tasks', { component: 'Slider', items: [{ task: 's2', completed: true }, { forPin: 3, note: 'ok' }, { task: 's4', completed: true, note: 'transition CSS' }] });
+    expect(ok.ok && ok.updates.tasks!.filter(t => t.completed).map(t => t.id).sort()).toEqual(['s1', 's2', 's4']);
+    const bad = runMcpCommand(dev, 'update_tasks', { component: 'Slider', items: [{ task: 's2', completed: true }, { task: 'inconnue', completed: true }] });
+    expect(!bad.ok && bad.error).toContain('Rien n\'a été modifié');
+    expect(runMcpCommand(dev, 'update_tasks', { component: 'Slider', items: [] }).ok).toBe(false);
+  });
+
+  it('enregistre où se trouve le code, en ajoutant ou en remplaçant', () => {
+    const first = runMcpCommand(dev, 'link_code', { component: 'Slider', files: ['wp-content/themes/vilaine/slider.php'], branch: 'feature/slider', commit: 'ab12cd' });
+    expect(first.ok && first.updates.code).toMatchObject({ files: ['wp-content/themes/vilaine/slider.php'], branch: 'feature/slider', commit: 'ab12cd' });
+    const withCode = { ...dev, components: dev.components.map(c => (c.id === 'slider' ? { ...c, code: first.ok ? first.updates.code : undefined } : c)) } as Project;
+    const added = runMcpCommand(withCode, 'link_code', { component: 'Slider', files: ['assets/slider.js', 'wp-content/themes/vilaine/slider.php'] });
+    expect(added.ok && added.updates.code!.files).toEqual(['wp-content/themes/vilaine/slider.php', 'assets/slider.js']);
+    expect(added.ok && added.updates.code!.branch).toBe('feature/slider');
+    const replaced = runMcpCommand(withCode, 'link_code', { component: 'Slider', files: ['x.php'], replace: true });
+    expect(replaced.ok && replaced.updates.code!.files).toEqual(['x.php']);
+    expect(runMcpCommand(dev, 'link_code', { component: 'Slider' }).ok).toBe(false);
+    expect(runMcpCommand(withCode, 'link_code', { component: 'Slider', clear: true }).ok).toBe(true);
+  });
+});

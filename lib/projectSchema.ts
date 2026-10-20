@@ -118,6 +118,8 @@ const taskSchema = z.object({
   scope: z.literal('v2').optional().catch(undefined),
   pinRef: pinRefSchema,
   auto: z.boolean().optional(),
+  note: z.string().optional(),
+  completedAt: z.string().optional(),
 });
 
 const instanceSchema = z.object({
@@ -163,6 +165,15 @@ const componentSchema = z.object({
   tasks: resilientArray(taskSchema),
   figmaLink: figmaLinkSchema,
   page: pageSchema,
+  code: z
+    .object({
+      files: z.array(z.string()).catch([]),
+      branch: z.string().optional(),
+      commit: z.string().optional(),
+      updatedAt: z.string().optional(),
+    })
+    .optional()
+    .catch(undefined),
 });
 
 const tokenValueSchema = z.union([

@@ -55,7 +55,7 @@ export const createTaskSlice = (set: SetState) => ({
                   ? {
                       ...c,
                       tasks: c.tasks.map((t) =>
-                        t.id === taskId ? { ...t, completed: !t.completed } : t
+                        t.id === taskId ? { ...t, completed: !t.completed, completedAt: t.completed ? undefined : new Date().toISOString() } : t
                       )
                     }
                   : c

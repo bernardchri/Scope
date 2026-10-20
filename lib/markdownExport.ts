@@ -170,6 +170,15 @@ function generateComponentBlock(component: Component, imageMap: ImageMap, allCom
 
   const pageSection = pageInfoLines(component, collections, collectionBase);
   if (pageSection) parts.push(pageSection);
+  if (component.code && (component.code.files.length > 0 || component.code.commit || component.code.branch)) {
+    parts.push([
+      '## Code',
+      '',
+      ...component.code.files.map(file => `- \`${file}\``),
+      component.code.branch ? `- Branche : \`${component.code.branch}\`` : '',
+      component.code.commit ? `- Commit : \`${component.code.commit}\`` : '',
+    ].filter(Boolean).join('\n'));
+  }
 
   if (component.figmaLink?.fileKey || component.figmaLink?.groupNodeId) {
     // Le « node » d'un groupe d'états (desktop/mobile) est fabriqué par le plugin : seuls les liens des images sont exploitables.
@@ -199,7 +208,7 @@ function generateComponentBlock(component: Component, imageMap: ImageMap, allCom
       for (const task of catTasks) {
         const pinSuffix = task.pinRef ? ` [Pin #${task.pinRef.pinNumber}]` : '';
         const scopePrefix = task.scope === 'v2' ? 'v2: ' : '';
-        taskLines.push(`- [ ] ${scopePrefix}${task.name}${pinSuffix}`);
+        taskLines.push(`- [${task.completed ? 'x' : ' '}] ${scopePrefix}${task.name}${pinSuffix}${task.note?.trim() ? ` — ${task.note.trim()}` : ''}`);
       }
       taskLines.push('');
     }

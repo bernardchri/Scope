@@ -23,12 +23,13 @@ export function buildMcpSnapshot(project: Project, folderPath?: string) {
     estimatedHours: comp.estimatedHours,
     progress: componentProgress(comp),
     page: comp.page,
+    code: comp.code,
     // Contenu texte des documents et blocs de texte, dans l'ordre de la fiche.
     texts: getActiveWidgets(comp)
       .map((w) => ({ id: w.id, widget: w.type, content: comp.notes?.find((n) => n.id === w.id)?.content }))
       .filter((t) => t.content && isTextWidget(t.widget)),
     tasks: comp.tasks.map((t) => ({
-      id: t.id, name: t.name, category: t.category, completed: t.completed, outOfScope: t.scope === 'v2' || undefined, pin: t.pinRef?.pinNumber,
+      id: t.id, name: t.name, category: t.category, completed: t.completed, note: t.note, completedAt: t.completedAt, outOfScope: t.scope === 'v2' || undefined, pin: t.pinRef?.pinNumber,
     })),
     usedComponents: comp.instances.map((i) => ({ component: nameOf(i.componentId), pin: i.pinRef?.pinNumber })),
     resources: comp.assets?.map((a) => a.name),
