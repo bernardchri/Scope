@@ -11,7 +11,7 @@ use serde::Serialize;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{SystemTime, UNIX_EPOCH};
-use crate::mcp::{self, McpSnapshot};
+use crate::mcp::{self, McpPending, McpSnapshot};
 use tauri::{AppHandle, Emitter, Manager};
 use tiny_http::{Header, Method, Response, StatusCode};
 
@@ -122,6 +122,7 @@ fn handle_request(
     token: &str,
     catalog: &FigmaComponentCatalog,
     snapshot: &McpSnapshot,
+    pending: &McpPending,
 ) -> Response<std::io::Cursor<Vec<u8>>> {
     if request.method() == &Method::Options {
         return preflight_response();
@@ -154,7 +155,9 @@ fn handle_request(
             return text_response("bad request", 400);
         }
         let snapshot_json = snapshot.0.lock().map(|s| s.clone()).unwrap_or_default();
-        return match mcp::handle(&body, &snapshot_json) {
+        // Les outils d'écriture sont exécutés par l'app (store, annulation) : on émet la commande et on attend sa réponse.
+        let dispatch = |tool: &str, args: &serde_json::Value| mcp::dispatch_to_app(app, pending, tool, args);
+        return match mcp::handle(&body, &snapshot_json, &dispatch) {
             Some(reply) => json_response(reply),
             None => text_response("", 202),
         };
@@ -184,7 +187,7 @@ fn handle_request(
 /// retourne les infos de connexion. Le serveur tourne dans son propre thread
 /// jusqu'à la fermeture de l'app. Retourne `None` si aucun candidat n'est
 /// libre — l'app continue de fonctionner sans le pont plutôt que de planter.
-pub fn start(app: AppHandle, catalog: FigmaComponentCatalog, snapshot: McpSnapshot) -> Option<FigmaBridgeInfo> {
+pub fn start(app: AppHandle, catalog: FigmaComponentCatalog, snapshot: McpSnapshot, pending: McpPending) -> Option<FigmaBridgeInfo> {
     let token = load_or_create_token(&app);
 
     for port in CANDIDATE_PORTS {
@@ -198,9 +201,10 @@ pub fn start(app: AppHandle, catalog: FigmaComponentCatalog, snapshot: McpSnapsh
         let token_for_thread = token.clone();
         let catalog_for_thread = catalog.clone();
         let snapshot_for_thread = snapshot.clone();
+        let pending_for_thread = pending.clone();
         std::thread::spawn(move || {
             for mut request in server.incoming_requests() {
-                let response = handle_request(&mut request, &app, &token_for_thread, &catalog_for_thread, &snapshot_for_thread);
+                let response = handle_request(&mut request, &app, &token_for_thread, &catalog_for_thread, &snapshot_for_thread, &pending_for_thread);
                 let _ = request.respond(response);
             }
         });

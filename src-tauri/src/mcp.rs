@@ -11,9 +11,47 @@ use serde_json::{json, Value};
 #[derive(Clone, Default)]
 pub struct McpSnapshot(pub std::sync::Arc<std::sync::Mutex<String>>);
 
+/// Commandes d'écriture en attente de la réponse de l'app, par identifiant.
+#[derive(Clone, Default)]
+pub struct McpPending(pub std::sync::Arc<std::sync::Mutex<std::collections::HashMap<String, std::sync::mpsc::Sender<Value>>>>);
+
+/// Délai laissé à l'app pour appliquer une commande avant de la déclarer perdue.
+const COMMAND_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(15);
+
+/// Émet `mcp-command` vers l'app et attend la réponse envoyée par `mcp_respond`.
+pub fn dispatch_to_app(app: &tauri::AppHandle, pending: &McpPending, tool: &str, args: &Value) -> Result<Value, String> {
+    use std::sync::atomic::{AtomicU64, Ordering};
+    use tauri::Emitter;
+    static NEXT: AtomicU64 = AtomicU64::new(1);
+    let id = format!("mcp-{}", NEXT.fetch_add(1, Ordering::Relaxed));
+    let (tx, rx) = std::sync::mpsc::channel();
+    pending.0.lock().map_err(|_| "File d'attente verrouillée".to_string())?.insert(id.clone(), tx);
+
+    if app.emit("mcp-command", json!({ "id": id, "tool": tool, "args": args })).is_err() {
+        pending.0.lock().ok().map(|mut m| m.remove(&id));
+        return Err("Impossible de joindre l'application.".to_string());
+    }
+    let outcome = rx.recv_timeout(COMMAND_TIMEOUT);
+    pending.0.lock().ok().map(|mut m| m.remove(&id));
+    match outcome {
+        Ok(o) if o["ok"] == Value::Bool(true) => Ok(o["result"].clone()),
+        Ok(o) => Err(o["error"].as_str().unwrap_or("Commande refusée.").to_string()),
+        Err(_) => Err("SCOPE n'a pas répondu à temps : un projet est-il ouvert dans l'application ?".to_string()),
+    }
+}
+
+/// Transmet la réponse de l'app à la requête qui l'attend.
+pub fn resolve(pending: &McpPending, id: &str, outcome: Value) {
+    if let Ok(mut map) = pending.0.lock() {
+        if let Some(tx) = map.remove(id) {
+            let _ = tx.send(outcome);
+        }
+    }
+}
+
 const SERVER_INSTRUCTIONS: &str = "SCOPE est un outil de documentation de projets web (composants, templates, sections, documents). \
 Les éléments portent des images annotées par des pins numérotés ; chaque pin peut être qualifié (type, contraintes, collection de contenu). \
-Commence par get_project puis get_issues pour voir ce qui reste à compléter. Lecture seule pour l'instant.";
+Commence par get_project puis get_issues pour voir ce qui reste à compléter. get_component_image montre la maquette ; qualify_pin et add_pin qualifient les pins (mêmes types et précisions que l'éditeur de SCOPE). Les modifications sont appliquées dans l'app et annulables (Cmd+Z).";
 
 fn tools() -> Value {
     json!([
@@ -47,6 +85,57 @@ fn tools() -> Value {
             "name": "list_collections",
             "description": "Modèle de contenu du projet : collections (types de contenu) et leurs champs, répéteurs compris.",
             "inputSchema": { "type": "object", "properties": {} }
+        },
+        {
+            "name": "get_component_image",
+            "description": "Renvoie l'image d'un élément (sans pins incrustés) avec la liste de ses pins et leurs positions (x, y en % depuis le coin haut-gauche), pour qualifier les pins en voyant la maquette.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "component": { "type": "string", "description": "Id ou nom de l'élément." },
+                    "image": { "type": "string", "description": "Id ou rang (1, 2…) de l'image ; l'image principale par défaut." }
+                },
+                "required": ["component"]
+            }
+        },
+        {
+            "name": "qualify_pin",
+            "description": "Qualifie un pin existant. kind : title, text, image, button, link, list, form, number, date, category, boolean, relation, repeater, other (changer de type efface les précisions et liens). specs : objet de précisions du type, clés par type — title : maxLength, editable, seo ; text : maxLength, editable, format ; image : size, editable, alt ; button : maxLength, target, editable ; link : target, editable ; list : count, source, editable ; form : fields, recipient ; number : range, unit, editable ; date : format, editable ; category : choice, values, hierarchy ; boolean : editable ; relation : multiple ; repeater : minRows, maxRows, rowSource, rowFields. Les champs à liste fermée (editable, seo…) refusent une valeur inconnue et indiquent les valeurs permises. Une valeur vide efface la précision.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "component": { "type": "string", "description": "Id ou nom de l'élément." },
+                    "pin": { "type": "integer", "description": "Numéro du pin sur l'image." },
+                    "image": { "type": "string", "description": "Id ou rang de l'image, si l'élément en a plusieurs (principale par défaut)." },
+                    "kind": { "type": "string", "description": "Type du pin ; chaîne vide pour le retirer." },
+                    "specs": { "type": "object", "description": "Précisions du type (voir description).", "additionalProperties": true },
+                    "note": { "type": "string", "description": "Précision libre (comportement, contrainte, exemple)." },
+                    "label": { "type": "string", "description": "Nom du pin." },
+                    "collection": { "type": "string", "description": "Collection liée (nom ou id) : pour un pin list ou relation, ou avec `field`." },
+                    "field": { "type": "string", "description": "Champ de la collection d'où vient la donnée (nom ou chemin « galerie › image »)." }
+                },
+                "required": ["component", "pin"]
+            }
+        },
+        {
+            "name": "add_pin",
+            "description": "Ajoute un pin sur l'image d'un élément (position en % depuis le coin haut-gauche), éventuellement déjà qualifié (mêmes paramètres que qualify_pin).",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "component": { "type": "string", "description": "Id ou nom de l'élément." },
+                    "x": { "type": "number", "description": "Position horizontale, 0 à 100." },
+                    "y": { "type": "number", "description": "Position verticale, 0 à 100." },
+                    "image": { "type": "string" },
+                    "kind": { "type": "string" },
+                    "specs": { "type": "object", "additionalProperties": true },
+                    "note": { "type": "string" },
+                    "label": { "type": "string" },
+                    "collection": { "type": "string" },
+                    "field": { "type": "string" }
+                },
+                "required": ["component", "x", "y"]
+            }
         },
         {
             "name": "get_issues",
@@ -89,7 +178,53 @@ fn find_component<'a>(components: &'a [Value], args: &Value) -> Option<&'a Value
         .or_else(|| components.iter().find(|c| c["name"].as_str().map_or(false, |n| n.to_lowercase().contains(&name))))
 }
 
-fn call_tool(name: &str, args: &Value, snapshot: &Value) -> Value {
+/// Envoie une commande d'écriture à l'app et attend son résultat (`Err` = refus ou délai dépassé).
+pub type Dispatch<'a> = &'a dyn Fn(&str, &Value) -> Result<Value, String>;
+
+/// Image d'un élément, lue sur le disque, avec ses pins : réponse MCP à deux blocs (texte + image).
+fn image_result(args: &Value, snapshot: &Value) -> Value {
+    let components = snapshot["components"].as_array().cloned().unwrap_or_default();
+    let component = match find_component(&components, &json!({ "id": args["component"], "name": args["component"] })) {
+        Some(c) => c,
+        None => return error_result("Élément introuvable (voir list_components)."),
+    };
+    let images = component["images"].as_array().cloned().unwrap_or_default();
+    let wanted = args["image"].as_str();
+    let image = match wanted {
+        Some(w) => images
+            .iter()
+            .find(|i| i["id"].as_str() == Some(w))
+            .or_else(|| w.parse::<usize>().ok().and_then(|n| n.checked_sub(1)).and_then(|n| images.get(n))),
+        None => images.iter().find(|i| i["isPrimary"] == Value::Bool(true)).or_else(|| images.first()),
+    };
+    let image = match image {
+        Some(i) => i,
+        None => return error_result("Cet élément n'a pas d'image."),
+    };
+    let (folder, filename) = match (snapshot["project"]["folderPath"].as_str(), image["filename"].as_str()) {
+        (Some(f), Some(n)) => (f, n),
+        _ => return error_result("Image indisponible sur le disque."),
+    };
+    let path = std::path::Path::new(folder).join("img").join(filename);
+    let bytes = match std::fs::read(&path) {
+        Ok(b) => b,
+        Err(e) => return error_result(&format!("Lecture de l'image impossible : {}", e)),
+    };
+    use base64::{engine::general_purpose, Engine as _};
+    let mime = match path.extension().and_then(|e| e.to_str()).map(|e| e.to_lowercase()).as_deref() {
+        Some("jpg") | Some("jpeg") => "image/jpeg",
+        Some("gif") => "image/gif",
+        Some("webp") => "image/webp",
+        _ => "image/png",
+    };
+    let info = json!({ "component": component["name"], "image": image["id"], "caption": image["caption"], "pins": image["pins"] });
+    json!({ "content": [
+        { "type": "text", "text": serde_json::to_string_pretty(&info).unwrap_or_default() },
+        { "type": "image", "data": general_purpose::STANDARD.encode(bytes), "mimeType": mime },
+    ] })
+}
+
+fn call_tool(name: &str, args: &Value, snapshot: &Value, dispatch: Dispatch) -> Value {
     if snapshot.is_null() {
         return error_result("Aucun projet n'est ouvert dans SCOPE. Ouvre un projet dans l'application.");
     }
@@ -130,6 +265,11 @@ fn call_tool(name: &str, args: &Value, snapshot: &Value) -> Value {
             Some(c) => text_result(c),
             None => error_result("Élément introuvable : donne un id ou un nom exact (voir list_components)."),
         },
+        "get_component_image" => image_result(args, snapshot),
+        "qualify_pin" | "add_pin" => match dispatch(name, args) {
+            Ok(result) => text_result(&result),
+            Err(message) => error_result(&message),
+        },
         "list_collections" => text_result(&snapshot["collections"]),
         "get_issues" => text_result(&snapshot["issues"]),
         _ => error_result(&format!("Outil inconnu : {}", name)),
@@ -145,7 +285,7 @@ fn rpc_error(id: &Value, code: i64, message: &str) -> Value {
 }
 
 /// Traite un message JSON-RPC. `None` = notification (pas de réponse à envoyer).
-pub fn handle(body: &str, snapshot_json: &str) -> Option<String> {
+pub fn handle(body: &str, snapshot_json: &str, dispatch: Dispatch) -> Option<String> {
     let request: Value = match serde_json::from_str(body) {
         Ok(v) => v,
         Err(_) => return Some(rpc_error(&Value::Null, -32700, "JSON invalide").to_string()),
@@ -174,7 +314,7 @@ pub fn handle(body: &str, snapshot_json: &str) -> Option<String> {
         "tools/call" => {
             let snapshot: Value = serde_json::from_str(snapshot_json).unwrap_or(Value::Null);
             let name = request["params"]["name"].as_str().unwrap_or("");
-            rpc_result(&id, call_tool(name, &request["params"]["arguments"], &snapshot))
+            rpc_result(&id, call_tool(name, &request["params"]["arguments"], &snapshot, dispatch))
         }
         _ => rpc_error(&id, -32601, "Méthode inconnue"),
     };
@@ -197,7 +337,7 @@ mod tests {
 
     fn call(method: &str, params: Value) -> Value {
         let body = json!({ "jsonrpc": "2.0", "id": 1, "method": method, "params": params }).to_string();
-        serde_json::from_str(&handle(&body, SNAPSHOT).unwrap()).unwrap()
+        serde_json::from_str(&handle(&body, SNAPSHOT, &|_, _| Ok(json!({ "ok": true }))).unwrap()).unwrap()
     }
 
     #[test]
@@ -210,7 +350,7 @@ mod tests {
     #[test]
     fn notification_sans_reponse() {
         let body = json!({ "jsonrpc": "2.0", "method": "notifications/initialized" }).to_string();
-        assert!(handle(&body, SNAPSHOT).is_none());
+        assert!(handle(&body, SNAPSHOT, &|_, _| Ok(json!({}))).is_none());
     }
 
     #[test]
@@ -232,9 +372,28 @@ mod tests {
     }
 
     #[test]
+    fn ecriture_deleguee_a_l_app() {
+        let r = call("tools/call", json!({ "name": "qualify_pin", "arguments": { "component": "a", "pin": 1 } }));
+        assert!(r["result"]["content"][0]["text"].as_str().unwrap().contains("\"ok\": true"));
+        let body = json!({ "jsonrpc": "2.0", "id": 1, "method": "tools/call", "params": { "name": "add_pin", "arguments": {} } }).to_string();
+        let r: Value = serde_json::from_str(&handle(&body, SNAPSHOT, &|_, _| Err("refusé".to_string())).unwrap()).unwrap();
+        assert_eq!(r["result"]["isError"], true);
+        assert_eq!(r["result"]["content"][0]["text"], "refusé");
+    }
+
+    #[test]
+    fn tous_les_outils_sont_annonces() {
+        let r = call("tools/list", json!({}));
+        let names: Vec<&str> = r["result"]["tools"].as_array().unwrap().iter().map(|t| t["name"].as_str().unwrap()).collect();
+        for expected in ["get_project", "list_components", "get_component", "get_component_image", "qualify_pin", "add_pin", "list_collections", "get_issues"] {
+            assert!(names.contains(&expected), "{} manquant", expected);
+        }
+    }
+
+    #[test]
     fn sans_projet_ouvert() {
         let body = json!({ "jsonrpc": "2.0", "id": 1, "method": "tools/call", "params": { "name": "get_project" } }).to_string();
-        let r: Value = serde_json::from_str(&handle(&body, "").unwrap()).unwrap();
+        let r: Value = serde_json::from_str(&handle(&body, "", &|_, _| Ok(json!({}))).unwrap()).unwrap();
         assert_eq!(r["result"]["isError"], true);
     }
 }

@@ -8,7 +8,7 @@ import { findCompletenessIssues, isPinQualified } from './completeness';
  * Instantané du projet ouvert, lu par le serveur MCP du pont (`POST /mcp`).
  * Sans images (ni base64, ni contenu) : seulement ce qu'un outil texte peut exploiter.
  */
-export function buildMcpSnapshot(project: Project) {
+export function buildMcpSnapshot(project: Project, folderPath?: string) {
   const collections = project.collections ?? [];
   const nameOf = (id: string) => project.components.find((c) => c.id === id)?.name;
 
@@ -31,6 +31,7 @@ export function buildMcpSnapshot(project: Project) {
     images: (comp.images ?? []).map((img) => ({
       id: img.id,
       caption: img.caption,
+      filename: img.filename,
       isPrimary: img.isPrimary,
       pins: (img.pins ?? []).map((pin) => {
         const instance = comp.instances.find((i) => i.pinRef?.pinId === pin.id);
@@ -57,6 +58,7 @@ export function buildMcpSnapshot(project: Project) {
   return {
     project: {
       id: project.id,
+      folderPath,
       name: project.name,
       description: project.description,
       client: project.client,
@@ -69,6 +71,6 @@ export function buildMcpSnapshot(project: Project) {
 }
 
 /** Publie l'instantané au pont, ou `null` quand aucun projet n'est ouvert. */
-export async function publishMcpSnapshot(project: Project | null): Promise<void> {
-  await invoke('set_mcp_snapshot', { snapshot: project ? buildMcpSnapshot(project) : null });
+export async function publishMcpSnapshot(project: Project | null, folderPath?: string): Promise<void> {
+  await invoke('set_mcp_snapshot', { snapshot: project ? buildMcpSnapshot(project, folderPath) : null });
 }

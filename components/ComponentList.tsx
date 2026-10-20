@@ -11,6 +11,8 @@ import FigmaSyncRecapDialog, { SyncRecapEntry } from './modals/FigmaSyncRecapDia
 import { withDefaultEstimate } from '@/lib/persistence';
 import { publishFigmaComponentCatalog } from '@/lib/figmaBridge';
 import { publishMcpSnapshot } from '@/lib/mcpSnapshot';
+import { runMcpCommand } from '@/lib/mcpCommands';
+import { invoke } from '@tauri-apps/api/core';
 import { useShortcuts } from '@/lib/hooks/useShortcuts';
 import ComponentSidebar from './ComponentSidebar';
 import ScopeItemDetail from './ScopeItemDetail';
@@ -124,10 +126,33 @@ export default function ComponentList({ projectId }: ComponentListProps) {
   // Instantané lu par le serveur MCP (Claude Code) : republié à chaque changement, retiré à la fermeture.
   useEffect(() => {
     if (!activeProject) return;
-    const timer = setTimeout(() => { publishMcpSnapshot(activeProject).catch(() => {}); }, 300);
+    const timer = setTimeout(() => { publishMcpSnapshot(activeProject, currentProjectPath || undefined).catch(() => {}); }, 300);
     return () => clearTimeout(timer);
-  }, [activeProject]);
+  }, [activeProject, currentProjectPath]);
   useEffect(() => () => { publishMcpSnapshot(null).catch(() => {}); }, []);
+
+  // Commandes d'écriture de Claude Code (serveur MCP) : appliquées via le store, donc annulables (Cmd+Z).
+  useEffect(() => {
+    const unlisten = listen<{ id: string; tool: string; args: Record<string, unknown> }>('mcp-command', async (event) => {
+      const { id, tool, args } = event.payload;
+      const state = useProjectStore.getState();
+      const project = state.projects.find(p => p.id === projectId);
+      let outcome: { ok: boolean; result?: unknown; error?: string };
+      if (!project) {
+        outcome = { ok: false, error: 'Aucun projet ouvert dans SCOPE.' };
+      } else {
+        const run = runMcpCommand(project, tool, args ?? {});
+        if (run.ok) {
+          state.updateComponent(project.id, run.componentId, run.updates);
+          outcome = { ok: true, result: run.result };
+        } else {
+          outcome = { ok: false, error: run.error };
+        }
+      }
+      await invoke('mcp_respond', { id, outcome }).catch(() => {});
+    });
+    return () => { unlisten.then(fn => fn()); };
+  }, [projectId]);
 
   if (!activeProject) return null;
 

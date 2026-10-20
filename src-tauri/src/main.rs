@@ -179,6 +179,17 @@ fn set_mcp_snapshot(
     Ok(())
 }
 
+/// Réponse de l'app à une commande MCP d'écriture (`mcp-command`) : `{ ok, result | error }`.
+#[tauri::command]
+fn mcp_respond(
+    id: String,
+    outcome: serde_json::Value,
+    state: tauri::State<mcp::McpPending>,
+) -> Result<(), String> {
+    mcp::resolve(&state, &id, outcome);
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -213,11 +224,13 @@ pub fn run() {
 
             let figma_catalog = figma_bridge::FigmaComponentCatalog::default();
             let mcp_snapshot = mcp::McpSnapshot::default();
-            let figma_bridge_info = figma_bridge::start(app.handle().clone(), figma_catalog.clone(), mcp_snapshot.clone())
+            let mcp_pending = mcp::McpPending::default();
+            let figma_bridge_info = figma_bridge::start(app.handle().clone(), figma_catalog.clone(), mcp_snapshot.clone(), mcp_pending.clone())
                 .unwrap_or_else(|| figma_bridge::FigmaBridgeInfo { port: 0, token: String::new() });
             app.manage(figma_bridge_info);
             app.manage(figma_catalog);
             app.manage(mcp_snapshot);
+            app.manage(mcp_pending);
 
             let app_handle = app.handle().clone();
             app.on_menu_event(move |_app, event| {
@@ -262,7 +275,8 @@ pub fn run() {
             is_project_folder,
             get_figma_bridge_info,
             set_figma_component_catalog,
-            set_mcp_snapshot
+            set_mcp_snapshot,
+            mcp_respond
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
