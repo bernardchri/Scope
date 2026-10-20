@@ -383,6 +383,7 @@ export default function ComponentList({ projectId }: ComponentListProps) {
           <TokensPage
             key={refreshKey}
             tokens={activeProject.tokens}
+            folderPath={currentProjectPath || undefined}
             onChange={(tokens) => updateProject(activeProject.id, { tokens })}
             className="flex-1"
           />

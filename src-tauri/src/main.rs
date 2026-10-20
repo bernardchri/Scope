@@ -76,6 +76,10 @@ fn read_image_as_base64(file_path: String) -> Result<String, String> {
         "gif" => "image/gif",
         "webp" => "image/webp",
         "svg" => "image/svg+xml",
+        "ttf" => "font/ttf",
+        "otf" => "font/otf",
+        "woff" => "font/woff",
+        "woff2" => "font/woff2",
         _ => "image/png",
     };
     let b64 = general_purpose::STANDARD.encode(&bytes);

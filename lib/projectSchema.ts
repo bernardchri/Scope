@@ -216,6 +216,12 @@ const tokensSchema = z
         paints: z.array(z.any()).catch([]),
       })
     ),
+    fonts: resilientArray(
+      z.union([
+        z.object({ id: z.string(), family: z.string(), kind: z.literal('google') }),
+        z.object({ id: z.string(), family: z.string(), kind: z.literal('file'), filename: z.string(), weight: z.union([z.number(), z.literal('variable')]).catch(400), italic: z.boolean().catch(false) }),
+      ])
+    ).optional(),
     effectStyles: resilientArray(
       z.object({
         origin: origin,

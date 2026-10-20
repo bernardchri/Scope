@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import { Copy, Plus, Trash2 } from 'lucide-react';
+import { invoke } from '@tauri-apps/api/core';
+import { open } from '@tauri-apps/plugin-dialog';
 import {
   DesignTokens, EffectStyleToken, TextStyleToken, TokenCollection, TokenValue, TokenVariable,
 } from '@/lib/types';
@@ -12,11 +14,15 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
+import { describeFontFile, isFontAvailable } from '@/lib/fonts';
+import { usePreviewFonts } from '@/lib/hooks/usePreviewFonts';
 
 interface TokensPageProps {
   /** Tokens du projet ; `undefined` tant que rien n'a été créé ni synchronisé. */
   tokens?: DesignTokens;
   onChange: (tokens: DesignTokens) => void;
+  /** Dossier du projet : reçoit les fichiers de police (`fonts/`). */
+  folderPath?: string;
   className?: string;
 }
 
@@ -79,8 +85,11 @@ function VariableValue({ variable, value, onCommit }: { variable: TokenVariable;
 }
 
 /** Variables, styles de texte, de couleur et d'effet du projet : reçus d'une source (plugin) ou saisis ici. */
-export default function TokensPage({ tokens, onChange, className }: TokensPageProps) {
+export default function TokensPage({ tokens, onChange, folderPath, className }: TokensPageProps) {
   const t = tokens ?? emptyTokens();
+  // Charge les polices du projet ; le compteur relance la détection quand l'une d'elles arrive.
+  const fontTick = usePreviewFonts(folderPath, t.fonts);
+  const [fontError, setFontError] = useState<string | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
   const [newCollection, setNewCollection] = useState({ name: '', modes: 'Mode 1' });
   const [newVariable, setNewVariable] = useState<Record<string, { name: string; type: string }>>({});
@@ -149,6 +158,33 @@ export default function TokensPage({ tokens, onChange, className }: TokensPagePr
         lineHeight: { unit: 'PERCENT', value: 150 }, letterSpacing: { unit: 'PIXELS', value: 0 },
       }],
     });
+  }
+
+  // ── Polices ────────────────────────────────────────────────────────────────
+  const addGoogleFont = (family: string) =>
+    update({ fonts: [...(t.fonts ?? []), { id: crypto.randomUUID(), family, kind: 'google' }] });
+
+  const removeFont = (id: string) => update({ fonts: (t.fonts ?? []).filter(f => f.id !== id) });
+
+  /** Copie des fichiers choisis dans `fonts/` du projet et enregistrement pour la famille. */
+  async function addFontFiles(family: string) {
+    if (!folderPath) { setFontError('Ouvre un projet pour y ajouter une police.'); return; }
+    setFontError(null);
+    const picked = await open({ multiple: true, filters: [{ name: 'Police', extensions: ['ttf', 'otf', 'woff', 'woff2'] }] });
+    const paths = Array.isArray(picked) ? picked : picked ? [picked] : [];
+    const added: NonNullable<DesignTokens['fonts']> = [];
+    try {
+      for (const path of paths) {
+        const filename = path.split('/').pop()!;
+        if ((t.fonts ?? []).some(f => f.kind === 'file' && f.filename === filename)) continue;
+        const data = await invoke<string>('read_image_as_base64', { filePath: path });
+        await invoke('write_binary_file', { path: `${folderPath}/fonts/${filename}`, base64Data: data });
+        added.push({ id: crypto.randomUUID(), family, kind: 'file', filename, ...describeFontFile(filename) });
+      }
+    } catch (e) {
+      setFontError(`Police non ajoutée : ${e instanceof Error ? e.message : e}`);
+    }
+    if (added.length) update({ fonts: [...(t.fonts ?? []), ...added] });
   }
 
   // ── Styles de couleur et d'effet ───────────────────────────────────────────
@@ -300,6 +336,9 @@ export default function TokensPage({ tokens, onChange, className }: TokensPagePr
                   .map(([k, v]) => [k.replace(/-([a-z])/g, (_, c) => c.toUpperCase()), v.replace(/"/g, '')]),
               );
               const weight = fontWeight(style.fontStyle);
+              // fontTick : se réévalue quand une police du projet vient d'être chargée
+              const available = fontTick >= 0 && isFontAvailable(style.fontFamily);
+              const provided = (t.fonts ?? []).filter(f => f.family === style.fontFamily);
               const lineUnit = style.lineHeight.unit;
               return (
                 <div key={style.name} className="px-4 py-3 space-y-2">
@@ -358,6 +397,22 @@ export default function TokensPage({ tokens, onChange, className }: TokensPagePr
                       <option value="TITLE">Capitales</option>
                     </select>
                   </div>
+                  <div className="flex flex-wrap items-center gap-2 text-xs">
+                    {available
+                      ? <span className="text-muted-foreground">✓ Police disponible pour l&apos;aperçu</span>
+                      : <span className="text-amber-600">⚠ Police absente : l&apos;aperçu utilise une police de remplacement</span>}
+                    {!available && !provided.some(f => f.kind === 'google') && (
+                      <Button variant="outline" size="sm" className="h-6 px-2 text-xs" onClick={() => addGoogleFont(style.fontFamily)}>Charger depuis Google Fonts</Button>
+                    )}
+                    <Button variant="outline" size="sm" className="h-6 px-2 text-xs" onClick={() => addFontFiles(style.fontFamily)}>Ajouter un fichier de police…</Button>
+                    {provided.map(f => (
+                      <span key={f.id} className="inline-flex items-center gap-1 rounded bg-muted px-1.5 py-0.5 text-muted-foreground">
+                        {f.kind === 'google' ? 'Google Fonts' : f.filename}
+                        <button className="hover:text-destructive" title="Retirer cette police" onClick={() => removeFont(f.id)}>×</button>
+                      </span>
+                    ))}
+                  </div>
+                  {fontError && <p className="text-xs text-destructive">{fontError}</p>}
                   <div className="truncate" style={{ ...css, fontSize: Math.min(style.fontSize, 40) }}>Aa — Les éditions de la Vilaine</div>
                 </div>
               );

@@ -1,3 +1,4 @@
+import { googleFontsUrl } from './fonts';
 import {
   ColorStyleToken, DesignTokens, EffectStyleToken, TextStyleToken, TokenCollection, TokenValue, TokenVariable,
 } from './types';
@@ -118,7 +119,13 @@ function effectCss(style: EffectStyleToken): { property: string; value: string }
 /** Feuille de styles : variables par mode, styles de couleur et d'effet en variables, styles de texte en classes. */
 export function tokensToCss(tokens: DesignTokens): string {
   const names = variableCssNames(tokens.collections);
-  const blocks: string[] = [`/* Design tokens — ${tokenSource(tokens)} */`];
+  const fonts = tokens.fonts ?? [];
+  const blocks: string[] = [
+    // @import doit précéder toute règle.
+    ...fonts.filter(f => f.kind === 'google').map(f => `@import url('${googleFontsUrl(f.family)}');`),
+    `/* Design tokens — ${tokenSource(tokens)} */`,
+    ...fonts.filter(f => f.kind === 'file').map(f => `/* Police « ${f.family} » : fichier \`fonts/${'filename' in f ? f.filename : ''}\` du projet SCOPE, à fournir avec le site. */`),
+  ];
 
   const root: string[] = [];
   const modeBlocks = new Map<string, string[]>();
@@ -232,7 +239,7 @@ function displayValue(value: TokenValue | undefined): string {
 /** Section Markdown « Design tokens » : tableaux lisibles par un humain ou une IA (vide s'il n'y a rien). */
 export function tokensToMarkdown(tokens: DesignTokens | undefined, heading = '##'): string {
   if (!tokens) return '';
-  const hasContent = tokens.collections.some(c => c.variables.length) || tokens.textStyles.length || tokens.colorStyles.length || tokens.effectStyles.length;
+  const hasContent = tokens.collections.some(c => c.variables.length) || tokens.textStyles.length || tokens.colorStyles.length || tokens.effectStyles.length || tokens.fonts?.length;
   if (!hasContent) return '';
   const names = variableCssNames(tokens.collections);
   const lines: string[] = [
@@ -257,6 +264,13 @@ export function tokensToMarkdown(tokens: DesignTokens | undefined, heading = '##
     lines.push(`${heading}# Styles de texte`, '', '| Style | Classe | Police | Taille | Graisse | Interligne | Espacement |', '|---|---|---|---|---|---|---|');
     for (const s of tokens.textStyles) {
       lines.push(`| ${cell(s.name)} | \`.text-${slug(s.name)}\` | ${s.fontFamily} | ${num(s.fontSize)} px | ${fontWeight(s.fontStyle)}${isItalic(s.fontStyle) ? ' italique' : ''} | ${lineHeightCss(s) ?? 'auto'} | ${letterSpacingCss(s) ?? '—'} |`);
+    }
+    lines.push('');
+  }
+  if (tokens.fonts?.length) {
+    lines.push(`${heading}# Polices`, '', '| Famille | Source |', '|---|---|');
+    for (const f of tokens.fonts) {
+      lines.push(`| ${cell(f.family)} | ${f.kind === 'google' ? `Google Fonts (\`@import\` dans \`tokens.css\`)` : `fichier \`fonts/${f.filename}\` du projet SCOPE`} |`);
     }
     lines.push('');
   }
@@ -317,6 +331,7 @@ export function mergeSyncedTokens(existing: DesignTokens | undefined, incoming: 
     textStyles: mergeNamed(existing?.textStyles, incoming.textStyles),
     colorStyles: mergeNamed(existing?.colorStyles, incoming.colorStyles),
     effectStyles: mergeNamed(existing?.effectStyles, incoming.effectStyles),
+    fonts: existing?.fonts?.length ? existing.fonts : incoming.fonts,
   };
 }
 

@@ -275,6 +275,11 @@ export interface EffectStyleToken {
   effects: EffectToken[];
 }
 
+/** Police utilisée par un style de texte, rendue dans l'aperçu : fichier du projet (`fonts/`) ou Google Fonts. */
+export type TokenFont =
+  | { id: string; family: string; kind: 'google' }
+  | { id: string; family: string; kind: 'file'; filename: string; weight: number | 'variable'; italic: boolean };
+
 /**
  * Variables et styles du projet. Ceux qui viennent d'une source (plugin Figma) sont remplacés à chaque envoi ;
  * ceux créés ou modifiés dans SCOPE (`origin: 'manual'`) sont conservés. SCOPE peut donc les porter seul.
@@ -288,4 +293,6 @@ export interface DesignTokens {
   textStyles: TextStyleToken[];
   colorStyles: ColorStyleToken[];
   effectStyles: EffectStyleToken[];
+  /** Polices fournies pour l'aperçu (et la remise au développeur) ; saisies dans SCOPE, jamais écrasées par un envoi. */
+  fonts?: TokenFont[];
 }
