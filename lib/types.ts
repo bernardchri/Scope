@@ -218,7 +218,11 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
 /** Valeur d'une variable pour un mode : couleur en hex, nombre, texte, booléen, ou alias vers une autre variable. */
 export type TokenValue = string | number | boolean | { alias: string; collection: string };
 
+/** Absent = reçu d'une source (plugin Figma…) ; « manual » = créé ou modifié dans SCOPE, protégé des synchronisations. */
+export type TokenOrigin = 'manual';
+
 export interface TokenVariable {
+  origin?: TokenOrigin;
   name: string;
   /** COLOR, FLOAT, STRING ou BOOLEAN (types des variables Figma). */
   type: string;
@@ -228,6 +232,7 @@ export interface TokenVariable {
 }
 
 export interface TokenCollection {
+  origin?: TokenOrigin;
   name: string;
   defaultMode: string;
   modes: string[];
@@ -235,6 +240,7 @@ export interface TokenCollection {
 }
 
 export interface TextStyleToken {
+  origin?: TokenOrigin;
   name: string;
   description?: string;
   fontFamily: string;
@@ -252,6 +258,7 @@ export type PaintToken =
   | { type: string; stops: { position: number; color: string }[] };
 
 export interface ColorStyleToken {
+  origin?: TokenOrigin;
   name: string;
   description?: string;
   paints: PaintToken[];
@@ -262,16 +269,21 @@ export type EffectToken =
   | { type: string; blur: number };
 
 export interface EffectStyleToken {
+  origin?: TokenOrigin;
   name: string;
   description?: string;
   effects: EffectToken[];
 }
 
-/** Variables et styles du document Figma, remplacés à chaque envoi depuis le plugin (Figma reste la source). */
+/**
+ * Variables et styles du projet. Ceux qui viennent d'une source (plugin Figma) sont remplacés à chaque envoi ;
+ * ceux créés ou modifiés dans SCOPE (`origin: 'manual'`) sont conservés. SCOPE peut donc les porter seul.
+ */
 export interface DesignTokens {
   fileKey?: string;
   fileName?: string;
-  syncedAt: string;
+  /** Date du dernier envoi depuis une source ; absent si les tokens ne viennent que de SCOPE. */
+  syncedAt?: string;
   collections: TokenCollection[];
   textStyles: TextStyleToken[];
   colorStyles: ColorStyleToken[];

@@ -14,7 +14,7 @@ import { message } from '@tauri-apps/plugin-dialog';
 import { publishFigmaComponentCatalog } from '@/lib/figmaBridge';
 import { publishMcpSnapshot } from '@/lib/mcpSnapshot';
 import { runMcpCommand } from '@/lib/mcpCommands';
-import { tokensFromPayload } from '@/lib/designTokens';
+import { mergeSyncedTokens, tokensFromPayload } from '@/lib/designTokens';
 import TokensPage from './TokensPage';
 import { invoke } from '@tauri-apps/api/core';
 import { useShortcuts } from '@/lib/hooks/useShortcuts';
@@ -118,7 +118,8 @@ export default function ComponentList({ projectId }: ComponentListProps) {
     const unlisten = listen<FigmaImportPayload>('figma-import', (event) => {
       // Variables et styles du document : pas liés à une frame, ils remplacent les tokens du projet.
       if ((event.payload as { kind?: string }).kind === 'tokens') {
-        updateProject(projectId, { tokens: tokensFromPayload(event.payload as unknown as Record<string, unknown>) });
+        const current = useProjectStore.getState().projects.find(p => p.id === projectId)?.tokens;
+        updateProject(projectId, { tokens: mergeSyncedTokens(current, tokensFromPayload(event.payload as unknown as Record<string, unknown>)) });
         return;
       }
       if (event.payload.bulk) {
@@ -286,7 +287,6 @@ export default function ComponentList({ projectId }: ComponentListProps) {
         components={activeProject!.components}
         selectedComponentId={selectedComponentId}
         showingDashboard={showingDashboard && !selectedCollectionId && !tokensOpen}
-        hasTokens={!!activeProject!.tokens}
         tokensActive={tokensOpen && !selectedComponentId}
         onOpenTokens={() => { setTokensOpen(true); setSelectedCollectionId(null); setNavHistory([]); afterNavigate?.(); }}
         onSelectComponent={(id) => { selectFromSidebar(id); afterNavigate?.(); }}
@@ -379,8 +379,13 @@ export default function ComponentList({ projectId }: ComponentListProps) {
                 onCreateCollection={handleCreateCollection}
               />
           </div>
-        ) : tokensOpen && activeProject.tokens ? (
-          <TokensPage key={refreshKey} tokens={activeProject.tokens} className="flex-1" />
+        ) : tokensOpen ? (
+          <TokensPage
+            key={refreshKey}
+            tokens={activeProject.tokens}
+            onChange={(tokens) => updateProject(activeProject.id, { tokens })}
+            className="flex-1"
+          />
         ) : selectedCollectionId && activeProject.collections?.some(c => c.id === selectedCollectionId) ? (
           <CollectionsPage
             key={`${selectedCollectionId}-${refreshKey}`}

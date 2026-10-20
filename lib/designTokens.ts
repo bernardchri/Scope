@@ -18,7 +18,19 @@ export function fontWeight(fontStyle: string): number {
   return WEIGHTS.find(([pattern]) => pattern.test(fontStyle))?.[1] ?? 400;
 }
 
-const isItalic = (fontStyle: string) => /italic|oblique/i.test(fontStyle);
+export const isItalic = (fontStyle: string) => /italic|oblique/i.test(fontStyle);
+
+/** Graisses proposées dans l'éditeur de styles de texte. */
+export const WEIGHT_NAMES: [number, string][] = [
+  [100, 'Thin'], [200, 'Extra Light'], [300, 'Light'], [400, 'Regular'], [500, 'Medium'],
+  [600, 'Semi Bold'], [700, 'Bold'], [800, 'Extra Bold'], [900, 'Black'],
+];
+
+/** Nom de style de police Figma pour une graisse CSS (« 600 », italique → « Semi Bold Italic »). */
+export function fontStyleName(weight: number, italic: boolean): string {
+  const name = WEIGHT_NAMES.find(([w]) => w === weight)?.[1] ?? 'Regular';
+  return italic ? `${name} Italic` : name;
+}
 const aliasKey = (collection: string, name: string) => `${collection}/${name}`;
 
 /** Remplace une valeur « -0 » ou à virgule flottante bruyante par un nombre lisible. */
@@ -106,7 +118,7 @@ function effectCss(style: EffectStyleToken): { property: string; value: string }
 /** Feuille de styles : variables par mode, styles de couleur et d'effet en variables, styles de texte en classes. */
 export function tokensToCss(tokens: DesignTokens): string {
   const names = variableCssNames(tokens.collections);
-  const blocks: string[] = [`/* Design tokens — Figma « ${tokens.fileName ?? ''} », synchronisés le ${tokens.syncedAt} */`];
+  const blocks: string[] = [`/* Design tokens — ${tokenSource(tokens)} */`];
 
   const root: string[] = [];
   const modeBlocks = new Map<string, string[]>();
@@ -206,7 +218,7 @@ export function tokensToJson(tokens: DesignTokens) {
     const effect = effectCss(style);
     if (effect) put(effectStyles, style.name, { $type: 'shadow', $value: effect.value });
   }
-  return { $description: `Design tokens — Figma « ${tokens.fileName ?? ''} », synchronisés le ${tokens.syncedAt}`, variables, textStyles, colorStyles, effectStyles };
+  return { $description: `Design tokens — ${tokenSource(tokens)}`, variables, textStyles, colorStyles, effectStyles };
 }
 
 const cell = (text: string) => text.replace(/\|/g, '\\|');
@@ -226,7 +238,7 @@ export function tokensToMarkdown(tokens: DesignTokens | undefined, heading = '##
   const lines: string[] = [
     `${heading} Design tokens`,
     '',
-    `Variables et styles du fichier Figma « ${tokens.fileName ?? ''} » (synchronisés le ${tokens.syncedAt.slice(0, 10)}). ` +
+    `Variables et styles ${tokenSource(tokens)}. ` +
       'Les fichiers `tokens.json` (format Design Tokens) et `tokens.css` (variables CSS et classes `.text-*`) sont fournis à côté de ce document : à utiliser tels quels plutôt que de relever les valeurs sur les images.',
     '',
   ];
@@ -265,6 +277,47 @@ export function tokensToMarkdown(tokens: DesignTokens | undefined, heading = '##
     lines.push('');
   }
   return lines.join('\n');
+}
+
+/** D'où viennent les tokens : fichier synchronisé, saisie dans SCOPE, ou les deux. */
+export function tokenSource(tokens: DesignTokens): string {
+  const manual = [...tokens.collections.flatMap(c => [c, ...c.variables]), ...tokens.textStyles, ...tokens.colorStyles, ...tokens.effectStyles]
+    .some(item => item.origin === 'manual');
+  const synced = tokens.syncedAt ? `du fichier « ${tokens.fileName ?? ''} » (synchronisés le ${tokens.syncedAt.slice(0, 10)})` : '';
+  if (synced && manual) return `${synced}, complétés dans SCOPE`;
+  return synced || 'saisis dans SCOPE';
+}
+
+/** Tokens vides : point de départ quand on les crée directement dans SCOPE, sans source de design. */
+export const emptyTokens = (): DesignTokens => ({ collections: [], textStyles: [], colorStyles: [], effectStyles: [] });
+
+/** Liste fusionnée : les éléments créés ou modifiés dans SCOPE (`manual`) l'emportent sur ceux de la source du même nom. */
+function mergeNamed<T extends { name: string; origin?: 'manual' }>(existing: T[] = [], incoming: T[]): T[] {
+  const manual = new Map(existing.filter(item => item.origin === 'manual').map(item => [item.name, item]));
+  const merged = incoming.map(item => manual.get(item.name) ?? item);
+  const incomingNames = new Set(incoming.map(item => item.name));
+  return [...merged, ...[...manual.values()].filter(item => !incomingNames.has(item.name))];
+}
+
+/**
+ * Applique un envoi du plugin aux tokens du projet : tout ce qui vient de la source est remplacé (un élément
+ * supprimé dans Figma disparaît), tout ce qui a été créé ou modifié dans SCOPE est conservé.
+ */
+export function mergeSyncedTokens(existing: DesignTokens | undefined, incoming: DesignTokens): DesignTokens {
+  const existingCollections = existing?.collections ?? [];
+  const synced = incoming.collections.map(collection => {
+    const same = existingCollections.find(c => c.name === collection.name);
+    return { ...collection, variables: mergeNamed(same?.variables, collection.variables) };
+  });
+  const syncedNames = new Set(synced.map(c => c.name));
+  const manualCollections = existingCollections.filter(c => c.origin === 'manual' && !syncedNames.has(c.name));
+  return {
+    ...incoming,
+    collections: [...synced, ...manualCollections],
+    textStyles: mergeNamed(existing?.textStyles, incoming.textStyles),
+    colorStyles: mergeNamed(existing?.colorStyles, incoming.colorStyles),
+    effectStyles: mergeNamed(existing?.effectStyles, incoming.effectStyles),
+  };
 }
 
 /** Payload du plugin → tokens du projet (les champs manquants deviennent des listes vides). */

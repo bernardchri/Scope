@@ -156,8 +156,7 @@ const collisionDetection: CollisionDetection = (args) => {
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
 
 interface ComponentSidebarProps {
-  /** Design tokens du document Figma (lecture seule) : un accès en tête de liste quand il y en a. */
-  hasTokens?: boolean;
+  /** Design tokens du projet (saisis dans SCOPE ou reçus d'un plugin) : un accès en tête de liste. */
   tokensActive?: boolean;
   onOpenTokens?: () => void;
   /** Modèle de contenu : listé comme les autres éléments, sous leurs sections. */
@@ -175,7 +174,6 @@ interface ComponentSidebarProps {
 }
 
 export default function ComponentSidebar({
-  hasTokens,
   tokensActive,
   onOpenTokens,
   collections = [],
@@ -241,7 +239,7 @@ export default function ComponentSidebar({
       </div>
 
       <div className="p-4 space-y-2 overflow-y-auto flex-1">
-        {hasTokens && onOpenTokens && (
+        {onOpenTokens && (
           <Button
             variant={tokensActive ? 'secondary' : 'ghost'}
             size="sm"

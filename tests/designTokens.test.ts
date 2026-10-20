@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { fontWeight, tokensFromPayload, tokensToCss, tokensToJson, tokensToMarkdown, variableCssNames } from '@/lib/designTokens';
+import { emptyTokens, fontStyleName, fontWeight, mergeSyncedTokens, tokenSource, tokensFromPayload, tokensToCss, tokensToJson, tokensToMarkdown, variableCssNames } from '@/lib/designTokens';
 import type { DesignTokens } from '@/lib/types';
 
 const tokens: DesignTokens = {
@@ -89,5 +89,63 @@ describe('designTokens', () => {
   it('normalise un payload incomplet', () => {
     const fromPlugin = tokensFromPayload({ kind: 'tokens', fileName: 'F', collections: [], textStyles: 'oops' as never }, '2026-01-01T00:00:00.000Z');
     expect(fromPlugin).toMatchObject({ fileName: 'F', syncedAt: '2026-01-01T00:00:00.000Z', collections: [], textStyles: [], colorStyles: [], effectStyles: [] });
+  });
+});
+
+describe('tokens saisis dans SCOPE', () => {
+  const synced = tokens;
+  const edited: DesignTokens = {
+    ...synced,
+    collections: [
+      {
+        ...synced.collections[0],
+        variables: [
+          // modifiée dans SCOPE : protégée
+          { name: 'color/primary', type: 'COLOR', origin: 'manual', values: { Light: '#abcdef', Dark: '#abcdef' } },
+          // créée dans SCOPE : conservée
+          { name: 'color/accent', type: 'COLOR', origin: 'manual', values: { Light: '#00ff00', Dark: '#00ff00' } },
+          // reçue de la source, absente du prochain envoi : disparaît
+          { name: 'old/token', type: 'FLOAT', values: { Light: 1, Dark: 1 } },
+        ],
+      },
+      { name: 'Perso', origin: 'manual', defaultMode: 'Mode 1', modes: ['Mode 1'], variables: [{ name: 'x', type: 'FLOAT', origin: 'manual', values: { 'Mode 1': 4 } }] },
+    ],
+    textStyles: [{ ...synced.textStyles[0], origin: 'manual', fontSize: 99 }, { ...synced.textStyles[0], name: 'Corps', origin: 'manual' }],
+    colorStyles: [], effectStyles: [],
+  };
+
+  it('la synchronisation remplace la source mais garde ce qui est à SCOPE', () => {
+    const next = mergeSyncedTokens(edited, { ...synced, syncedAt: '2026-11-01T00:00:00.000Z' });
+    const primitives = next.collections.find(c => c.name === 'Primitives')!;
+    expect(primitives.variables.find(v => v.name === 'color/primary')?.values.Light).toBe('#abcdef');
+    expect(primitives.variables.map(v => v.name)).toContain('color/accent');
+    expect(primitives.variables.map(v => v.name)).not.toContain('old/token');
+    expect(primitives.variables.map(v => v.name)).toContain('spacing/4');
+    expect(next.collections.map(c => c.name)).toEqual(['Primitives', 'Marque', 'Perso']);
+    expect(next.textStyles.find(s => s.name === 'Heading/H1')?.fontSize).toBe(99);
+    expect(next.textStyles.map(s => s.name)).toContain('Corps');
+    expect(next.syncedAt).toBe('2026-11-01T00:00:00.000Z');
+  });
+
+  it('le premier envoi sur un projet sans tokens les reprend tels quels', () => {
+    expect(mergeSyncedTokens(undefined, synced)).toEqual(synced);
+  });
+
+  it('décrit la provenance des tokens', () => {
+    expect(tokenSource(synced)).toContain('synchronisés le 2026-10-20');
+    expect(tokenSource(edited)).toContain('complétés dans SCOPE');
+    expect(tokenSource({ ...emptyTokens(), colorStyles: [{ name: 'a', origin: 'manual', paints: [] }] })).toBe('saisis dans SCOPE');
+  });
+
+  it('exporte des tokens sans fichier source', () => {
+    const own: DesignTokens = { ...emptyTokens(), colorStyles: [{ name: 'Marque', origin: 'manual', paints: [{ type: 'SOLID', color: '#123456' }] }] };
+    expect(tokensToCss(own)).toContain('--color-style-marque: #123456;');
+    expect(tokensToMarkdown({ ...own, collections: [{ name: 'C', defaultMode: 'M', modes: ['M'], variables: [{ name: 'v', type: 'FLOAT', values: { M: 1 } }] }] })).toContain('saisis dans SCOPE');
+  });
+
+  it('nomme le style de police d\'après la graisse', () => {
+    expect(fontStyleName(600, false)).toBe('Semi Bold');
+    expect(fontStyleName(700, true)).toBe('Bold Italic');
+    expect(fontWeight(fontStyleName(300, true))).toBe(300);
   });
 });

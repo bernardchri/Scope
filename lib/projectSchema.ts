@@ -169,18 +169,22 @@ const tokenValueSchema = z.union([
   z.object({ alias: z.string(), collection: z.string().catch('') }),
 ]);
 
+const origin = z.literal('manual').optional().catch(undefined);
+
 const tokensSchema = z
   .object({
     fileKey: z.string().optional(),
     fileName: z.string().optional(),
-    syncedAt: z.string().catch(''),
+    syncedAt: z.string().optional(),
     collections: resilientArray(
       z.object({
+        origin: origin,
         name: z.string().catch(''),
         defaultMode: z.string().catch(''),
         modes: z.array(z.string()).catch([]),
         variables: resilientArray(
           z.object({
+            origin: origin,
             name: z.string(),
             type: z.string().catch('STRING'),
             description: z.string().optional(),
@@ -191,6 +195,7 @@ const tokensSchema = z
     ),
     textStyles: resilientArray(
       z.object({
+        origin: origin,
         name: z.string(),
         description: z.string().optional(),
         fontFamily: z.string().catch(''),
@@ -205,6 +210,7 @@ const tokensSchema = z
     ),
     colorStyles: resilientArray(
       z.object({
+        origin: origin,
         name: z.string(),
         description: z.string().optional(),
         paints: z.array(z.any()).catch([]),
@@ -212,6 +218,7 @@ const tokensSchema = z
     ),
     effectStyles: resilientArray(
       z.object({
+        origin: origin,
         name: z.string(),
         description: z.string().optional(),
         effects: z.array(z.any()).catch([]),
