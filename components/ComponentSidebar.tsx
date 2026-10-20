@@ -14,6 +14,7 @@ import {
   CollisionDetection,
   DndContext,
   DragEndEvent,
+  MeasuringStrategy,
   PointerSensor,
   closestCenter,
   pointerWithin,
@@ -28,9 +29,8 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { cn } from '@/lib/utils';
+import { CATEGORY_DROP_PREFIX, SIDEBAR_ORDER, computeReorder } from '@/lib/sidebarReorder';
 
-// Display order for the sidebar
-const SIDEBAR_ORDER: ScopeItemType[] = ['document', 'template', 'section', 'component'];
 
 // ─── Sortable item ────────────────────────────────────────────────────────────
 
@@ -48,7 +48,7 @@ function SortableItem({ component, isSelected, onSelect }: SortableItemProps) {
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: component.id });
+  } = useSortable({ id: component.id, data: { category: component.category } });
 
   return (
     <div
@@ -82,7 +82,6 @@ function SortableItem({ component, isSelected, onSelect }: SortableItemProps) {
 
 // ─── Category section ─────────────────────────────────────────────────────────
 
-const CATEGORY_DROP_PREFIX = 'cat:';
 
 interface CategorySectionProps {
   category: ScopeItemType;
@@ -101,7 +100,7 @@ function CategorySection({
 }: CategorySectionProps) {
   // Toute la section est une zone de dépôt : permet de déposer sur un titre
   // ou une section vide pour changer le type d'un élément.
-  const { setNodeRef, isOver } = useDroppable({ id: CATEGORY_DROP_PREFIX + category });
+  const { setNodeRef, isOver } = useDroppable({ id: CATEGORY_DROP_PREFIX + category, data: { category } });
 
   return (
     <div
@@ -136,12 +135,22 @@ function CategorySection({
   );
 }
 
-// Priorité aux éléments sous le pointeur (réordonner), puis aux sections (changer de type).
+// Priorité aux éléments sous le pointeur (réordonner). Entre deux éléments ou sous le dernier, le pointeur n'est que
+// sur la section : on retient alors l'élément le plus proche de cette section (sinon l'élément « sautait » en fin de
+// liste), et la section elle-même seulement si elle est vide.
 const collisionDetection: CollisionDetection = (args) => {
   const hits = pointerWithin(args);
   const items = hits.filter(c => !String(c.id).startsWith(CATEGORY_DROP_PREFIX));
   if (items.length) return items;
-  return hits.length ? hits : closestCenter(args);
+  const section = hits.find(c => String(c.id).startsWith(CATEGORY_DROP_PREFIX));
+  if (section) {
+    const category = String(section.id).slice(CATEGORY_DROP_PREFIX.length);
+    const sectionItems = args.droppableContainers.filter(
+      c => !String(c.id).startsWith(CATEGORY_DROP_PREFIX) && c.data.current?.category === category,
+    );
+    return sectionItems.length ? closestCenter({ ...args, droppableContainers: sectionItems }) : [section];
+  }
+  return closestCenter(args);
 };
 
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
@@ -188,39 +197,15 @@ export default function ComponentSidebar({
   function handleDragEnd(event: DragEndEvent) {
     setDraggingId(null);
     const { active, over } = event;
-    if (!over || active.id === over.id) return;
-
-    const dragged = components.find(c => c.id === active.id);
-    if (!dragged) return;
-
-    // Cible : un élément (on prend son type) ou une section (fin de liste).
-    const overId = String(over.id);
-    const overItem = overId.startsWith(CATEGORY_DROP_PREFIX)
-      ? undefined
-      : components.find(c => c.id === overId);
-    const targetCategory = overItem
-      ? overItem.category
-      : (overId.slice(CATEGORY_DROP_PREFIX.length) as ScopeItemType);
-
-    const groups: Record<string, string[]> = {};
-    for (const cat of SIDEBAR_ORDER) {
-      groups[cat] = (groupedComponents[cat] || []).map(c => c.id).filter(id => id !== dragged.id);
-    }
-    const target = groups[targetCategory];
-    if (!target) return;
-    let index = overItem ? target.indexOf(overItem.id) : target.length;
-    // Même section, déplacement vers le bas : insérer après l'élément survolé
-    if (overItem && targetCategory === dragged.category) {
-      const before = (groupedComponents[targetCategory] || []).map(c => c.id);
-      if (before.indexOf(dragged.id) < before.indexOf(overItem.id)) index += 1;
-    }
-    target.splice(index, 0, dragged.id);
-
-    const orderedIds = SIDEBAR_ORDER.flatMap(cat => groups[cat]);
-    onReorderComponents(
-      orderedIds,
-      targetCategory !== dragged.category ? { id: dragged.id, category: targetCategory } : undefined,
+    if (!over) return;
+    const moved = active.rect.current.translated;
+    const result = computeReorder(
+      components,
+      String(active.id),
+      String(over.id),
+      !!moved && moved.top + moved.height / 2 > over.rect.top + over.rect.height / 2,
     );
+    if (result) onReorderComponents(result.orderedIds, result.categoryChange);
   }
 
   return (
@@ -275,6 +260,8 @@ export default function ComponentSidebar({
         <DndContext
           sensors={sensors}
           collisionDetection={collisionDetection}
+          // Des sections vides apparaissent au début du glissement : les positions sont remesurées pendant qu'on glisse.
+          measuring={{ droppable: { strategy: MeasuringStrategy.Always } }}
           onDragStart={e => setDraggingId(String(e.active.id))}
           onDragCancel={() => setDraggingId(null)}
           onDragEnd={handleDragEnd}
