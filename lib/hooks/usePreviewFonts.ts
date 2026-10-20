@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { TokenFont } from '../types';
-import { fontFileWeight, googleFontsUrl } from '../fonts';
+import { fontFileWeight, googleFontsBasicUrl, googleFontsUrl } from '../fonts';
 
 /**
  * Charge dans la page les polices du projet (fichiers du dossier `fonts/`, feuilles Google Fonts) pour que les
@@ -20,8 +20,15 @@ export function usePreviewFonts(folderPath: string | undefined, fonts: TokenFont
         const link = document.createElement('link');
         link.id = id;
         link.rel = 'stylesheet';
-        link.href = googleFontsUrl(font.family);
+        link.href = font.url ?? googleFontsUrl(font.family);
         link.onload = () => { document.fonts.load(`16px ${JSON.stringify(font.family)}`).then(bump, bump); };
+        // Google refuse l'adresse complète (italique, graisses variables) pour une famille qui ne les a pas : on retente en simple.
+        if (!font.url) {
+          link.onerror = () => {
+            link.onerror = null;
+            link.href = googleFontsBasicUrl(font.family);
+          };
+        }
         document.head.appendChild(link);
       } else if (folderPath) {
         const already = Array.from(document.fonts).some(f => f.family.replace(/"/g, '') === font.family && f.weight === fontFileWeight(font) && (f.style === 'italic') === font.italic);

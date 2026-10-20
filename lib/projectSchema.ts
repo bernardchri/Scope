@@ -218,7 +218,7 @@ const tokensSchema = z
     ),
     fonts: resilientArray(
       z.union([
-        z.object({ id: z.string(), family: z.string(), kind: z.literal('google') }),
+        z.object({ id: z.string(), family: z.string(), kind: z.literal('google'), url: z.string().optional() }),
         z.object({ id: z.string(), family: z.string(), kind: z.literal('file'), filename: z.string(), weight: z.union([z.number(), z.literal('variable')]).catch(400), italic: z.boolean().catch(false) }),
       ])
     ).optional(),

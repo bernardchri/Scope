@@ -14,7 +14,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
-import { describeFontFile, isFontAvailable } from '@/lib/fonts';
+import { describeFontFile, isFontAvailable, parseGoogleFontsUrl } from '@/lib/fonts';
 import { usePreviewFonts } from '@/lib/hooks/usePreviewFonts';
 
 interface TokensPageProps {
@@ -161,8 +161,16 @@ export default function TokensPage({ tokens, onChange, folderPath, className }: 
   }
 
   // ── Polices ────────────────────────────────────────────────────────────────
-  const addGoogleFont = (family: string) =>
-    update({ fonts: [...(t.fonts ?? []), { id: crypto.randomUUID(), family, kind: 'google' }] });
+  const addGoogleFont = (family: string, url?: string) =>
+    update({ fonts: [...(t.fonts ?? []).filter(f => !(f.kind === 'google' && f.family === family)), { id: crypto.randomUUID(), family, kind: 'google', url }] });
+
+  /** URL collée (adresse, `<link>` ou `@import` de Google Fonts) : enregistrée pour la famille du style. */
+  function addGoogleFontFromUrl(family: string, pasted: string) {
+    const parsed = parseGoogleFontsUrl(pasted);
+    if (!parsed) { setFontError('Aucune adresse Google Fonts reconnue (https://fonts.googleapis.com/css2?family=…).'); return; }
+    setFontError(null);
+    addGoogleFont(family, parsed.url);
+  }
 
   const removeFont = (id: string) => update({ fonts: (t.fonts ?? []).filter(f => f.id !== id) });
 
@@ -403,6 +411,13 @@ export default function TokensPage({ tokens, onChange, folderPath, className }: 
                       : <span className="text-amber-600">⚠ Police absente : l&apos;aperçu utilise une police de remplacement</span>}
                     {!available && !provided.some(f => f.kind === 'google') && (
                       <Button variant="outline" size="sm" className="h-6 px-2 text-xs" onClick={() => addGoogleFont(style.fontFamily)}>Charger depuis Google Fonts</Button>
+                    )}
+                    {!available && (
+                      <Input
+                        className="h-6 w-64 text-xs" placeholder="ou colle l'URL Google Fonts (Entrée)"
+                        onKeyDown={(e) => { if (e.key === 'Enter') { addGoogleFontFromUrl(style.fontFamily, e.currentTarget.value); e.currentTarget.value = ''; } }}
+                        onPaste={(e) => { const text = e.clipboardData.getData('text'); if (parseGoogleFontsUrl(text)) { e.preventDefault(); addGoogleFontFromUrl(style.fontFamily, text); } }}
+                      />
                     )}
                     <Button variant="outline" size="sm" className="h-6 px-2 text-xs" onClick={() => addFontFiles(style.fontFamily)}>Ajouter un fichier de police…</Button>
                     {provided.map(f => (

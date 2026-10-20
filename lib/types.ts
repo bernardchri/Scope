@@ -277,7 +277,7 @@ export interface EffectStyleToken {
 
 /** Police utilisée par un style de texte, rendue dans l'aperçu : fichier du projet (`fonts/`) ou Google Fonts. */
 export type TokenFont =
-  | { id: string; family: string; kind: 'google' }
+  | { id: string; family: string; kind: 'google'; /** URL de la feuille de style si elle diffère du lien automatique. */ url?: string }
   | { id: string; family: string; kind: 'file'; filename: string; weight: number | 'variable'; italic: boolean };
 
 /**

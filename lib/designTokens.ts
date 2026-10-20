@@ -122,7 +122,7 @@ export function tokensToCss(tokens: DesignTokens): string {
   const fonts = tokens.fonts ?? [];
   const blocks: string[] = [
     // @import doit précéder toute règle.
-    ...fonts.filter(f => f.kind === 'google').map(f => `@import url('${googleFontsUrl(f.family)}');`),
+    ...fonts.filter(f => f.kind === 'google').map(f => `@import url('${f.url ?? googleFontsUrl(f.family)}');`),
     `/* Design tokens — ${tokenSource(tokens)} */`,
     ...fonts.filter(f => f.kind === 'file').map(f => `/* Police « ${f.family} » : fichier \`fonts/${'filename' in f ? f.filename : ''}\` du projet SCOPE, à fournir avec le site. */`),
   ];

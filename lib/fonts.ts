@@ -24,6 +24,22 @@ export function googleFontsUrl(family: string): string {
   return `https://fonts.googleapis.com/css2?family=${encodeURIComponent(family.trim()).replace(/%20/g, '+')}:ital,wght@0,100..900;1,100..900&display=swap`;
 }
 
+/** Lien Google Fonts réduit au strict minimum (graisse normale) : certaines familles n'ont ni italique ni graisses variables. */
+export const googleFontsBasicUrl = (family: string) =>
+  `https://fonts.googleapis.com/css2?family=${encodeURIComponent(family.trim()).replace(/%20/g, '+')}&display=swap`;
+
+/**
+ * URL d'une feuille Google Fonts dans un texte collé : l'adresse seule, un `<link href="…">` ou un
+ * `@import url(…)` tels que les donne le site. Renvoie aussi la famille lue dans l'adresse.
+ */
+export function parseGoogleFontsUrl(text: string): { url: string; family?: string } | null {
+  const match = text.match(/https?:\/\/fonts\.googleapis\.com\/css2?\?[^\s'"<>)]+/i);
+  if (!match) return null;
+  const url = match[0].replace(/&amp;/g, '&');
+  const family = new URL(url).searchParams.get('family')?.split(':')[0].replace(/\+/g, ' ');
+  return { url, family: family || undefined };
+}
+
 const WEIGHT_WORDS: [RegExp, number][] = [
   [/thin|hairline/i, 100], [/extra-?light|ultra-?light/i, 200], [/light/i, 300], [/medium/i, 500],
   [/semi-?bold|demi-?bold/i, 600], [/extra-?bold|ultra-?bold/i, 800], [/black|heavy/i, 900], [/bold/i, 700],
