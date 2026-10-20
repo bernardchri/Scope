@@ -367,12 +367,12 @@ export default function TokensPage({ tokens, onChange, folderPath, className }: 
                 <div key={font.id} className="border rounded-lg p-3 space-y-2">
                   <div className="flex flex-wrap items-center gap-2">
                     <Input
-                      key={font.name} className="h-8 w-36 text-sm font-medium" defaultValue={font.name} title="Nom du rôle (devient la variable CSS)"
+                      key={`name-${font.id}-${font.name}`} className="h-8 w-36 text-sm font-medium" defaultValue={font.name} title="Nom du rôle (devient la variable CSS)"
                       onBlur={(e) => e.target.value.trim() && !fonts.some(f => f.id !== font.id && f.name === e.target.value.trim()) && setFont(font.id, { name: e.target.value.trim() })}
                     />
                     <code className="text-xs text-muted-foreground">{fontCssName(font)}</code>
                     <Input
-                      key={font.family} className="h-8 w-48 text-sm" placeholder="Famille (ex. Playfair Display)" defaultValue={font.family}
+                      key={`family-${font.id}-${font.family}`} className="h-8 w-48 text-sm" placeholder="Famille (ex. Playfair Display)" defaultValue={font.family}
                       onBlur={(e) => e.target.value.trim() && setFont(font.id, { family: e.target.value.trim() })}
                     />
                     <select className={SELECT} value={font.fallback ?? 'sans-serif'} title="Famille générique de repli" onChange={(e) => setFont(font.id, { fallback: e.target.value as FontToken['fallback'] })}>
@@ -437,7 +437,7 @@ export default function TokensPage({ tokens, onChange, folderPath, className }: 
                 <div key={style.name} className="px-4 py-3 space-y-2">
                   <div className="flex flex-wrap items-center gap-2">
                     <Input
-                      key={style.name} className="h-8 w-44 text-sm font-medium" defaultValue={style.name}
+                      key={`name-${style.name}`} className="h-8 w-44 text-sm font-medium" defaultValue={style.name}
                       onBlur={(e) => e.target.value.trim() && !t.textStyles.some((s, k) => k !== i && s.name === e.target.value.trim()) && setText(i, { name: e.target.value.trim() })}
                     />
                     <ManualBadge show={style.origin === 'manual'} />
@@ -453,7 +453,7 @@ export default function TokensPage({ tokens, onChange, folderPath, className }: 
                       <option value="__free__">Autre police (saisie libre)</option>
                     </select>
                     {!font && (
-                      <Input key={style.fontFamily} className="h-8 w-36 text-sm" placeholder="Famille" defaultValue={style.fontFamily} onBlur={(e) => setText(i, { fontFamily: e.target.value.trim() || 'Inter' })} />
+                      <Input key={`family-${style.fontFamily}`} className="h-8 w-36 text-sm" placeholder="Famille" defaultValue={style.fontFamily} onBlur={(e) => setText(i, { fontFamily: e.target.value.trim() || 'Inter' })} />
                     )}
                     <select className={SELECT} value={weight} onChange={(e) => setText(i, { fontStyle: fontStyleName(Number(e.target.value), isItalic(style.fontStyle)) })}>
                       {WEIGHT_NAMES.map(([w, label]) => <option key={w} value={w}>{label} ({w})</option>)}
@@ -462,7 +462,7 @@ export default function TokensPage({ tokens, onChange, folderPath, className }: 
                       <Checkbox checked={isItalic(style.fontStyle)} onCheckedChange={(v) => setText(i, { fontStyle: fontStyleName(weight, v === true) })} /> Italique
                     </label>
                     <Input
-                      key={style.fontSize} className="h-8 w-20 text-sm" type="number" min={1} defaultValue={style.fontSize}
+                      key={`size-${style.fontSize}`} className="h-8 w-20 text-sm" type="number" min={1} defaultValue={style.fontSize}
                       onBlur={(e) => Number(e.target.value) > 0 && setText(i, { fontSize: Number(e.target.value) })}
                     />
                     <span className="text-xs text-muted-foreground">px</span>
@@ -530,7 +530,7 @@ export default function TokensPage({ tokens, onChange, folderPath, className }: 
                   <div className="p-2 space-y-1.5">
                     <div className="flex items-center gap-1">
                       <Input
-                        key={style.name} className="h-8 text-sm" defaultValue={style.name}
+                        key={`color-${style.name}`} className="h-8 text-sm" defaultValue={style.name}
                         onBlur={(e) => e.target.value.trim() && !t.colorStyles.some((s, k) => k !== i && s.name === e.target.value.trim()) &&
                           update({ colorStyles: t.colorStyles.map((s, k) => (k === i ? { ...s, name: e.target.value.trim(), origin: 'manual' } : s)) })}
                       />
@@ -564,7 +564,7 @@ export default function TokensPage({ tokens, onChange, folderPath, className }: 
               return (
                 <div key={style.name} className="px-4 py-3 flex flex-wrap items-center gap-2">
                   <Input
-                    key={style.name} className="h-8 w-44 text-sm font-medium" defaultValue={style.name}
+                    key={`effect-${style.name}`} className="h-8 w-44 text-sm font-medium" defaultValue={style.name}
                     onBlur={(e) => e.target.value.trim() && !t.effectStyles.some((s, k) => k !== i && s.name === e.target.value.trim()) && setEffect(i, { name: e.target.value.trim() })}
                   />
                   <ManualBadge show={style.origin === 'manual'} />
