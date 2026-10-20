@@ -20,7 +20,8 @@ import ComponentSidebar from './ComponentSidebar';
 import ScopeItemDetail from './ScopeItemDetail';
 import ProjectHeader from './ProjectHeader';
 import ProjectDashboard from './ProjectDashboard';
-import CreateComponentModal from './modals/CreateComponentModal';
+import CreateComponentModal, { COLLECTION_TYPE, type NewElementType } from './modals/CreateComponentModal';
+import { createCollection } from '@/lib/collections';
 import FigmaImportDialog from './modals/FigmaImportDialog';
 import { Button } from '@/components/ui/button';
 import { PanelLeftOpen } from 'lucide-react';
@@ -52,8 +53,8 @@ export default function ComponentList({ projectId }: ComponentListProps) {
   const [figmaImportPayload, setFigmaImportPayload] = useState<FigmaImportPayload | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
-  const [collectionsOpen, setCollectionsOpen] = useState(false);
-  const [focusedCollectionId, setFocusedCollectionId] = useState<string | null>(null);
+  // Collection ouverte dans la zone principale (choisie dans la sidebar) ; exclusive avec un élément ouvert.
+  const [selectedCollectionId, setSelectedCollectionId] = useState<string | null>(null);
   const [syncRecap, setSyncRecap] = useState<SyncRecapEntry[]>([]);
   const bulkQueueRef = useRef(Promise.resolve());
   const detailScrollRef = useRef<HTMLDivElement>(null);
@@ -195,7 +196,7 @@ export default function ComponentList({ projectId }: ComponentListProps) {
   }
 
   function selectFromSidebar(id: string | null) {
-    setCollectionsOpen(false);
+    setSelectedCollectionId(null);
     setNavHistory(id ? [id] : []);
   }
 
@@ -213,8 +214,16 @@ export default function ComponentList({ projectId }: ComponentListProps) {
 
   const showingDashboard = !selectedComponentId;
 
-  async function handleCreateComponent(name: string, description: string, category: ScopeItemType) {
+  async function handleCreateComponent(name: string, description: string, category: NewElementType) {
     if (!activeProject) return;
+    if (category === COLLECTION_TYPE) {
+      const collection = { ...createCollection(name, activeProject.collections ?? []), description: description.trim() || undefined };
+      updateProject(activeProject.id, { collections: [...(activeProject.collections ?? []), collection] });
+      setIsModalOpen(false);
+      setSelectedCollectionId(collection.id);
+      setNavHistory([]);
+      return;
+    }
     const newComponent = await withDefaultEstimate({
       id: crypto.randomUUID(),
       name,
@@ -266,13 +275,13 @@ export default function ComponentList({ projectId }: ComponentListProps) {
       <ComponentSidebar
         components={activeProject!.components}
         selectedComponentId={selectedComponentId}
-        showingDashboard={showingDashboard && !collectionsOpen}
+        showingDashboard={showingDashboard && !selectedCollectionId}
         onSelectComponent={(id) => { selectFromSidebar(id); afterNavigate?.(); }}
         onReorderComponents={(ids, categoryChange) => reorderComponents(activeProject!.id, ids, categoryChange)}
-        onGoHome={then(() => { setCollectionsOpen(false); setNavHistory([]); })}
-        onOpenCollections={then(() => { setFocusedCollectionId(null); setCollectionsOpen(true); setNavHistory([]); })}
-        collectionsActive={collectionsOpen && !selectedComponentId}
-        collectionCount={activeProject!.collections?.length}
+        onGoHome={then(() => { setSelectedCollectionId(null); setNavHistory([]); })}
+        collections={activeProject!.collections}
+        selectedCollectionId={selectedComponentId ? null : selectedCollectionId}
+        onSelectCollection={(id) => { setSelectedCollectionId(id); setNavHistory([]); afterNavigate?.(); }}
         onToggleSidebar={() => setSidebarOpen(false)}
         onNewElement={then(() => setIsModalOpen(true))}
       />
@@ -357,14 +366,15 @@ export default function ComponentList({ projectId }: ComponentListProps) {
                 onCreateCollection={handleCreateCollection}
               />
           </div>
-        ) : collectionsOpen ? (
+        ) : selectedCollectionId && activeProject.collections?.some(c => c.id === selectedCollectionId) ? (
           <CollectionsPage
-            key={`${focusedCollectionId ?? 'all'}-${refreshKey}`}
-            initialSelectedId={focusedCollectionId}
+            key={`${selectedCollectionId}-${refreshKey}`}
+            collectionId={selectedCollectionId}
+            onRemoved={() => setSelectedCollectionId(null)}
             collections={activeProject.collections || []}
             components={activeProject.components}
             onChange={(collections) => updateProject(activeProject.id, { collections })}
-            onSelectComponent={(id) => { setCollectionsOpen(false); setNavHistory([id]); }}
+            onSelectComponent={(id) => { setSelectedCollectionId(null); setNavHistory([id]); }}
             className="flex-1"
           />
         ) : (
@@ -373,7 +383,7 @@ export default function ComponentList({ projectId }: ComponentListProps) {
             project={activeProject}
             folderPath={currentProjectPath || ''}
             onSelectComponent={(id) => setNavHistory([id])}
-            onOpenCollection={(id) => { setFocusedCollectionId(id); setCollectionsOpen(true); }}
+            onOpenCollection={(id) => { setSelectedCollectionId(id); setNavHistory([]); }}
             onUpdateProject={(updates) => updateProject(activeProject.id, updates)}
             className="flex-1 min-h-0"
           />

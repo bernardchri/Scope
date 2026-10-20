@@ -1,9 +1,8 @@
 'use client';
 
-import { useState } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import { Collection, CollectionField, Component } from '@/lib/types';
-import { createCollection, createField } from '@/lib/collections';
+import { createField } from '@/lib/collections';
 import FieldEditor from '@/components/molecules/FieldEditor';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,16 +14,15 @@ interface CollectionsPageProps {
   components: Component[];
   onChange: (collections: Collection[]) => void;
   onSelectComponent: (id: string) => void;
-  /** Collection à ouvrir à l'arrivée (depuis « À compléter »). */
-  initialSelectedId?: string | null;
+  /** Collection éditée (choisie dans la sidebar). */
+  collectionId: string;
+  onRemoved?: () => void;
   className?: string;
 }
 
 /** Modèle de contenu du site : collections (custom post types) et leurs champs. */
-export default function CollectionsPage({ collections, components, onChange, onSelectComponent, initialSelectedId, className }: CollectionsPageProps) {
-  const [selectedId, setSelectedId] = useState<string | null>(initialSelectedId ?? collections[0]?.id ?? null);
-  const [newName, setNewName] = useState('');
-  const selected = collections.find((c) => c.id === selectedId) ?? null;
+export default function CollectionsPage({ collections, components, onChange, onSelectComponent, collectionId, onRemoved, className }: CollectionsPageProps) {
+  const selected = collections.find((c) => c.id === collectionId) ?? null;
 
   function update(id: string, patch: Partial<Collection>) {
     onChange(collections.map((c) => (c.id === id ? { ...c, ...patch } : c)));
@@ -34,15 +32,6 @@ export default function CollectionsPage({ collections, components, onChange, onS
     update(collection.id, { fields: collection.fields.map((f) => (f.id === fieldId ? { ...f, ...patch } : f)) });
   }
 
-  function add() {
-    const name = newName.trim();
-    if (!name) return;
-    const collection = createCollection(name, collections);
-    onChange([...collections, collection]);
-    setSelectedId(collection.id);
-    setNewName('');
-  }
-
   function remove(collection: Collection) {
     // Les relations qui pointaient vers cette collection sont retirées ; les pins liés l'ignorent d'eux-mêmes.
     onChange(
@@ -50,7 +39,7 @@ export default function CollectionsPage({ collections, components, onChange, onS
         .filter((c) => c.id !== collection.id)
         .map((c) => ({ ...c, fields: c.fields.map((f) => (f.relationTo === collection.id ? { ...f, relationTo: undefined } : f)) }))
     );
-    setSelectedId(null);
+    onRemoved?.();
   }
 
   // Composants dont au moins un pin utilise la collection (liste ou champ).
@@ -63,43 +52,8 @@ export default function CollectionsPage({ collections, components, onChange, onS
 
   return (
     <div className={`flex min-h-0 ${className ?? ''}`}>
-      <div className="w-60 shrink-0 border-r p-4 space-y-2 overflow-y-auto">
-        <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Collections</h2>
-        {collections.map((c) => (
-          <Button
-            key={c.id}
-            variant={c.id === selectedId ? 'secondary' : 'ghost'}
-            size="sm"
-            className="w-full justify-between"
-            onClick={() => setSelectedId(c.id)}
-          >
-            <span className="truncate">{c.name}</span>
-            <span className="text-xs text-muted-foreground">{c.fields.length}</span>
-          </Button>
-        ))}
-        <div className="flex gap-1 pt-2">
-          <Input
-            className="h-8 text-sm"
-            placeholder="Nouvelle collection"
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter') add(); }}
-          />
-          <Button size="icon" className="h-8 w-8 shrink-0" onClick={add} title="Créer la collection"><Plus className="h-4 w-4" /></Button>
-        </div>
-      </div>
-
       <div className="flex-1 overflow-y-auto p-8">
-        {!selected ? (
-          <div className="max-w-xl space-y-2 text-sm text-muted-foreground">
-            <p className="text-foreground font-medium">Modèle de contenu</p>
-            <p>
-              Une collection décrit un type de contenu du site (comme un custom post type WordPress) : Projets, Articles, Équipe…
-              Elle liste ses champs (titre, image, catégorie…) sans contenir les entrées elles-mêmes.
-            </p>
-            <p>Crée-en une à gauche, ou depuis un pin « Liste » dans un composant.</p>
-          </div>
-        ) : (
+        {!selected ? null : (
           <div className="max-w-3xl space-y-6">
             <div className="space-y-3">
               <div className="flex gap-2 items-center">

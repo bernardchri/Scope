@@ -1,14 +1,14 @@
 'use client';
 
 import { useState } from 'react';
-import { Component, ScopeItemType } from '@/lib/types';
+import { Collection, Component, ScopeItemType } from '@/lib/types';
 import { getCategoryLabel, SCOPE_ITEM_TYPES } from '@/lib/categoryHelpers';
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
-import { ChevronRight, GripVertical, Database, Home, Plus } from 'lucide-react';
+import { ChevronRight, Database, GripVertical, Home, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   CollisionDetection,
@@ -147,9 +147,10 @@ const collisionDetection: CollisionDetection = (args) => {
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
 
 interface ComponentSidebarProps {
-  onOpenCollections?: () => void;
-  collectionsActive?: boolean;
-  collectionCount?: number;
+  /** Modèle de contenu : listé comme les autres éléments, sous leurs sections. */
+  collections?: Collection[];
+  selectedCollectionId?: string | null;
+  onSelectCollection?: (id: string) => void;
   components: Component[];
   selectedComponentId: string | null;
   showingDashboard: boolean;
@@ -161,9 +162,9 @@ interface ComponentSidebarProps {
 }
 
 export default function ComponentSidebar({
-  onOpenCollections,
-  collectionsActive,
-  collectionCount,
+  collections = [],
+  selectedCollectionId,
+  onSelectCollection,
   components,
   selectedComponentId,
   showingDashboard,
@@ -236,21 +237,6 @@ export default function ComponentSidebar({
         </Button>
       </div>
 
-      {onOpenCollections && (
-        <div className="px-2 pt-2">
-          <Button
-            variant={collectionsActive ? 'secondary' : 'ghost'}
-            size="sm"
-            className="w-full justify-start gap-2"
-            onClick={onOpenCollections}
-          >
-            <Database className="h-4 w-4" />
-            Collections
-            {!!collectionCount && <span className="ml-auto text-xs text-muted-foreground">{collectionCount}</span>}
-          </Button>
-        </div>
-      )}
-
       <div className="p-2 border-b">
         <Button
           size="sm"
@@ -286,6 +272,29 @@ export default function ComponentSidebar({
             );
           })}
         </DndContext>
+
+        {collections.length > 0 && onSelectCollection && (
+          <Collapsible defaultOpen className="space-y-1">
+            <CollapsibleTrigger className="flex w-full items-center justify-between p-2 hover:bg-accent rounded-md group">
+              <span className="font-semibold text-sm">Collections</span>
+              <ChevronRight className="h-4 w-4 transition-transform group-data-[state=open]:rotate-90" />
+            </CollapsibleTrigger>
+            <CollapsibleContent className="space-y-1 pl-1">
+              {collections.map(collection => (
+                <Button
+                  key={collection.id}
+                  variant={selectedCollectionId === collection.id ? 'secondary' : 'ghost'}
+                  size="sm"
+                  className="w-full justify-start gap-2 font-normal"
+                  onClick={() => onSelectCollection(collection.id)}
+                >
+                  <Database className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                  <span className="truncate">{collection.name}</span>
+                </Button>
+              ))}
+            </CollapsibleContent>
+          </Collapsible>
+        )}
       </div>
     </div>
   );

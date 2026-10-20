@@ -15,10 +15,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import { SCOPE_ITEM_TYPES, TYPE_LABELS } from '@/lib/categoryHelpers';
 
+/** Valeur du sélecteur de type pour créer une collection (modèle de contenu) plutôt qu'un élément de page. */
+export const COLLECTION_TYPE = 'collection';
+export type NewElementType = ScopeItemType | typeof COLLECTION_TYPE;
+
 interface CreateComponentModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (name: string, description: string, category: ScopeItemType) => void;
+  onSubmit: (name: string, description: string, category: NewElementType) => void;
 }
 
 export default function CreateComponentModal({
@@ -28,7 +32,7 @@ export default function CreateComponentModal({
 }: CreateComponentModalProps) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [category, setCategory] = useState<ScopeItemType>('component');
+  const [category, setCategory] = useState<NewElementType>('component');
 
   function handleSubmit() {
     if (!name.trim()) return;
@@ -56,7 +60,7 @@ export default function CreateComponentModal({
         <div className="space-y-4 py-4">
           <div className="space-y-2">
             <Label htmlFor="category">Type *</Label>
-            <Select value={category} onValueChange={(v) => setCategory(v as ScopeItemType)}>
+            <Select value={category} onValueChange={(v) => setCategory(v as NewElementType)}>
               <SelectTrigger id="category">
                 <SelectValue />
               </SelectTrigger>
@@ -66,6 +70,7 @@ export default function CreateComponentModal({
                     {TYPE_LABELS[type]}
                   </SelectItem>
                 ))}
+                <SelectItem value={COLLECTION_TYPE}>Collection (type de contenu)</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -76,7 +81,7 @@ export default function CreateComponentModal({
               id="name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Ex: Hero Section, Brief technique..."
+              placeholder={category === COLLECTION_TYPE ? 'Ex: Projets, Articles, Équipe...' : 'Ex: Hero Section, Brief technique...'}
               autoFocus
               onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
             />
