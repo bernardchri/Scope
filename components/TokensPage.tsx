@@ -26,6 +26,12 @@ interface TokensPageProps {
   className?: string;
 }
 
+/** Faux texte d'aperçu : court pour un titre, plus long pour un texte courant (on juge l'interligne sur plusieurs lignes). */
+const sampleText = (fontSize: number) =>
+  fontSize >= 28
+    ? 'Lorem ipsum dolor sit amet'
+    : 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.';
+
 const HEX = /^#[0-9a-f]{6}([0-9a-f]{2})?$/i;
 const SELECT = 'h-8 rounded-md border border-input bg-background px-2 text-sm text-foreground';
 const TYPE_LABELS: Record<string, string> = { COLOR: 'Couleur', FLOAT: 'Nombre', STRING: 'Texte', BOOLEAN: 'Oui / non' };
@@ -365,7 +371,7 @@ export default function TokensPage({ tokens, onChange, folderPath, className }: 
               const usedBy = t.textStyles.filter(s => fontForStyle(t, s)?.id === font.id).length;
               return (
                 <div key={font.id} className="border rounded-lg p-4 space-y-3">
-                  <div className="pb-3 border-b break-words text-3xl" style={{ fontFamily: fontCssValue(font) }}>Aa — Les éditions de la Vilaine</div>
+                  <div className="pb-3 border-b break-words text-3xl" style={{ fontFamily: fontCssValue(font) }}>Aa — Lorem ipsum dolor sit amet</div>
                   <div className="flex flex-wrap items-center gap-2">
                     <Input
                       key={`name-${font.id}-${font.name}`} className="h-8 w-36 text-sm font-medium" defaultValue={font.name} title="Nom du rôle (devient la variable CSS)"
@@ -437,7 +443,7 @@ export default function TokensPage({ tokens, onChange, folderPath, className }: 
                 <div key={style.name} className="border rounded-lg p-4 space-y-3">
                   {/* Rendu en premier : c'est ce qu'on juge, les réglages viennent dessous */}
                   <div className="pb-3 border-b break-words" style={{ ...css, fontSize: Math.min(style.fontSize, 64) }}>
-                    Aa — Les éditions de la Vilaine
+                    {sampleText(style.fontSize)}
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
                     <Input
