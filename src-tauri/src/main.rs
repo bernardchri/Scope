@@ -1,5 +1,6 @@
 mod backup;
 mod figma_bridge;
+mod mcp;
 
 use tauri::{menu::{Menu, MenuItem, Submenu, PredefinedMenuItem}, Manager, Emitter};
 use tauri_plugin_dialog::DialogExt;
@@ -166,6 +167,18 @@ fn set_figma_component_catalog(
     Ok(())
 }
 
+/// Publie l'instantané du projet ouvert, lu par les outils du serveur MCP (`POST /mcp`).
+/// `null` quand aucun projet n'est ouvert.
+#[tauri::command]
+fn set_mcp_snapshot(
+    snapshot: serde_json::Value,
+    state: tauri::State<mcp::McpSnapshot>,
+) -> Result<(), String> {
+    let json = if snapshot.is_null() { String::new() } else { serde_json::to_string(&snapshot).map_err(|e| format!("Erreur sérialisation: {}", e))? };
+    *state.0.lock().map_err(|_| "Instantané verrouillé".to_string())? = json;
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -199,10 +212,12 @@ pub fn run() {
             app.set_menu(menu)?;
 
             let figma_catalog = figma_bridge::FigmaComponentCatalog::default();
-            let figma_bridge_info = figma_bridge::start(app.handle().clone(), figma_catalog.clone())
+            let mcp_snapshot = mcp::McpSnapshot::default();
+            let figma_bridge_info = figma_bridge::start(app.handle().clone(), figma_catalog.clone(), mcp_snapshot.clone())
                 .unwrap_or_else(|| figma_bridge::FigmaBridgeInfo { port: 0, token: String::new() });
             app.manage(figma_bridge_info);
             app.manage(figma_catalog);
+            app.manage(mcp_snapshot);
 
             let app_handle = app.handle().clone();
             app.on_menu_event(move |_app, event| {
@@ -246,7 +261,8 @@ pub fn run() {
             delete_image_file,
             is_project_folder,
             get_figma_bridge_info,
-            set_figma_component_catalog
+            set_figma_component_catalog,
+            set_mcp_snapshot
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

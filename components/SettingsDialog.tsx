@@ -23,6 +23,9 @@ interface Props {
   onOpenChange: (open: boolean) => void;
 }
 
+const mcpCommand = (bridge: { port: number; token: string }) =>
+  `claude mcp add --transport http scope http://localhost:${bridge.port}/mcp --header "Authorization: Bearer ${bridge.token}"`;
+
 export default function SettingsDialog({ open, onOpenChange }: Props) {
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_APP_SETTINGS);
   const [loaded, setLoaded] = useState(false);
@@ -171,6 +174,24 @@ export default function SettingsDialog({ open, onOpenChange }: Props) {
                 <p className="text-sm text-muted-foreground">Pont indisponible.</p>
               )}
             </div>
+
+            {figmaBridge && figmaBridge.port !== 0 && (
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold">Serveur MCP (Claude Code)</Label>
+                <p className="text-sm text-muted-foreground">
+                  Permet à Claude Code de lire le projet ouvert (éléments, pins, collections, points à compléter). Lance cette commande une fois dans un terminal :
+                </p>
+                <code className="block break-all rounded bg-muted p-2 text-xs">{mcpCommand(figmaBridge)}</code>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => navigator.clipboard.writeText(mcpCommand(figmaBridge))}
+                >
+                  Copier la commande
+                </Button>
+              </div>
+            )}
           </div>
         )}
 

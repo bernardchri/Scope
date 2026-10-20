@@ -10,6 +10,7 @@ import { Collection } from '@/lib/types';
 import FigmaSyncRecapDialog, { SyncRecapEntry } from './modals/FigmaSyncRecapDialog';
 import { withDefaultEstimate } from '@/lib/persistence';
 import { publishFigmaComponentCatalog } from '@/lib/figmaBridge';
+import { publishMcpSnapshot } from '@/lib/mcpSnapshot';
 import { useShortcuts } from '@/lib/hooks/useShortcuts';
 import ComponentSidebar from './ComponentSidebar';
 import ScopeItemDetail from './ScopeItemDetail';
@@ -119,6 +120,14 @@ export default function ComponentList({ projectId }: ComponentListProps) {
     }));
     publishFigmaComponentCatalog(catalog).catch(() => {});
   }, [catalogComponents]);
+
+  // Instantané lu par le serveur MCP (Claude Code) : republié à chaque changement, retiré à la fermeture.
+  useEffect(() => {
+    if (!activeProject) return;
+    const timer = setTimeout(() => { publishMcpSnapshot(activeProject).catch(() => {}); }, 300);
+    return () => clearTimeout(timer);
+  }, [activeProject]);
+  useEffect(() => () => { publishMcpSnapshot(null).catch(() => {}); }, []);
 
   if (!activeProject) return null;
 

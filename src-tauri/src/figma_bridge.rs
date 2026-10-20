@@ -11,6 +11,7 @@ use serde::Serialize;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{SystemTime, UNIX_EPOCH};
+use crate::mcp::{self, McpSnapshot};
 use tauri::{AppHandle, Emitter, Manager};
 use tiny_http::{Header, Method, Response, StatusCode};
 
@@ -120,6 +121,7 @@ fn handle_request(
     app: &AppHandle,
     token: &str,
     catalog: &FigmaComponentCatalog,
+    snapshot: &McpSnapshot,
 ) -> Response<std::io::Cursor<Vec<u8>>> {
     if request.method() == &Method::Options {
         return preflight_response();
@@ -127,7 +129,13 @@ fn handle_request(
 
     let is_push = request.method() == &Method::Post && request.url() == "/scope-push";
     let is_catalog = request.method() == &Method::Get && request.url() == "/scope-components";
-    if !is_push && !is_catalog {
+    let is_mcp = request.url() == "/mcp";
+    if is_mcp && request.method() != &Method::Post {
+        // Transport HTTP sans flux serveur : seul POST est servi.
+        return text_response("method not allowed", 405);
+    }
+    let is_mcp = is_mcp && request.method() == &Method::Post;
+    if !is_push && !is_catalog && !is_mcp {
         return text_response("not found", 404);
     }
 
@@ -138,6 +146,18 @@ fn handle_request(
         .any(|h| h.field.to_string().eq_ignore_ascii_case("authorization") && h.value.to_string() == expected);
     if !authorized {
         return text_response("unauthorized", 401);
+    }
+
+    if is_mcp {
+        let mut body = String::new();
+        if request.as_reader().read_to_string(&mut body).is_err() {
+            return text_response("bad request", 400);
+        }
+        let snapshot_json = snapshot.0.lock().map(|s| s.clone()).unwrap_or_default();
+        return match mcp::handle(&body, &snapshot_json) {
+            Some(reply) => json_response(reply),
+            None => text_response("", 202),
+        };
     }
 
     if is_catalog {
@@ -164,7 +184,7 @@ fn handle_request(
 /// retourne les infos de connexion. Le serveur tourne dans son propre thread
 /// jusqu'à la fermeture de l'app. Retourne `None` si aucun candidat n'est
 /// libre — l'app continue de fonctionner sans le pont plutôt que de planter.
-pub fn start(app: AppHandle, catalog: FigmaComponentCatalog) -> Option<FigmaBridgeInfo> {
+pub fn start(app: AppHandle, catalog: FigmaComponentCatalog, snapshot: McpSnapshot) -> Option<FigmaBridgeInfo> {
     let token = load_or_create_token(&app);
 
     for port in CANDIDATE_PORTS {
@@ -177,9 +197,10 @@ pub fn start(app: AppHandle, catalog: FigmaComponentCatalog) -> Option<FigmaBrid
 
         let token_for_thread = token.clone();
         let catalog_for_thread = catalog.clone();
+        let snapshot_for_thread = snapshot.clone();
         std::thread::spawn(move || {
             for mut request in server.incoming_requests() {
-                let response = handle_request(&mut request, &app, &token_for_thread, &catalog_for_thread);
+                let response = handle_request(&mut request, &app, &token_for_thread, &catalog_for_thread, &snapshot_for_thread);
                 let _ = request.respond(response);
             }
         });

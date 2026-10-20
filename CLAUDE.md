@@ -203,6 +203,10 @@ Tasks in markdown are grouped by category under `###` sub-headings (Front-end, B
 
 Tailwind CSS 4, OKLch color space, CSS variables in `styles/global.css`. Use `cn()` from `lib/utils.ts`. shadcn/ui `new-york` style + lucide icons. No hardcoded colors. `@plugin "@tailwindcss/typography"` required for prose/markdown rendering.
 
+### Pont local et serveur MCP
+
+`src-tauri/src/figma_bridge.rs` écoute sur 127.0.0.1 (ports 51789–51793, token conservé dans le dossier de données) : `POST /scope-push` (plugin Figma), `GET /scope-components`, et `POST /mcp` (serveur MCP pour Claude Code, `src-tauri/src/mcp.rs`). Le front publie un instantané du projet ouvert (`lib/mcpSnapshot.ts` → commande `set_mcp_snapshot`) que les outils MCP interrogent ; la commande de connexion est dans Paramètres.
+
 ### Vision
 
 SCOPE = cadrage client (composants, mockups, estimations, PDF). Story-compiler = développement. Lien = export `STORIES.md`. Voir `docs/philosophie-et-integrations.md`. Les profils qui parcourent ce flux (créatif, chef de projet, développeur, IA Claude, client) sont décrits dans `docs/personas.md`.
