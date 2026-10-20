@@ -107,6 +107,9 @@ export default function ScopeItemDetail({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   // Demande de focus sur un bloc de texte (id, position du curseur) ; `n` relance le focus sur un même bloc.
   const [focusReq, setFocusReq] = useState<{ id: string; caret?: number; n: number } | null>(null);
+  // Paragraphe vide toujours présent en fin de page (comme dans Notion) : il n'existe pas dans les données tant qu'on n'y
+  // écrit rien, puis devient un vrai bloc (même identifiant, donc même zone de saisie et même focus).
+  const [trailingId, setTrailingId] = useState(() => crypto.randomUUID());
   const requestFocus = (id: string, caret?: number) => setFocusReq(prev => ({ id, caret, n: (prev?.n ?? 0) + 1 }));
   const [slashMenu, setSlashMenu] = useState<{
     position: { top: number; left: number };
@@ -423,10 +426,24 @@ export default function ScopeItemDetail({
     );
   }
 
-  function handleAddParagraph(position: number) {
-    const id = addWidget('paragraph', position);
-    requestFocus(id, 0);
+  /** Crée le vrai bloc derrière le paragraphe vide de fin de page, avec le texte déjà saisi. */
+  function materializeTrailing(content: string, type: WidgetType = 'paragraph') {
+    onUpdate(item.id, {
+      widgets: [...activeWidgets, { id: trailingId, type }],
+      notes: [...(item.notes || []), { id: trailingId, content }],
+    });
+    setTrailingId(crypto.randomUUID());
   }
+
+  const lastWidget = activeWidgets[activeWidgets.length - 1];
+  const lastIsEmptyText = !!lastWidget && isTextWidget(lastWidget.type) && lastWidget.type !== 'notes'
+    && !item.notes?.find(n => n.id === lastWidget.id)?.content;
+  const showTrailing = !lastIsEmptyText;
+  const trailingWidget: WidgetInstance = { id: trailingId, type: 'paragraph' };
+  const blocks = [
+    ...activeWidgets.map(widget => ({ widget, placeholder: false })),
+    ...(showTrailing ? [{ widget: trailingWidget, placeholder: true }] : []),
+  ];
 
   function handleSlashSelect(widgetType: WidgetType) {
     if (!slashMenu) return;
@@ -535,30 +552,48 @@ export default function ScopeItemDetail({
         onDragStart={({ active }) => setActiveId(active.id as string)}
         onDragEnd={handleDragEnd}
       >
-        <SortableContext items={activeWidgets.map(w => w.id)} strategy={verticalListSortingStrategy}>
+        <SortableContext items={blocks.map(b => b.widget.id)} strategy={verticalListSortingStrategy}>
           <div className="flex flex-col">
-            {activeWidgets.map((widget, i) => (
+            {blocks.map(({ widget, placeholder }) => (
               <div key={widget.id}>
                 <SortableWidget
                   id={widget.id}
                   label={WIDGET_LABELS[widget.type]}
                   icon={WIDGET_ICONS[widget.type]}
                   onRemove={() => removeWidget(widget)}
-                  actions={blockActions(widget)}
+                  actions={placeholder ? undefined : blockActions(widget)}
+                  placeholder={placeholder}
                   spacing={BLOCK_SPACING[widget.type] ?? 'py-3'}
                 >
-                  {renderWidget(widget)}
+                  {placeholder ? (
+                    <ParagraphWidget
+                      // Même clé que le bloc réel qui prendra sa place : la zone de saisie (et son focus) est conservée.
+                      key={trailingId}
+                      content=""
+                      onSave={() => {}}
+                      onInput={(value) => materializeTrailing(value)}
+                      onSlashCommand={(caretRect, textBefore, textAfter) => {
+                        setSlashMenu({
+                          position: { top: caretRect.bottom, left: caretRect.left },
+                          widgetId: trailingId,
+                          textBefore,
+                          textAfter,
+                          filter: '',
+                        });
+                      }}
+                      onSlashFilter={(filter) => setSlashMenu(menu => (menu ? { ...menu, filter } : menu))}
+                      onSlashClose={() => setSlashMenu(null)}
+                      onShortcut={(type, rest) => {
+                        materializeTrailing(rest, type);
+                        requestFocus(trailingId, 0);
+                      }}
+                    />
+                  ) : renderWidget(widget)}
                 </SortableWidget>
               </div>
             ))}
           </div>
         </SortableContext>
-        <button
-          onClick={() => handleAddParagraph(activeWidgets.length)}
-          className="w-full h-8 mt-8 text-left text-sm text-muted-foreground/50 hover:text-muted-foreground px-3 transition-colors cursor-text"
-        >
-          Tapez du texte…
-        </button>
         <DragOverlay>
           {activeWidget && (() => {
             const Icon = WIDGET_ICONS[activeWidget.type];

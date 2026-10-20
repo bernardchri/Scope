@@ -38,12 +38,14 @@ interface SortableWidgetProps {
   icon: LucideIcon;
   onRemove: () => void;
   actions?: BlockActions;
+  /** Bloc pas encore créé (paragraphe vide en fin de page) : pas de « + » ni de poignée, mais la marge reste. */
+  placeholder?: boolean;
   /** Espacement vertical du bloc (par défaut celui d'un gros bloc : une demi-ligne de chaque côté). */
   spacing?: string;
   children: ReactNode;
 }
 
-export default function SortableWidget({ id, onRemove, actions, spacing = 'py-3', children }: SortableWidgetProps) {
+export default function SortableWidget({ id, onRemove, actions, placeholder, spacing = 'py-3', children }: SortableWidgetProps) {
   const {
     attributes,
     listeners,
@@ -70,7 +72,7 @@ export default function SortableWidget({ id, onRemove, actions, spacing = 'py-3'
     >
       {!isDragging && (
         <div
-          className={`flex items-start gap-0.5 shrink-0 transition-opacity ${menuOpen ? 'opacity-100' : 'opacity-0 group-hover/widget:opacity-100 focus-within:opacity-100'}`}
+          className={`flex items-start gap-0.5 shrink-0 transition-opacity ${placeholder ? 'invisible pointer-events-none' : ''} ${menuOpen ? 'opacity-100' : 'opacity-0 group-hover/widget:opacity-100 focus-within:opacity-100'}`}
         >
           {actions && (
             <DropdownMenu>

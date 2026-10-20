@@ -31,6 +31,8 @@ export interface TextBlockHandlers {
   focusCaret?: number;
   onSlashCommand?: (caretRect: DOMRect, textBefore: string, textAfter: string) => void;
   /** Texte tapé après le « / » : filtre le menu des blocs. */
+  /** Chaque saisie, avant les autres réactions : un bloc encore virtuel se crée à la première frappe. */
+  onInput?: (value: string) => void;
   onSlashFilter?: (filter: string) => void;
   onSlashClose?: () => void;
   onDelete?: () => void;
@@ -65,6 +67,7 @@ export default function TextBlock({
   focusToken,
   focusCaret,
   onSlashCommand,
+  onInput,
   onSlashFilter,
   onSlashClose,
   onDelete,
@@ -136,6 +139,8 @@ export default function TextBlock({
       onShortcut!(SHORTCUTS[shortcut[1]], newValue.slice(cursorPos));
       return;
     }
+
+    onInput?.(newValue);
 
     // Menu des blocs : s'ouvre sur un « / » en début de bloc ou après un espace, se filtre en tapant.
     const typedSlash = newValue[cursorPos - 1] === '/' && (cursorPos === 1 || /\s/.test(newValue[cursorPos - 2]));
