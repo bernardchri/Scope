@@ -32,7 +32,7 @@ const TYPE_LABELS: Record<string, string> = { COLOR: 'Couleur', FLOAT: 'Nombre',
 const DEFAULT_VALUES: Record<string, TokenValue> = { COLOR: '#000000', FLOAT: 0, STRING: '', BOOLEAN: false };
 
 const Section = ({ title, children, action }: { title: string; children: React.ReactNode; action?: React.ReactNode }) => (
-  <section className="space-y-2">
+  <section className="space-y-3">
     <div className="flex items-center justify-between gap-2">
       <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">{title}</h3>
       {action}
@@ -232,7 +232,7 @@ export default function TokensPage({ tokens, onChange, folderPath, className }: 
 
   return (
     <div className={`overflow-y-auto p-8 ${className ?? ''}`}>
-      <div className="max-w-5xl space-y-8">
+      <div className="max-w-5xl space-y-14">
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex-1 min-w-0">
             <h1 className="text-2xl font-bold">Design tokens</h1>
