@@ -1,4 +1,5 @@
 import { Task } from '../types';
+import { optOutPinOfDeletedTask } from '../pinTasks';
 import type { SetState } from './types';
 
 export interface TaskSlice {
@@ -34,7 +35,7 @@ export const createTaskSlice = (set: SetState) => ({
               ...p,
               components: p.components.map((c) =>
                 c.id === componentId
-                  ? { ...c, tasks: c.tasks.filter((t) => t.id !== taskId) }
+                  ? optOutPinOfDeletedTask(c, taskId)
                   : c
               )
             }

@@ -38,6 +38,8 @@ export interface Task {
   /** 'v2' = hors périmètre / évolution : exclu du chiffrage, listé à part dans les exports. */
   scope?: 'v2';
   pinRef?: { imageId: string; pinId: string; pinNumber: number };
+  /** Créée automatiquement pour un pin (un pin = une tâche) : suit le pin, disparaît avec lui tant qu'elle n'est pas faite. */
+  auto?: boolean;
 }
 
 export interface ImagePin {
@@ -55,6 +57,8 @@ export interface ImagePin {
   specs?: Record<string, string>;
   /** Précision libre, exportée avec le pin. */
   note?: string;
+  /** Ce pin n'est pas une tâche (par défaut, tout pin en est une). */
+  noTask?: boolean;
   /** Pin « Liste » : collection dont la liste affiche les entrées. */
   collectionId?: string;
   /** Autre pin : champ de collection d'où vient la donnée affichée. */
@@ -186,6 +190,8 @@ export interface Project {
   collections?: Collection[];
   /** Variables et styles du document Figma (design tokens). */
   tokens?: DesignTokens;
+  /** « auto » : chaque pin crée sa tâche ; « off » : choix de ne pas le faire. Absent tant que la question n'a pas été posée. */
+  pinTasks?: 'auto' | 'off';
   createdAt: string;
   formatVersion?: number; // 2 = folder format
 }

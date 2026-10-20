@@ -5,6 +5,7 @@ import { findCollection, flattenFields } from './collectionLookup';
 import { isPinQualified } from './completeness';
 import { nextPinNumber } from './pinHelpers';
 import { generateBriefMd } from './markdownExport';
+import { optOutPinOfDeletedTask } from './pinTasks';
 
 /** Arguments d'un outil MCP d'écriture, tels que reçus de Claude (non fiables : tout est revalidé). */
 export type McpArgs = Record<string, unknown>;
@@ -111,6 +112,7 @@ function qualify(pin: ImagePin, args: McpArgs, collections: Collection[]): Image
     next = { ...next, specs: Object.keys(specs).length ? specs : undefined };
   }
 
+  if (args.isTask !== undefined) next = { ...next, noTask: args.isTask === false ? true : undefined };
   if (args.note !== undefined) next = { ...next, note: str(args.note)?.trim() || undefined };
   if (args.label !== undefined) next = { ...next, label: str(args.label)?.trim() || undefined };
 
@@ -175,11 +177,14 @@ function runPinCommand(project: Project, component: Component, tool: string, arg
   }
 
   const images = (component.images ?? []).map((img) => (img.id === image.id ? { ...img, pins: updatedPins } : img));
-  const updated = { ...component, images };
+  // « isTask: false » retire aussi les tâches non faites du pin, comme le bouton « Ce n'est pas une tâche ».
+  const opted = target.noTask && !pins.find((p) => p.id === target.id)?.noTask;
+  const tasks = opted ? component.tasks.filter((t) => t.pinRef?.pinId !== target.id || t.completed) : component.tasks;
+  const updated = { ...component, images, tasks };
   return {
     ok: true,
     componentId: component.id,
-    updates: { images },
+    updates: opted ? { images, tasks } : { images },
     result: { component: component.name, image: image.id, pin: pinReport(target, updated, collections) },
   };
 }
@@ -290,7 +295,14 @@ function runTaskCommand(component: Component, tool: string, args: McpArgs): McpO
     const found = findTask(component, args.task);
     if (typeof found === 'string') return fail(found);
     if (tool === 'delete_task') {
-      tasks = component.tasks.filter((t) => t.id !== found.id);
+      // Supprimer la tâche d'un pin dit que ce pin n'est pas une tâche (sinon elle serait recréée).
+      const next = optOutPinOfDeletedTask(component, found.id);
+      return {
+        ok: true,
+        componentId: component.id,
+        updates: { tasks: next.tasks, ...(next.images !== component.images ? { images: next.images } : {}) },
+        result: { component: component.name, task: 'supprimée', tasks: next.tasks.map(taskView) },
+      };
     } else {
       const name = args.name === undefined ? undefined : str(args.name)?.trim();
       if (args.name !== undefined && !name) return fail('`name` ne peut pas être vide.');

@@ -110,6 +110,7 @@ fn tools() -> Value {
                     "kind": { "type": "string", "description": "Type du pin ; chaîne vide pour le retirer." },
                     "specs": { "type": "object", "description": "Précisions du type (voir description).", "additionalProperties": true },
                     "note": { "type": "string", "description": "Précision libre (comportement, contrainte, exemple)." },
+                    "isTask": { "type": "boolean", "description": "Par défaut chaque pin est une tâche ; false = ce pin n'est pas une tâche (ses tâches non faites sont retirées), true = en refaire une." },
                     "label": { "type": "string", "description": "Nom du pin." },
                     "collection": { "type": "string", "description": "Collection liée (nom ou id) : pour un pin list ou relation, ou avec `field`." },
                     "field": { "type": "string", "description": "Champ de la collection d'où vient la donnée (nom ou chemin « galerie › image »)." }

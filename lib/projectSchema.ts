@@ -45,6 +45,7 @@ const imagePinSchema = z.object({
   kind: z.string().optional(),
   specs: z.record(z.string(), z.string()).optional(),
   note: z.string().optional(),
+  noTask: z.boolean().optional(),
   collectionId: z.string().optional(),
   fieldRef: z.object({ collectionId: z.string(), fieldId: z.string() }).optional().catch(undefined),
 });
@@ -116,6 +117,7 @@ const taskSchema = z.object({
   category: z.enum(['frontend', 'backend', 'seo', 'motion']).catch('frontend'),
   scope: z.literal('v2').optional().catch(undefined),
   pinRef: pinRefSchema,
+  auto: z.boolean().optional(),
 });
 
 const instanceSchema = z.object({
@@ -271,6 +273,7 @@ const projectSchema = z.object({
   components: resilientArray(componentSchema),
   collections: resilientArray(collectionSchema).optional(),
   tokens: tokensSchema,
+  pinTasks: z.enum(['auto', 'off']).optional().catch(undefined),
   createdAt: z.string().catch(() => new Date().toISOString()),
   formatVersion: z.number().optional(),
 });

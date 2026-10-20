@@ -10,7 +10,8 @@ import { Collection } from '@/lib/types';
 import FigmaSyncRecapDialog, { SyncRecapEntry } from './modals/FigmaSyncRecapDialog';
 import { withDefaultEstimate, openProjectFolder } from '@/lib/persistence';
 import { clearImageCache } from '@/lib/imageManager';
-import { message } from '@tauri-apps/plugin-dialog';
+import { ask, message } from '@tauri-apps/plugin-dialog';
+import { reconcilePinTasks } from '@/lib/pinTasks';
 import { publishFigmaComponentCatalog } from '@/lib/figmaBridge';
 import { publishMcpSnapshot } from '@/lib/mcpSnapshot';
 import { runMcpCommand } from '@/lib/mcpCommands';
@@ -143,6 +144,30 @@ export default function ComponentList({ projectId }: ComponentListProps) {
     }));
     publishFigmaComponentCatalog(catalog).catch(() => {});
   }, [catalogComponents]);
+
+  // Un pin = une tâche. La première fois que des pins n'ont pas de tâche, on demande (une seule fois par projet) ;
+  // ensuite chaque nouveau pin (dessiné, venu de Figma ou de MCP) a sa tâche, et celle d'un pin supprimé s'en va.
+  const askedPinTasks = useRef(false);
+  const pinTasksMode = activeProject?.pinTasks;
+  const componentsForPinTasks = activeProject?.components;
+  useEffect(() => {
+    if (!componentsForPinTasks || pinTasksMode === 'off') return;
+    const { components, added, removed } = reconcilePinTasks(componentsForPinTasks);
+    if (added === 0 && removed === 0) return;
+    const apply = () => {
+      const latest = useProjectStore.getState().projects.find(p => p.id === projectId);
+      if (!latest) return;
+      updateProject(projectId, { components: reconcilePinTasks(latest.components).components, pinTasks: 'auto' });
+    };
+    if (pinTasksMode === 'auto') { apply(); return; }
+    if (askedPinTasks.current) return;
+    askedPinTasks.current = true;
+    ask(
+      `Chaque pin devient une tâche à cocher : ${added} tâche${added > 1 ? 's' : ''} vont être créée${added > 1 ? 's' : ''} à partir des pins existants. ` +
+      `Tu pourras exclure un pin (« ce n'est pas une tâche ») et tout annuler avec Cmd+Z. Continuer ?`,
+      { title: 'Un pin = une tâche', kind: 'info', okLabel: 'Créer les tâches', cancelLabel: 'Pas maintenant' },
+    ).then(ok => { if (ok) apply(); else updateProject(projectId, { pinTasks: 'off' }); }).catch(() => {});
+  }, [componentsForPinTasks, pinTasksMode, projectId, updateProject]);
 
   // Instantané lu par le serveur MCP (Claude Code) : republié à chaque changement, retiré à la fermeture.
   useEffect(() => {

@@ -22,10 +22,11 @@ interface ZoomModalProps {
   linkedNameFor?: (pinId: string) => string | undefined;
   onAddTaskForPin?: (imageId: string, pin: ImagePin) => void;
   onToggleTask?: (taskId: string) => void;
+  onSetPinNoTask?: (pinId: string, noTask: boolean) => void;
   onClose: () => void;
 }
 
-export default function ZoomModal({ open, image, tasks, folderPath, onUpdatePins, collections, onCreateCollection, linkedNameFor, onAddTaskForPin, onToggleTask, onClose }: ZoomModalProps) {
+export default function ZoomModal({ open, image, tasks, folderPath, onUpdatePins, collections, onCreateCollection, linkedNameFor, onAddTaskForPin, onToggleTask, onSetPinNoTask, onClose }: ZoomModalProps) {
   const { resolve: resolveImageSrc } = useImageLoader([image], folderPath);
   const [zoom, setZoom] = useState(1);
   const [showPins, setShowPins] = useState(true);
@@ -274,6 +275,7 @@ export default function ZoomModal({ open, image, tasks, folderPath, onUpdatePins
               linkedTasks={tasks.filter(t => t.pinRef?.pinId === selectedPinId)}
               onAddTask={onAddTaskForPin ? () => onAddTaskForPin(image.id, localPins.find(p => p.id === selectedPinId)!) : undefined}
               onToggleTask={onToggleTask}
+              onSetNoTask={onSetPinNoTask ? (value) => onSetPinNoTask(selectedPinId, value) : undefined}
             />
           </div>
         )}

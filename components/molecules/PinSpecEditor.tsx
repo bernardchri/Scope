@@ -21,6 +21,8 @@ interface PinSpecEditorProps {
   linkedTasks?: Task[];
   onAddTask?: () => void;
   onToggleTask?: (taskId: string) => void;
+  /** « Ce n'est pas une tâche » (et l'inverse) : retire ou recrée la tâche automatique du pin. */
+  onSetNoTask?: (noTask: boolean) => void;
   onCreateCollection?: (collection: Collection) => void;
 }
 
@@ -36,7 +38,7 @@ function visibleKind(kind: PinKind, pin: ImagePin, linked: boolean): PinKind {
  * au type (longueur max, éditable en backoffice, balise SEO…). Exporté dans le
  * Markdown (prompt IA) et lu par le développeur.
  */
-export default function PinSpecEditor({ pin, onChange, collections = [], linkedComponentName, linkedTasks = [], onAddTask, onToggleTask, onCreateCollection = () => {} }: PinSpecEditorProps) {
+export default function PinSpecEditor({ pin, onChange, collections = [], linkedComponentName, linkedTasks = [], onAddTask, onToggleTask, onSetNoTask, onCreateCollection = () => {} }: PinSpecEditorProps) {
   const kind = getPinKind(pin.kind);
   const fieldOptions = collections.flatMap((c) =>
     flattenFields(c.fields).filter((f) => f.field.name).map((f) => ({ value: `${c.id}:${f.field.id}`, label: `${c.name} › ${f.path}` }))
@@ -106,20 +108,29 @@ export default function PinSpecEditor({ pin, onChange, collections = [], linkedC
         </label>
       )}
 
-      {/* Tâches du pin : son état d'avancement (à faire, en cours, fait) en découle */}
+      {/* Un pin est une tâche par défaut ; on peut dire que non. Son état d'avancement vient de ses tâches. */}
       {onAddTask && (
         <div className="space-y-1.5">
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
+          <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
             <span>
-              {linkedTasks.length === 0
-                ? 'Aucune tâche liée à ce pin'
-                : `Tâches de ce pin : ${linkedTasks.filter(t => t.completed).length}/${linkedTasks.length} faite${linkedTasks.filter(t => t.completed).length > 1 ? 's' : ''}`}
+              {pin.noTask
+                ? "Ce pin n'est pas une tâche"
+                : linkedTasks.length === 0
+                  ? 'Tâche en cours de création…'
+                  : `Tâches de ce pin : ${linkedTasks.filter(t => t.completed).length}/${linkedTasks.length} faite${linkedTasks.filter(t => t.completed).length > 1 ? 's' : ''}`}
             </span>
-            <Button type="button" size="sm" variant="outline" className="h-6 px-2 text-xs" onClick={onAddTask}>
-              {linkedTasks.length === 0 ? 'Créer la tâche de ce pin' : '+ Tâche'}
-            </Button>
+            <span className="flex items-center gap-1">
+              {!pin.noTask && (
+                <Button type="button" size="sm" variant="ghost" className="h-6 px-2 text-xs" onClick={onAddTask}>+ Tâche</Button>
+              )}
+              {onSetNoTask && (
+                <Button type="button" size="sm" variant="outline" className="h-6 px-2 text-xs" onClick={() => onSetNoTask(!pin.noTask)}>
+                  {pin.noTask ? 'En faire une tâche' : "Ce n'est pas une tâche"}
+                </Button>
+              )}
+            </span>
           </div>
-          {linkedTasks.map((task) => (
+          {!pin.noTask && linkedTasks.map((task) => (
             <label key={task.id} className="flex items-center gap-2 text-sm cursor-pointer">
               <Checkbox checked={task.completed} onCheckedChange={() => onToggleTask?.(task.id)} />
               <span className={task.completed ? 'line-through text-muted-foreground' : ''}>{task.name}</span>

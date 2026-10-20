@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { getPinKind } from '@/lib/pinKinds';
+import { setPinNoTask } from '@/lib/pinTasks';
 import { Collection, Component, FigmaLink, ImagePin, ScopeItemType, WidgetType, WidgetInstance } from '@/lib/types';
 import { getCategoryLabel, getCategoryColor, getActiveWidgets, getAvailableWidgetTypes, WIDGET_LABELS, WIDGET_ICONS, widgetHasContent, isTextWidget } from '@/lib/categoryHelpers';
 import { Button } from '@/components/ui/button';
@@ -184,7 +185,11 @@ export default function ScopeItemDetail({
     } else {
       switch (widget.type) {
         case 'images': updates.images = []; break;
-        case 'tasks': updates.tasks = []; break;
+        case 'tasks':
+          updates.tasks = [];
+          // Sans cela, chaque pin recréerait sa tâche aussitôt : retirer le bloc Tâches, c'est dire qu'il n'y en a plus.
+          updates.images = (item.images ?? []).map(img => ({ ...img, pins: img.pins?.map(p => ({ ...p, noTask: true })) }));
+          break;
         case 'instances': updates.instances = []; break;
         case 'resources': updates.assets = undefined; break;
         case 'page': updates.page = undefined; break;
@@ -296,6 +301,10 @@ export default function ScopeItemDetail({
             onCreateCollection={onCreateCollection}
             onAddTaskForPin={addTaskForPin}
             onToggleTask={toggleTask}
+            onSetPinNoTask={(pinId, noTask) => {
+              const next = setPinNoTask(item, pinId, noTask);
+              onUpdate(item.id, { images: next.images, tasks: next.tasks });
+            }}
           />
         );
       case 'notes': {
