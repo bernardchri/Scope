@@ -72,7 +72,8 @@ export default function SortableWidget({ id, onRemove, actions, placeholder, spa
     >
       {!isDragging && (
         <div
-          className={`flex items-start gap-0.5 shrink-0 transition-opacity ${placeholder ? 'invisible pointer-events-none' : ''} ${menuOpen ? 'opacity-100' : 'opacity-0 group-hover/widget:opacity-100 focus-within:opacity-100'}`}
+          // Marge négative : « + » et poignée sortent dans la marge gauche de la page, le contenu reste aligné sur le titre.
+          className={`flex items-start justify-end gap-0.5 shrink-0 -ml-12 w-11 transition-opacity ${placeholder ? 'invisible pointer-events-none' : ''} ${menuOpen ? 'opacity-100' : 'opacity-0 group-hover/widget:opacity-100 focus-within:opacity-100'}`}
         >
           {actions && (
             <DropdownMenu>

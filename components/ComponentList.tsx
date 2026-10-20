@@ -343,7 +343,7 @@ export default function ComponentList({ projectId }: ComponentListProps) {
         )}
 
         {selectedItem ? (
-          <div key={`${selectedItem.id}-${refreshKey}`} ref={detailScrollRef} className="flex-1 overflow-y-auto p-8">
+          <div key={`${selectedItem.id}-${refreshKey}`} ref={detailScrollRef} className="flex-1 overflow-y-auto p-8 pl-14">
               <ScopeItemDetail
                 projectId={projectId}
                 item={selectedItem}
