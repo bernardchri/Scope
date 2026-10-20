@@ -3,12 +3,12 @@
 import { useState } from 'react';
 import { Copy, Plus, Trash2 } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
-import { open } from '@tauri-apps/plugin-dialog';
+import { ask, open } from '@tauri-apps/plugin-dialog';
 import {
   DesignTokens, EffectStyleToken, FontSource, FontToken, TextStyleToken, TokenCollection, TokenValue, TokenVariable,
 } from '@/lib/types';
 import {
-  bySizeDesc, WEIGHT_NAMES, emptyTokens, fontStyleName, fontWeight, isItalic, textStyleDeclarations, tokenSource, tokensToCss, tokensToJson,
+  addMode as addModeTo, aliasTargets, bySizeDesc, isManualMode, removeMode as removeModeFrom, renameInTokens, renameMode as renameModeIn, WEIGHT_NAMES, emptyTokens, fontStyleName, fontWeight, isItalic, textStyleDeclarations, tokenSource, tokensToCss, tokensToJson,
   variableCssNames,
 } from '@/lib/designTokens';
 import { Button } from '@/components/ui/button';
@@ -71,23 +71,52 @@ function ColorInput({ value, onCommit }: { value: string; onCommit: (hex: string
   );
 }
 
-function VariableValue({ variable, value, onCommit }: { variable: TokenVariable; value: TokenValue | undefined; onCommit: (v: TokenValue) => void }) {
-  if (value !== undefined && typeof value === 'object') return <span className="text-muted-foreground">→ {value.alias}</span>;
-  if (variable.type === 'COLOR') return <ColorInput value={typeof value === 'string' ? value : '#000000'} onCommit={onCommit} />;
-  if (variable.type === 'BOOLEAN') return <Checkbox checked={value === true} onCheckedChange={(v) => onCommit(v === true)} />;
-  const numeric = variable.type === 'FLOAT';
-  return (
-    <Input
-      key={String(value)}
-      className="h-8 w-32 text-xs"
-      type={numeric ? 'number' : 'text'}
-      defaultValue={value === undefined ? '' : String(value)}
-      onBlur={(e) => {
-        const next = numeric ? Number(e.target.value) : e.target.value;
-        if (next !== value && !(numeric && Number.isNaN(next))) onCommit(next);
+/** Valeur d'une variable pour un mode : littéral, ou renvoi vers une autre variable du même type (alias, ex. un thème vers une primitive). */
+function VariableValue({ variable, value, targets, onCommit }: {
+  variable: TokenVariable;
+  value: TokenValue | undefined;
+  targets: { collection: string; name: string }[];
+  onCommit: (v: TokenValue) => void;
+}) {
+  const alias = value !== undefined && typeof value === 'object' ? value : undefined;
+  const selector = targets.length > 0 && (
+    <select
+      className="h-8 max-w-[11rem] rounded-md border border-input bg-background px-1 text-xs text-foreground"
+      title="Valeur directe ou renvoi vers une autre variable"
+      value={alias ? `${alias.collection}\u0000${alias.alias}` : ''}
+      onChange={(e) => {
+        if (!e.target.value) { onCommit(DEFAULT_VALUES[variable.type] ?? ''); return; }
+        const [collection, name] = e.target.value.split('\u0000');
+        onCommit({ alias: name, collection });
       }}
-    />
+    >
+      <option value="">valeur</option>
+      {targets.map(target => (
+        <option key={`${target.collection}\u0000${target.name}`} value={`${target.collection}\u0000${target.name}`}>→ {target.name}</option>
+      ))}
+    </select>
   );
+  if (alias) return <span className="inline-flex items-center gap-1">{selector}</span>;
+
+  let editor: React.ReactNode;
+  if (variable.type === 'COLOR') editor = <ColorInput value={typeof value === 'string' ? value : '#000000'} onCommit={onCommit} />;
+  else if (variable.type === 'BOOLEAN') editor = <Checkbox checked={value === true} onCheckedChange={(v) => onCommit(v === true)} />;
+  else {
+    const numeric = variable.type === 'FLOAT';
+    editor = (
+      <Input
+        key={String(value)}
+        className="h-8 w-32 text-xs"
+        type={numeric ? 'number' : 'text'}
+        defaultValue={value === undefined ? '' : String(value)}
+        onBlur={(e) => {
+          const next = numeric ? Number(e.target.value) : e.target.value;
+          if (next !== value && !(numeric && Number.isNaN(next))) onCommit(next);
+        }}
+      />
+    );
+  }
+  return <span className="inline-flex items-center gap-1">{editor}{selector}</span>;
 }
 
 /** Variables, styles de texte, de couleur et d'effet du projet : reçus d'une source (plugin) ou saisis ici. */
@@ -115,9 +144,27 @@ export default function TokensPage({ tokens, onChange, folderPath, className }: 
   const setCollection = (ci: number, collection: TokenCollection) =>
     update({ collections: t.collections.map((c, i) => (i === ci ? collection : c)) });
 
-  function setVariable(ci: number, vi: number, variable: TokenVariable) {
+  /** Modifie une variable. Changer la valeur d'un mode créé dans SCOPE laisse la variable synchronisée ; tout autre changement la rend « SCOPE ». */
+  function setVariable(ci: number, vi: number, variable: TokenVariable, mode?: string) {
     const collection = t.collections[ci];
-    setCollection(ci, { ...collection, variables: collection.variables.map((v, i) => (i === vi ? { ...variable, origin: 'manual' } : v)) });
+    const onlyOwnMode = mode !== undefined && collection.origin !== 'manual' && isManualMode(collection, mode);
+    setCollection(ci, {
+      ...collection,
+      variables: collection.variables.map((v, i) => (i === vi ? (onlyOwnMode ? variable : { ...variable, origin: 'manual' }) : v)),
+    });
+  }
+
+  /** Nom ou type d'une variable d'une collection créée dans SCOPE ; les alias qui y renvoient suivent. */
+  function renameVariable(ci: number, variable: TokenVariable, name: string) {
+    const collection = t.collections[ci];
+    if (!name || name === variable.name || collection.variables.some(v => v.name === name)) return;
+    onChange(renameInTokens(t, collection.name, { variable: variable.name }, { variable: name }));
+  }
+
+  function renameCollection(ci: number, name: string) {
+    const collection = t.collections[ci];
+    if (!name || name === collection.name || t.collections.some(c => c.name === name)) return;
+    onChange(renameInTokens(t, collection.name, {}, { collection: name }));
   }
 
   function addCollection() {
@@ -140,14 +187,8 @@ export default function TokensPage({ tokens, onChange, folderPath, className }: 
 
   function addMode(ci: number) {
     const mode = (newMode[ci] ?? '').trim();
-    const collection = t.collections[ci];
-    if (!mode || collection.modes.includes(mode)) return;
-    const base = collection.defaultMode || collection.modes[0];
-    setCollection(ci, {
-      ...collection,
-      modes: [...collection.modes, mode],
-      variables: collection.variables.map(v => (v.values[base] === undefined ? v : { ...v, values: { ...v.values, [mode]: v.values[base] } })),
-    });
+    if (!mode) return;
+    setCollection(ci, addModeTo(t.collections[ci], mode));
     setNewMode({ ...newMode, [ci]: '' });
   }
 
@@ -259,85 +300,146 @@ export default function TokensPage({ tokens, onChange, folderPath, className }: 
         </div>
 
         {/* ── Variables ─────────────────────────────────────────────────── */}
-        {t.collections.map((collection, ci) => (
-          <Section
-            key={collection.name}
-            title={`Variables — ${collection.name}${collection.modes.length > 1 ? ` (${collection.modes.join(' / ')})` : ''}`}
-            action={collection.origin === 'manual' && (
-              <Button
-                variant="ghost" size="sm" className="h-7 gap-1 text-destructive hover:text-destructive"
-                onClick={() => update({ collections: t.collections.filter((_, i) => i !== ci) })}
-              >
-                <Trash2 className="h-3.5 w-3.5" /> Supprimer la collection
-              </Button>
-            )}
-          >
-            <div className="border rounded-lg overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-muted/50 text-left text-xs text-muted-foreground">
-                  <tr>
-                    <th className="px-3 py-2 font-medium">Variable</th>
-                    <th className="px-3 py-2 font-medium">CSS</th>
-                    {collection.modes.map(mode => <th key={mode} className="px-3 py-2 font-medium">{mode}</th>)}
-                    <th className="w-10" />
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {collection.variables.map((variable, vi) => (
-                    <tr key={variable.name}>
-                      <td className="px-3 py-1.5 whitespace-nowrap" title={variable.description}>
-                        {variable.name}<ManualBadge show={variable.origin === 'manual'} />
-                      </td>
-                      <td className="px-3 py-1.5 font-mono text-xs text-muted-foreground">{names.get(`${collection.name}/${variable.name}`)}</td>
-                      {collection.modes.map(mode => (
-                        <td key={mode} className="px-3 py-1.5">
-                          <VariableValue
-                            variable={variable}
-                            value={variable.values[mode]}
-                            onCommit={(value) => setVariable(ci, vi, { ...variable, values: { ...variable.values, [mode]: value } })}
-                          />
-                        </td>
-                      ))}
-                      <td className="px-1">
-                        <Button
-                          variant="ghost" size="icon" className="h-7 w-7" title="Supprimer la variable (une variable de la source revient à la prochaine synchronisation)"
-                          onClick={() => setCollection(ci, { ...collection, variables: collection.variables.filter((_, i) => i !== vi) })}
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <Input
-                className="h-8 w-56 text-sm" placeholder="Nouvelle variable (ex. color/primary)"
-                value={newVariable[ci]?.name ?? ''}
-                onChange={(e) => setNewVariable({ ...newVariable, [ci]: { name: e.target.value, type: newVariable[ci]?.type ?? 'COLOR' } })}
-                onKeyDown={(e) => e.key === 'Enter' && addVariable(ci)}
-              />
-              <select
-                className={SELECT} value={newVariable[ci]?.type ?? 'COLOR'}
-                onChange={(e) => setNewVariable({ ...newVariable, [ci]: { name: newVariable[ci]?.name ?? '', type: e.target.value } })}
-              >
-                {Object.entries(TYPE_LABELS).map(([type, label]) => <option key={type} value={type}>{label}</option>)}
-              </select>
-              <Button size="sm" variant="outline" className="gap-1" onClick={() => addVariable(ci)}><Plus className="h-4 w-4" /> Variable</Button>
-              {collection.origin === 'manual' && (
-                <>
-                  <Input
-                    className="h-8 w-36 text-sm" placeholder="Nouveau mode"
-                    value={newMode[ci] ?? ''} onChange={(e) => setNewMode({ ...newMode, [ci]: e.target.value })}
-                    onKeyDown={(e) => e.key === 'Enter' && addMode(ci)}
-                  />
-                  <Button size="sm" variant="outline" className="gap-1" onClick={() => addMode(ci)}><Plus className="h-4 w-4" /> Mode</Button>
-                </>
+        {t.collections.map((collection, ci) => {
+          const own = collection.origin === 'manual';
+          return (
+            <Section
+              key={`collection-${ci}`}
+              title={`Variables — ${collection.name}`}
+              action={(
+                <Button
+                  variant="ghost" size="sm" className="h-7 gap-1 text-destructive hover:text-destructive"
+                  title={own ? 'Supprimer la collection' : 'Supprimer la collection (elle revient à la prochaine synchronisation)'}
+                  onClick={async () => {
+                    if (!own && !(await ask(`Supprimer « ${collection.name} » ? Elle revient à la prochaine synchronisation depuis la source.`, { title: 'Supprimer la collection', kind: 'warning' }))) return;
+                    update({ collections: t.collections.filter((_, i) => i !== ci) });
+                  }}
+                >
+                  <Trash2 className="h-3.5 w-3.5" /> Supprimer la collection
+                </Button>
               )}
-            </div>
-          </Section>
-        ))}
+            >
+              {/* Nom (collection créée ici) et modes : chacun peut être un thème */}
+              <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                {own && (
+                  <Input
+                    key={`cname-${ci}-${collection.name}`} className="h-8 w-48 text-sm font-medium text-foreground" defaultValue={collection.name} title="Nom de la collection"
+                    onBlur={(e) => renameCollection(ci, e.target.value.trim())}
+                  />
+                )}
+                Modes
+                {collection.modes.map((mode) => {
+                  const editable = isManualMode(collection, mode);
+                  return (
+                    <span key={mode} className="inline-flex items-center gap-1 rounded border bg-muted/40 px-1.5 py-0.5">
+                      {editable ? (
+                        <Input
+                          key={`mode-${ci}-${mode}`} className="h-6 w-28 px-1 text-xs" defaultValue={mode} title="Renommer le mode"
+                          onBlur={(e) => e.target.value.trim() !== mode && setCollection(ci, renameModeIn(collection, mode, e.target.value))}
+                        />
+                      ) : (
+                        <span className="px-1" title="Mode venu de la source : modifiable dans l'outil de design">{mode}</span>
+                      )}
+                      {own && (
+                        <button
+                          className={collection.defaultMode === mode ? 'text-foreground' : 'text-muted-foreground/50 hover:text-foreground'}
+                          title={collection.defaultMode === mode ? 'Mode par défaut (écrit dans :root)' : 'Définir comme mode par défaut'}
+                          onClick={() => setCollection(ci, { ...collection, defaultMode: mode })}
+                        >★</button>
+                      )}
+                      {editable && collection.modes.length > 1 && (
+                        <button className="hover:text-destructive" title="Supprimer ce mode" onClick={() => setCollection(ci, removeModeFrom(collection, mode))}>×</button>
+                      )}
+                    </span>
+                  );
+                })}
+                <Input
+                  className="h-8 w-36 text-sm" placeholder="Nouveau mode (thème)"
+                  value={newMode[ci] ?? ''} onChange={(e) => setNewMode({ ...newMode, [ci]: e.target.value })}
+                  onKeyDown={(e) => e.key === 'Enter' && addMode(ci)}
+                />
+                <Button size="sm" variant="outline" className="h-8 gap-1" onClick={() => addMode(ci)}><Plus className="h-4 w-4" /> Mode</Button>
+              </div>
+
+              <div className="border rounded-lg overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-muted/50 text-left text-xs text-muted-foreground">
+                    <tr>
+                      <th className="px-3 py-2 font-medium">Variable</th>
+                      <th className="px-3 py-2 font-medium">CSS</th>
+                      {collection.modes.map(mode => <th key={mode} className="px-3 py-2 font-medium">{mode}</th>)}
+                      <th className="w-10" />
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {collection.variables.map((variable, vi) => {
+                      const targets = aliasTargets(t, collection.name, variable);
+                      return (
+                        <tr key={`variable-${vi}`}>
+                          <td className="px-3 py-1.5 whitespace-nowrap" title={variable.description}>
+                            {own ? (
+                              <span className="inline-flex items-center gap-1">
+                                <Input
+                                  key={`vname-${ci}-${variable.name}`} className="h-8 w-40 text-sm" defaultValue={variable.name}
+                                  onBlur={(e) => renameVariable(ci, variable, e.target.value.trim())}
+                                />
+                                <select
+                                  className={SELECT} title="Type (changer le type remet les valeurs à zéro)" value={variable.type}
+                                  onChange={(e) => setVariable(ci, vi, {
+                                    ...variable, type: e.target.value,
+                                    values: Object.fromEntries(collection.modes.map(m => [m, DEFAULT_VALUES[e.target.value]])),
+                                  })}
+                                >
+                                  {Object.entries(TYPE_LABELS).map(([type, label]) => <option key={type} value={type}>{label}</option>)}
+                                </select>
+                              </span>
+                            ) : (
+                              <>{variable.name}<ManualBadge show={variable.origin === 'manual'} /></>
+                            )}
+                          </td>
+                          <td className="px-3 py-1.5 font-mono text-xs text-muted-foreground">{names.get(`${collection.name}/${variable.name}`)}</td>
+                          {collection.modes.map(mode => (
+                            <td key={mode} className="px-3 py-1.5">
+                              <VariableValue
+                                variable={variable}
+                                value={variable.values[mode]}
+                                targets={targets}
+                                onCommit={(value) => setVariable(ci, vi, { ...variable, values: { ...variable.values, [mode]: value } }, mode)}
+                              />
+                            </td>
+                          ))}
+                          <td className="px-1">
+                            <Button
+                              variant="ghost" size="icon" className="h-7 w-7" title="Supprimer la variable (une variable de la source revient à la prochaine synchronisation)"
+                              onClick={() => setCollection(ci, { ...collection, variables: collection.variables.filter((_, i) => i !== vi) })}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <Input
+                  className="h-8 w-56 text-sm" placeholder="Nouvelle variable (ex. color/primary)"
+                  value={newVariable[ci]?.name ?? ''}
+                  onChange={(e) => setNewVariable({ ...newVariable, [ci]: { name: e.target.value, type: newVariable[ci]?.type ?? 'COLOR' } })}
+                  onKeyDown={(e) => e.key === 'Enter' && addVariable(ci)}
+                />
+                <select
+                  className={SELECT} value={newVariable[ci]?.type ?? 'COLOR'}
+                  onChange={(e) => setNewVariable({ ...newVariable, [ci]: { name: newVariable[ci]?.name ?? '', type: e.target.value } })}
+                >
+                  {Object.entries(TYPE_LABELS).map(([type, label]) => <option key={type} value={type}>{label}</option>)}
+                </select>
+                <Button size="sm" variant="outline" className="gap-1" onClick={() => addVariable(ci)}><Plus className="h-4 w-4" /> Variable</Button>
+              </div>
+            </Section>
+          );
+        })}
 
         <Section title="Nouvelle collection de variables">
           <div className="flex flex-wrap items-center gap-2">

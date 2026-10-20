@@ -188,6 +188,7 @@ const tokensSchema = z
         name: z.string().catch(''),
         defaultMode: z.string().catch(''),
         modes: z.array(z.string()).catch([]),
+        manualModes: z.array(z.string()).optional(),
         variables: resilientArray(
           z.object({
             origin: origin,

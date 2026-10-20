@@ -236,6 +236,8 @@ export interface TokenCollection {
   name: string;
   defaultMode: string;
   modes: string[];
+  /** Modes ajoutés dans SCOPE à une collection venue d'une source (ex. thèmes : Figma gratuit n'a qu'un mode) ; conservés à chaque envoi. */
+  manualModes?: string[];
   variables: TokenVariable[];
 }
 

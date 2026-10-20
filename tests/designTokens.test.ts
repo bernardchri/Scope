@@ -149,3 +149,74 @@ describe('tokens saisis dans SCOPE', () => {
     expect(fontWeight(fontStyleName(300, true))).toBe(300);
   });
 });
+
+describe('collections de variables : modes et renommages', () => {
+  const synced = tokens.collections[0]; // collection de la source (Light / Dark)
+  const own: DesignTokens = {
+    ...tokens,
+    collections: [{ name: 'Thème', origin: 'manual', defaultMode: 'La Vilaine', modes: ['La Vilaine'], variables: [
+      { name: 'fond', type: 'COLOR', origin: 'manual', values: { 'La Vilaine': { alias: 'color/primary', collection: 'Primitives' } } },
+    ] }, ...tokens.collections],
+  };
+
+  it('ajoute un mode à une collection de la source, copié du mode par défaut', async () => {
+    const { addMode, isManualMode } = await import('@/lib/designTokens');
+    const next = addMode(synced, 'Sombre');
+    expect(next.modes).toEqual(['Light', 'Dark', 'Sombre']);
+    expect(next.manualModes).toEqual(['Sombre']);
+    expect(next.variables[0].values.Sombre).toBe('#1a2b3c');
+    expect(isManualMode(next, 'Sombre')).toBe(true);
+    expect(isManualMode(next, 'Dark')).toBe(false);
+    expect(addMode(next, 'Sombre')).toBe(next);
+  });
+
+  it('une synchronisation garde les modes ajoutés et leurs valeurs', async () => {
+    const { addMode } = await import('@/lib/designTokens');
+    const withMode = { ...tokens, collections: [addMode(synced, 'Sombre'), ...tokens.collections.slice(1)] };
+    withMode.collections[0].variables[0].values.Sombre = '#123456';
+    const next = mergeSyncedTokens(withMode, tokens);
+    const primitives = next.collections[0];
+    expect(primitives.modes).toEqual(['Light', 'Dark', 'Sombre']);
+    expect(primitives.manualModes).toEqual(['Sombre']);
+    expect(primitives.variables[0].values.Sombre).toBe('#123456');
+    expect(primitives.variables[0].values.Light).toBe('#1a2b3c');
+  });
+
+  it('renomme et supprime un mode créé dans SCOPE, pas ceux de la source', async () => {
+    const { addMode, renameMode, removeMode } = await import('@/lib/designTokens');
+    const withMode = addMode(synced, 'Sombre');
+    const renamed = renameMode(withMode, 'Sombre', 'Nuit');
+    expect(renamed.modes).toContain('Nuit');
+    expect(renamed.manualModes).toEqual(['Nuit']);
+    expect(renamed.variables[0].values.Nuit).toBe('#1a2b3c');
+    expect(renamed.variables[0].values.Sombre).toBeUndefined();
+    expect(renameMode(withMode, 'Light', 'Clair')).toBe(withMode);
+    const removed = removeMode(renamed, 'Nuit');
+    expect(removed.modes).toEqual(['Light', 'Dark']);
+    expect(removed.manualModes).toBeUndefined();
+    expect(removeMode(withMode, 'Dark')).toBe(withMode);
+  });
+
+  it('ne supprime pas le dernier mode et déplace le mode par défaut', async () => {
+    const { addMode, removeMode } = await import('@/lib/designTokens');
+    const solo = own.collections[0];
+    expect(removeMode(solo, 'La Vilaine')).toBe(solo);
+    const two = addMode(solo, 'Roazhör');
+    expect(removeMode(two, 'La Vilaine').defaultMode).toBe('Roazhör');
+  });
+
+  it('renomme une collection ou une variable en suivant les alias', async () => {
+    const { renameInTokens, aliasTargets } = await import('@/lib/designTokens');
+    const renamedVar = renameInTokens(own, 'Primitives', { variable: 'color/primary' }, { variable: 'color/brand' });
+    expect(renamedVar.collections[1].variables.map(v => v.name)).toContain('color/brand');
+    expect(renamedVar.collections[0].variables[0].values['La Vilaine']).toEqual({ alias: 'color/brand', collection: 'Primitives' });
+    const renamedCollection = renameInTokens(own, 'Primitives', {}, { collection: 'Base' });
+    expect(renamedCollection.collections[1].name).toBe('Base');
+    expect(renamedCollection.collections[0].variables[0].values['La Vilaine']).toEqual({ alias: 'color/primary', collection: 'Base' });
+    // les alias possibles : même type, sauf soi-même
+    const targets = aliasTargets(own, 'Thème', own.collections[0].variables[0]);
+    expect(targets.map(t => t.name)).toEqual(expect.arrayContaining(['color/primary', 'color/surface']));
+    expect(targets.some(t => t.name === 'spacing/4')).toBe(false);
+    expect(targets.some(t => t.collection === 'Thème')).toBe(false);
+  });
+});

@@ -335,7 +335,15 @@ export function mergeSyncedTokens(existing: DesignTokens | undefined, incoming: 
   const existingCollections = existing?.collections ?? [];
   const synced = incoming.collections.map(collection => {
     const same = existingCollections.find(c => c.name === collection.name);
-    return { ...collection, variables: mergeNamed(same?.variables, collection.variables) };
+    // Modes ajoutés dans SCOPE (thèmes…) : conservés, avec leurs valeurs, même sur les variables que la source remplace.
+    const manualModes = (same?.manualModes ?? []).filter(m => !collection.modes.includes(m));
+    const variables = mergeNamed(same?.variables, collection.variables).map(variable => {
+      if (variable.origin === 'manual') return variable;
+      const previous = same?.variables.find(v => v.name === variable.name);
+      const carried = Object.fromEntries(manualModes.filter(m => previous?.values[m] !== undefined).map(m => [m, previous!.values[m]]));
+      return Object.keys(carried).length ? { ...variable, values: { ...variable.values, ...carried } } : variable;
+    });
+    return { ...collection, modes: [...collection.modes, ...manualModes], manualModes: manualModes.length ? manualModes : undefined, variables };
   });
   const syncedNames = new Set(synced.map(c => c.name));
   const manualCollections = existingCollections.filter(c => c.origin === 'manual' && !syncedNames.has(c.name));
@@ -365,3 +373,96 @@ export function tokensFromPayload(payload: Partial<DesignTokens> & Record<string
     effectStyles: Array.isArray(payload.effectStyles) ? payload.effectStyles : [],
   };
 }
+
+// ─── Édition des collections de variables ─────────────────────────────────────
+
+/** Ce mode a-t-il été créé dans SCOPE (donc modifiable) ? Ceux d'une source (Figma) restent en lecture seule. */
+export const isManualMode = (collection: TokenCollection, mode: string): boolean =>
+  collection.origin === 'manual' || (collection.manualModes ?? []).includes(mode);
+
+/** Ajoute un mode : il part des valeurs du mode par défaut, pour n'avoir qu'à changer ce qui diffère. */
+export function addMode(collection: TokenCollection, mode: string): TokenCollection {
+  const name = mode.trim();
+  if (!name || collection.modes.includes(name)) return collection;
+  const base = collection.defaultMode || collection.modes[0];
+  return {
+    ...collection,
+    modes: [...collection.modes, name],
+    manualModes: collection.origin === 'manual' ? collection.manualModes : [...(collection.manualModes ?? []), name],
+    variables: collection.variables.map(v => (v.values[base] === undefined ? v : { ...v, values: { ...v.values, [name]: v.values[base] } })),
+  };
+}
+
+/** Renomme un mode créé dans SCOPE (valeurs, mode par défaut et liste des modes suivent). */
+export function renameMode(collection: TokenCollection, from: string, to: string): TokenCollection {
+  const name = to.trim();
+  if (!name || name === from || collection.modes.includes(name) || !isManualMode(collection, from)) return collection;
+  const swap = (m: string) => (m === from ? name : m);
+  return {
+    ...collection,
+    modes: collection.modes.map(swap),
+    manualModes: collection.manualModes?.map(swap),
+    defaultMode: swap(collection.defaultMode),
+    variables: collection.variables.map(v => {
+      if (!(from in v.values)) return v;
+      const { [from]: value, ...rest } = v.values;
+      return { ...v, values: { ...rest, [name]: value } };
+    }),
+  };
+}
+
+/** Supprime un mode créé dans SCOPE (jamais le dernier) ; le mode par défaut passe au premier restant. */
+export function removeMode(collection: TokenCollection, mode: string): TokenCollection {
+  if (!isManualMode(collection, mode) || collection.modes.length <= 1) return collection;
+  const modes = collection.modes.filter(m => m !== mode);
+  const manualModes = collection.manualModes?.filter(m => m !== mode);
+  return {
+    ...collection,
+    modes,
+    manualModes: manualModes?.length ? manualModes : undefined,
+    defaultMode: collection.defaultMode === mode ? modes[0] : collection.defaultMode,
+    variables: collection.variables.map(v => {
+      const { [mode]: _removed, ...values } = v.values;
+      void _removed;
+      return { ...v, values };
+    }),
+  };
+}
+
+/** Renomme une collection ou une variable en mettant à jour les alias qui y renvoient. */
+export function renameInTokens(
+  tokens: DesignTokens,
+  collectionName: string,
+  from: { variable?: string },
+  to: { collection?: string; variable?: string },
+): DesignTokens {
+  return {
+    ...tokens,
+    collections: tokens.collections.map(collection => {
+      const renamedCollection = collection.name === collectionName && to.collection ? to.collection : collection.name;
+      return {
+        ...collection,
+        name: renamedCollection,
+        variables: collection.variables.map(variable => {
+          const name = collection.name === collectionName && from.variable === variable.name && to.variable ? to.variable : variable.name;
+          const values = Object.fromEntries(Object.entries(variable.values).map(([mode, value]) => {
+            if (typeof value !== 'object' || value.collection !== collectionName) return [mode, value];
+            if (from.variable !== undefined && value.alias !== from.variable) return [mode, value];
+            return [mode, { alias: to.variable ?? value.alias, collection: to.collection ?? value.collection }];
+          }));
+          return { ...variable, name, values };
+        }),
+      };
+    }),
+  };
+}
+
+/** Variables du même type qu'une variable donnée, vers lesquelles elle peut renvoyer (alias), sauf elle-même. */
+export function aliasTargets(tokens: DesignTokens, collectionName: string, variable: TokenVariable): { collection: string; name: string }[] {
+  return tokens.collections.flatMap(c =>
+    c.variables
+      .filter(v => v.type === variable.type && !(c.name === collectionName && v.name === variable.name))
+      .map(v => ({ collection: c.name, name: v.name })),
+  );
+}
+
